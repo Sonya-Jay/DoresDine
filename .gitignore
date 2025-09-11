@@ -1,0 +1,44 @@
+# Node / JavaScript
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+package-lock.json
+yarn.lock
+.pnpm-debug.log
+
+# Expo / React Native
+.expo/
+.expo-shared/
+*.expo
+*.expo-shared
+
+# Logs
+logs
+*.log
+*.log.*
+debug.log
+
+# OS / Editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Build / Cache
+dist/
+build/
+.cache/
+coverage/
+*.tsbuildinfo
+
+# Environment / Secrets
+.env
+.env.local
+.env.*.local
+
+# PostgreSQL (local)
+*.sql
+*.dump
