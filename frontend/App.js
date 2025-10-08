@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  ScrollView, 
-  Image, 
+import {
+  View,
+  Text,
+  TextInput,
+  ScrollView,
+  Image,
   TouchableOpacity,
   SafeAreaView,
   StatusBar,
-  StyleSheet
+  StyleSheet,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 
@@ -24,10 +24,16 @@ export default function DoresDineApp() {
       date: '09/19/2025 Lunch',
       visits: 23,
       images: [
-        { uri: 'https://images.unsplash.com/photo-1567337710282-00832b415979?w=400', rating: 5.8 },
-        { uri: 'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?w=400', rating: 10.0 }
+        {
+          uri: 'https://images.unsplash.com/photo-1567337710282-00832b415979?w=400',
+          rating: 5.8,
+        },
+        {
+          uri: 'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?w=400',
+          rating: 10.0,
+        },
       ],
-      notes: 'Love rand cookies'
+      notes: 'Love rand cookies',
     },
     {
       id: 2,
@@ -36,16 +42,19 @@ export default function DoresDineApp() {
       date: '09/19/2025 Lunch',
       visits: 11,
       images: [
-        { uri: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400', rating: 1.2 }
+        {
+          uri: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400',
+          rating: 1.2,
+        },
       ],
-      notes: ''
-    }
+      notes: '',
+    },
   ];
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
-      
+
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
@@ -79,8 +88,8 @@ export default function DoresDineApp() {
         </View>
 
         {/* Filter Buttons */}
-        <ScrollView 
-          horizontal 
+        <ScrollView
+          horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.filterContainer}
           contentContainerStyle={styles.filterContentContainer}
@@ -102,14 +111,14 @@ export default function DoresDineApp() {
               <View style={styles.avatar}>
                 <Icon name="user" size={24} color="#fff" />
               </View>
-              
+
               <View style={styles.userDetails}>
                 <View style={styles.userHeader}>
                   <Text style={styles.username}>{post.username}</Text>
                   <Text style={styles.rankedText}> ranked </Text>
                   <Text style={styles.restaurant}>{post.restaurant}</Text>
                 </View>
-                
+
                 <View style={styles.metadata}>
                   <View style={styles.metadataRow}>
                     <Icon name="calendar" size={11} color="#666" />
@@ -117,7 +126,10 @@ export default function DoresDineApp() {
                   </View>
                   <View style={styles.metadataRow}>
                     <Icon name="x" size={11} color="#666" />
-                    <Text style={styles.metadataText}> {post.visits} Visits</Text>
+                    <Text style={styles.metadataText}>
+                      {' '}
+                      {post.visits} Visits
+                    </Text>
                   </View>
                 </View>
               </View>
@@ -126,22 +138,31 @@ export default function DoresDineApp() {
             {/* Images */}
             <View style={styles.imagesContainer}>
               {post.images.map((img, idx) => (
-                <View 
-                  key={idx} 
+                <View
+                  key={idx}
                   style={[
                     styles.imageWrapper,
-                    post.images.length === 1 && styles.singleImageWrapper
+                    post.images.length === 1 && styles.singleImageWrapper,
                   ]}
                 >
-                  <Image 
+                  <Image
                     source={{ uri: img.uri }}
                     style={styles.foodImage}
                     resizeMode="cover"
                   />
-                  <View style={[
-                    styles.rating,
-                    { borderColor: img.rating >= 7 ? '#4CAF50' : img.rating >= 5 ? '#FFA726' : '#f44336' }
-                  ]}>
+                  <View
+                    style={[
+                      styles.rating,
+                      {
+                        borderColor:
+                          img.rating >= 7
+                            ? '#4CAF50'
+                            : img.rating >= 5
+                            ? '#FFA726'
+                            : '#f44336',
+                      },
+                    ]}
+                  >
                     <Text style={styles.ratingText}>{img.rating}</Text>
                   </View>
                 </View>
@@ -191,25 +212,24 @@ export default function DoresDineApp() {
           { icon: 'file-text', label: 'Menus' },
           { icon: 'search', label: 'Search' },
           { icon: 'users', label: 'Friends' },
-          { icon: 'user', label: 'Profile' }
+          { icon: 'user', label: 'Profile' },
         ].map((item, idx) => {
           const isActive = activeTab === item.label;
           return (
-            <TouchableOpacity 
+            <TouchableOpacity
               key={idx}
               onPress={() => setActiveTab(item.label)}
               style={styles.navItem}
             >
-              <Icon 
-                name={item.icon} 
-                size={26} 
+              <Icon
+                name={item.icon}
+                size={26}
                 color={isActive ? '#000' : '#999'}
                 strokeWidth={isActive ? 2.5 : 2}
               />
-              <Text style={[
-                styles.navLabel,
-                isActive && styles.navLabelActive
-              ]}>
+              <Text
+                style={[styles.navLabel, isActive && styles.navLabelActive]}
+              >
                 {item.label}
               </Text>
             </TouchableOpacity>
