@@ -1,1 +1,0 @@
-<!-- Gives info on the schema -->
