@@ -12,9 +12,9 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 
-export default function DoresDineApp() {
-  const [searchText, setSearchText] = useState('');
-  const [activeTab, setActiveTab] = useState('Feed');
+const DoresDineApp: React.FC = () => {
+  const [searchText, setSearchText] = useState<string>('');
+  const [activeTab, setActiveTab] = useState<string>('Feed');
 
   const posts = [
     {
@@ -238,7 +238,9 @@ export default function DoresDineApp() {
       </View>
     </SafeAreaView>
   );
-}
+};
+
+export default DoresDineApp;
 
 const styles = StyleSheet.create({
   container: {
