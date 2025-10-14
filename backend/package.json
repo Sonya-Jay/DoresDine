@@ -10,6 +10,7 @@
     "db:migrate": "psql -U postgres -d doresdine -f migrations/001_initial_schema.sql"
   },
   "dependencies": {
+    "dotenv": "^17.2.3",
     "express": "^4.18.2",
     "multer": "^2.0.2",
     "pg": "^8.11.3"

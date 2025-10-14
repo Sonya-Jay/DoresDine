@@ -4,6 +4,28 @@ import { CreateUserRequest, User } from '../types';
 
 const router = Router();
 
+// GET /users/username/:username - Get user by username
+router.get('/username/:username', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { username } = req.params;
+
+    const result = await pool.query<User>(
+      'SELECT * FROM users WHERE username = $1 LIMIT 1',
+      [username]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    res.status(200).json(result.rows[0]);
+  } catch (error) {
+    console.error('Error fetching user:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // POST /users - Create a new user (for testing only)
 router.post('/', async (req: Request, res: Response): Promise<void> => {
   try {

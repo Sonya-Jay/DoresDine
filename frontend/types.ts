@@ -14,8 +14,8 @@ export interface Post {
 }
 
 export interface PostData {
-  dininghallId: string;
-  dininghallName: string;
+  restaurantId: string;
+  restaurantName: string;
   date: string;
   mealType: string;
   menuItems: string[];

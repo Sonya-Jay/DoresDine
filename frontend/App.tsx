@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { SafeAreaView, StatusBar, ScrollView } from 'react-native';
+import { SafeAreaView, StatusBar, ScrollView, Alert } from 'react-native';
 import Header from './components/Header';
 import PostCard from './components/PostCard';
 import BottomNav from './components/BottomNav';
-import CreatePostModal from './components/CreatePostModal.tsx';
+import CreatePostModal from './components/CreatePostModal';
 import styles from './styles';
 import { Post, PostData } from './types';
 import { API_URL } from '@env';
@@ -51,7 +51,9 @@ const DoresDineApp: React.FC = () => {
 
   const handleCreatePost = async (postData: PostData) => {
     // TODO: Replace hardcoded user ID with real authentication/user selection
-    const userId = '1'; // <-- Hardcoded for now
+    // For now, we'll create a test user or use an existing one
+    const userId = await getOrCreateTestUser();
+
     try {
       const response = await fetch(`${API_URL}/posts`, {
         method: 'POST',
@@ -61,23 +63,71 @@ const DoresDineApp: React.FC = () => {
         },
         body: JSON.stringify({
           caption: postData.notes || '',
-          // TODO: Map postData.photos if you add photo upload
-          photos: postData.photos || [],
+          photos: postData.photos.map((photo, index) => ({
+            storage_key: photo,
+            display_order: index,
+          })),
         }),
       });
       if (!response.ok) {
         const error = await response.json();
         console.error('Error creating post:', error);
-        // Optionally show error to user
+        Alert.alert('Error', `Error creating post: ${error.error || 'Unknown error'}`);
       } else {
         const newPost = await response.json();
-        setPosts([newPost, ...posts]);
+        console.log('Post created successfully:', newPost);
+        // TODO: Convert backend post format to frontend Post format
+        Alert.alert('Success', 'Post created successfully!');
       }
     } catch (error) {
-      console.error('Error creating post:', error);
-      // Optionally show error to user
+      console.error('Network error creating post:', error);
+      Alert.alert('Network Error', `Could not connect to server: ${error}`);
     }
     setModalVisible(false);
+  };
+
+  // Helper function to get or create a test user
+  const getOrCreateTestUser = async (): Promise<string> => {
+    const testUsername = 'testuser';
+    const testEmail = 'testuser@example.com';
+
+    try {
+      // First, try to get existing user
+      const getResponse = await fetch(`${API_URL}/users/username/${testUsername}`);
+
+      if (getResponse.ok) {
+        const user = await getResponse.json();
+        console.log('Using existing test user:', user.id);
+        return user.id;
+      }
+
+      // If user doesn't exist (404), create it
+      if (getResponse.status === 404) {
+        const createResponse = await fetch(`${API_URL}/users`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            username: testUsername,
+            email: testEmail,
+          }),
+        });
+
+        if (createResponse.ok) {
+          const user = await createResponse.json();
+          console.log('Created new test user:', user.id);
+          return user.id;
+        }
+
+        throw new Error('Failed to create test user');
+      }
+
+      throw new Error('Failed to fetch user');
+    } catch (error) {
+      console.error('Error getting/creating test user:', error);
+      throw error; // Re-throw so the post creation fails with a proper error message
+    }
   };
 
   return (
@@ -99,7 +149,6 @@ const DoresDineApp: React.FC = () => {
       <BottomNav
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        onAddPress={() => setModalVisible(true)}
       />
 
       <CreatePostModal

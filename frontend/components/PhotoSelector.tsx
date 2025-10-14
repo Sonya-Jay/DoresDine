@@ -1,7 +1,7 @@
 import React from 'react';
 import { Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
-import { launchImageLibrary } from 'react-native-image-picker';
+import { launchImageLibrary, ImagePickerResponse } from 'react-native-image-picker';
 import { API_URL } from '@env';
 
 interface PhotoSelectorProps {
@@ -16,7 +16,7 @@ const PhotoSelector: React.FC<PhotoSelectorProps> = ({
   const handlePress = async () => {
     launchImageLibrary(
       { mediaType: 'photo', selectionLimit: 1 },
-      async response => {
+      async (response: ImagePickerResponse) => {
         if (response.didCancel) return;
         if (response.errorCode) {
           Alert.alert('Error', response.errorMessage || 'Image picker error');

@@ -20,7 +20,7 @@ const PostCard: React.FC<PostCardProps> = ({ post }) => {
           <View style={styles.userHeader}>
             <Text style={styles.username}>{post.username}</Text>
             <Text style={styles.rankedText}> ranked </Text>
-            <Text style={styles.restaurant}>{post.restaurant}</Text>
+            <Text style={styles.restaurant}>{post.dininghall}</Text>
           </View>
 
           <View style={styles.metadata}>
