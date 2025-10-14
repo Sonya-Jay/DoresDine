@@ -12,9 +12,14 @@ import styles from '../styles';
 interface HeaderProps {
   searchText: string;
   setSearchText: (s: string) => void;
+  onAddPress: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ searchText, setSearchText }) => {
+const Header: React.FC<HeaderProps> = ({
+  searchText,
+  setSearchText,
+  onAddPress,
+}) => {
   return (
     <View style={styles.header}>
       <View style={styles.headerTop}>
@@ -27,6 +32,13 @@ const Header: React.FC<HeaderProps> = ({ searchText, setSearchText }) => {
           </TouchableOpacity>
           <TouchableOpacity style={{ marginLeft: 20 }}>
             <Icon name="menu" size={24} color="#000" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={{ marginLeft: 20 }}
+            onPress={onAddPress}
+            accessibilityLabel="Add Post"
+          >
+            <Icon name="plus" size={26} color="#007AFF" />
           </TouchableOpacity>
         </View>
       </View>
