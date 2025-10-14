@@ -1,0 +1,21 @@
+# Ignore platform-specific build files
+ios/** linguist-vendored
+android/** linguist-vendored
+vendor/** linguist-vendored
+
+# Ignore dependency directories
+node_modules/** linguist-vendored
+.bundle/** linguist-vendored
+
+# Ignore configuration and build artifacts
+*.podspec linguist-vendored
+*.lock linguist-vendored
+*.gradle linguist-vendored
+*.xcworkspace/** linguist-vendored
+*.xcodeproj/** linguist-vendored
+
+# Ensure TypeScript and JavaScript are counted correctly
+*.ts linguist-language=TypeScript
+*.tsx linguist-language=TypeScript
+*.js linguist-language=JavaScript
+*.jsx linguist-language=JavaScript
