@@ -73,3 +73,13 @@ yarn-error.log
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+# Local node_modules and package lock
+node_modules/
+
+# iOS Pods and build outputs
+ios/Pods/
+ios/build/
+
+# Ruby runtime artifacts
+2.6.0/

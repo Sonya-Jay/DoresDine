@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { SafeAreaView, StatusBar, ScrollView } from 'react-native';
-import Header from './components/header';
+import Header from './components/Header';
 import PostCard from './components/PostCard';
 import BottomNav from './components/BottomNav';
 import styles from './styles';
