@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { SafeAreaView, StatusBar, ScrollView, Alert } from 'react-native';
+import { SafeAreaView, StatusBar, ScrollView, Alert, Text } from 'react-native';
 import Header from './components/Header';
 import PostCard from './components/PostCard';
 import BottomNav from './components/BottomNav';
 import CreatePostModal from './components/CreatePostModal';
+import MenusScreen from './components/MenusScreen';
 import styles from './styles';
 import { Post, PostData } from './types';
 import { API_URL } from '@env';
@@ -72,7 +73,10 @@ const DoresDineApp: React.FC = () => {
       if (!response.ok) {
         const error = await response.json();
         console.error('Error creating post:', error);
-        Alert.alert('Error', `Error creating post: ${error.error || 'Unknown error'}`);
+        Alert.alert(
+          'Error',
+          `Error creating post: ${error.error || 'Unknown error'}`,
+        );
       } else {
         const newPost = await response.json();
         console.log('Post created successfully:', newPost);
@@ -93,7 +97,9 @@ const DoresDineApp: React.FC = () => {
 
     try {
       // First, try to get existing user
-      const getResponse = await fetch(`${API_URL}/users/username/${testUsername}`);
+      const getResponse = await fetch(
+        `${API_URL}/users/username/${testUsername}`,
+      );
 
       if (getResponse.ok) {
         const user = await getResponse.json();
@@ -129,12 +135,51 @@ const DoresDineApp: React.FC = () => {
       throw error; // Re-throw so the post creation fails with a proper error message
     }
   };
+  const renderScreen = () => {
+    switch (activeTab) {
+      case 'Feed':
+        return (
+          <>
+            <Header
+              searchText={searchText}
+              setSearchText={setSearchText}
+              onAddPress={() => setModalVisible(true)}
+            />
+            <ScrollView style={styles.feed}>
+              {posts.map(p => (
+                <PostCard key={p.id} post={p} />
+              ))}
+            </ScrollView>
+          </>
+        );
+      case 'Menus':
+        return <MenusScreen />;
+      case 'Search':
+      case 'Friends':
+      case 'Profile':
+        return (
+          <>
+            <Header
+              searchText={searchText}
+              setSearchText={setSearchText}
+              onAddPress={() => setModalVisible(true)}
+            />
+            <Text style={{ padding: 20, fontSize: 18, textAlign: 'center' }}>
+              {activeTab} - Coming soon!
+            </Text>
+          </>
+        );
+      default:
+        return null;
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
+      {renderScreen()}
 
-      <Header
+      {/* <Header
         searchText={searchText}
         setSearchText={setSearchText}
         onAddPress={() => setModalVisible(true)}
@@ -144,12 +189,9 @@ const DoresDineApp: React.FC = () => {
         {posts.map(p => (
           <PostCard key={p.id} post={p} />
         ))}
-      </ScrollView>
+      </ScrollView> */}
 
-      <BottomNav
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-      />
+      <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
 
       <CreatePostModal
         visible={modalVisible}
