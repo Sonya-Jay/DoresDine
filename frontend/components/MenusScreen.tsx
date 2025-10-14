@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   TextInput,
 } from 'react-native';
+import ScheduleDetailScreen from './ScheduleDetails';
 // import Header from './components/Header';
 import styles from '../styles';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -37,10 +38,20 @@ const diningFacilities: DiningFacility[] = [
 const MenusScreen: React.FC = () => {
   const [searchText, setSearchText] = useState<string>('');
   // const [activeTab, setActiveTab] = useState<string>('Menus');
+  const [selectedHall, setSelectedHall] = useState<string | null>(null);
 
   const filteredFacilities = diningFacilities.filter(facility =>
     facility.name.toLowerCase().includes(searchText.toLowerCase()),
   );
+
+  if (selectedHall) {
+    return (
+      <ScheduleDetailScreen
+        hallName={selectedHall}
+        onBack={() => setSelectedHall(null)}
+      />
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -65,7 +76,7 @@ const MenusScreen: React.FC = () => {
         <View style={styles.searchBar}>
           <TextInput
             style={styles.searchInput}
-            placeholder="Search a menu, member, etc."
+            placeholder="Search for a Dining Hall"
             placeholderTextColor="#999"
             value={searchText}
             onChangeText={setSearchText}
@@ -88,6 +99,7 @@ const MenusScreen: React.FC = () => {
               key={facility.id}
               style={styles.facilityCard}
               activeOpacity={0.7}
+              onPress={() => setSelectedHall(facility.name)}
             >
               <Text style={styles.facilityName}>{facility.name}</Text>
               <View

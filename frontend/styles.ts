@@ -245,6 +245,45 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  diningHallHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  backButton: {
+    marginRight: 12,
+  },
+  diningHallTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#000',
+  },
+  menuList: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  daySection: {
+    marginTop: 24,
+    marginBottom: 8,
+  },
+  dayHeader: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#000',
+    marginBottom: 12,
+  },
+  mealButton: {
+    paddingVertical: 12,
+    marginBottom: 8,
+  },
+  mealText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#D4A574',
+  },
 });
 
 export default styles;
