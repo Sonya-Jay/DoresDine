@@ -1,9 +1,10 @@
-import 'dotenv/config';
+import "dotenv/config";
 import express from "express";
 import usersRouter from "./routes/users";
 import postsRouter from "./routes/posts";
 import uploadRouter from "./routes/upload";
 import pool from "./db";
+import diningRouter from "./routes/dining";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -21,6 +22,7 @@ app.use((req, res, next) => {
 app.use("/users", usersRouter);
 app.use("/posts", postsRouter);
 app.use("/upload", uploadRouter);
+app.use("/api/dining", diningRouter);
 
 // Health check
 app.get("/health", async (req, res) => {
