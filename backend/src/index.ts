@@ -12,6 +12,9 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(express.json());
 
+// Serve uploaded files statically
+app.use("/uploads", express.static("uploads"));
+
 // Request logging (simple)
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} ${req.method} ${req.path}`);
