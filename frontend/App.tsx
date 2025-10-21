@@ -61,7 +61,7 @@ const DoresDineApp: React.FC = () => {
   // Fetch posts from backend
   const fetchPosts = async () => {
     const userId = '00000000-0000-0000-0000-000000000001'; // Use same hardcoded user ID
-    
+
     try {
       setLoading(true);
       const response = await fetch(`${API_URL}/posts`, {
@@ -175,6 +175,14 @@ const DoresDineApp: React.FC = () => {
     }
   };
 
+  const handleCommentCountUpdate = (postId: number, newCount: number) => {
+    setPosts(currentPosts =>
+      currentPosts.map(post =>
+        post.id === postId ? { ...post, commentCount: newCount } : post,
+      ),
+    );
+  };
+
   const renderScreen = () => {
     switch (activeTab) {
       case 'Feed':
@@ -194,7 +202,12 @@ const DoresDineApp: React.FC = () => {
                 </Text>
               ) : posts.length > 0 ? (
                 posts.map(p => (
-                  <PostCard key={p.id} post={p} onLike={handleLike} />
+                  <PostCard
+                    key={p.id}
+                    post={p}
+                    onLike={handleLike}
+                    onCommentCountUpdate={handleCommentCountUpdate}
+                  />
                 ))
               ) : (
                 <Text
@@ -241,7 +254,7 @@ const DoresDineApp: React.FC = () => {
 
       <ScrollView style={styles.feed}>
         {posts.map(p => (
-          <PostCard key={p.id} post={p} onLike={handleLike} />
+          <PostCard key={p.id} post={p} onLike={handleLike} onCommentCountUpdate={handleCommentCountUpdate} />
         ))}
       </ScrollView> */}
 

@@ -7,8 +7,8 @@ const router = Router();
 // GET /posts - Fetch all posts with photos and user info
 router.get("/", async (req: Request, res: Response): Promise<void> => {
   try {
-    const userId = req.headers['x-user-id'] as string;
-    
+    const userId = req.headers["x-user-id"] as string;
+
     const query = `
       SELECT 
         p.id,

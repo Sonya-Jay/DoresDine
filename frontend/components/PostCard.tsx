@@ -3,22 +3,31 @@ import { View, Text, Image, TouchableOpacity } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import styles from '../styles';
 import { Post } from '../types';
+import CommentsModal from './CommentsModal';
 
 interface PostCardProps {
   post: Post;
   onLike?: (postId: number) => Promise<void>;
+  onCommentCountUpdate?: (postId: number, newCount: number) => void;
 }
 
-const PostCard: React.FC<PostCardProps> = ({ post, onLike }) => {
+const PostCard: React.FC<PostCardProps> = ({
+  post,
+  onLike,
+  onCommentCountUpdate,
+}) => {
   const [isLiking, setIsLiking] = useState(false);
   const [isLiked, setIsLiked] = useState(post.isLiked);
   const [likeCount, setLikeCount] = useState(post.likeCount);
+  const [commentsModalVisible, setCommentsModalVisible] = useState(false);
+  const [commentCount, setCommentCount] = useState(post.commentCount);
 
   // Update local state when post prop changes
   React.useEffect(() => {
     setIsLiked(post.isLiked);
     setLikeCount(post.likeCount);
-  }, [post.isLiked, post.likeCount]);
+    setCommentCount(post.commentCount);
+  }, [post.isLiked, post.likeCount, post.commentCount]);
 
   const handleLike = async () => {
     if (isLiking || !onLike) return;
@@ -41,6 +50,17 @@ const PostCard: React.FC<PostCardProps> = ({ post, onLike }) => {
       setIsLiking(false);
     }
   };
+  const handleCommentAdded = () => {
+    // Update local comment count
+    const newCount = commentCount + 1;
+    setCommentCount(newCount);
+
+    // Notify parent component
+    if (onCommentCountUpdate) {
+      onCommentCountUpdate(post.id, newCount);
+    }
+  };
+
   return (
     <View style={styles.post}>
       <View style={styles.userInfo}>
@@ -152,7 +172,10 @@ const PostCard: React.FC<PostCardProps> = ({ post, onLike }) => {
               <Icon name="heart" size={24} color="#000" />
             )}
           </TouchableOpacity>
-          <TouchableOpacity style={{ marginLeft: 20 }}>
+          <TouchableOpacity
+            style={{ marginLeft: 20 }}
+            onPress={() => setCommentsModalVisible(true)}
+          >
             <Icon name="message-square" size={24} color="#000" />
           </TouchableOpacity>
           <TouchableOpacity style={{ marginLeft: 20 }}>
@@ -176,13 +199,23 @@ const PostCard: React.FC<PostCardProps> = ({ post, onLike }) => {
             {likeCount} {Number(likeCount) === 1 ? 'like' : 'likes'}
           </Text>
         )}
-        {post.commentCount > 0 && (
-          <Text style={styles.commentsText}>
-            View all {post.commentCount}{' '}
-            {Number(post.commentCount) === 1 ? 'comment' : 'comments'}
-          </Text>
+        {commentCount > 0 && (
+          <TouchableOpacity onPress={() => setCommentsModalVisible(true)}>
+            <Text style={styles.commentsText}>
+              View all {Number(commentCount)}{' '}
+              {Number(commentCount) === 1 ? 'comment' : 'comments'}
+            </Text>
+          </TouchableOpacity>
         )}
       </View>
+
+      {/* Comments Modal */}
+      <CommentsModal
+        visible={commentsModalVisible}
+        postId={post.id}
+        onClose={() => setCommentsModalVisible(false)}
+        onCommentAdded={handleCommentAdded}
+      />
     </View>
   );
 };
