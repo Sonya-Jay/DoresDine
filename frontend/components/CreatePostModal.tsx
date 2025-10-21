@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Modal,
   View,
@@ -22,12 +22,16 @@ interface CreatePostModalProps {
   visible: boolean;
   onClose: () => void;
   onSubmit: (postData: PostData) => void;
+  initialDiningHall?: string;
+  initialMealType?: string;
 }
 
 const CreatePostModal: React.FC<CreatePostModalProps> = ({
   visible,
   onClose,
   onSubmit,
+  initialDiningHall,
+  initialMealType,
 }) => {
   const [selectedDiningHall, setSelectedDiningHall] =
     useState<DiningHall | null>(null);
@@ -39,6 +43,25 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const [companions, setCompanions] = useState<string[]>([]);
   const [notes, setNotes] = useState('');
   const [photos, setPhotos] = useState<string[]>([]);
+
+  // Effect to set initial values when modal opens
+  useEffect(() => {
+    if (visible) {
+      if (initialDiningHall) {
+        const diningHall = DINING_HALLS.find(dh => dh.name === initialDiningHall);
+        if (diningHall) {
+          setSelectedDiningHall(diningHall);
+        }
+      }
+      
+      if (initialMealType) {
+        const mealType = MEAL_TYPES.find(mt => mt === initialMealType);
+        if (mealType) {
+          setSelectedMealType(mealType);
+        }
+      }
+    }
+  }, [visible, initialDiningHall, initialMealType]);
 
   const handleClose = () => {
     // Reset all form fields when closing

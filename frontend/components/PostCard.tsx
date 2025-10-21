@@ -9,12 +9,14 @@ interface PostCardProps {
   post: Post;
   onLike?: (postId: number) => Promise<void>;
   onCommentCountUpdate?: (postId: number, newCount: number) => void;
+  onCreateSimilarPost?: (diningHall: string, mealType: string) => void;
 }
 
 const PostCard: React.FC<PostCardProps> = ({
   post,
   onLike,
   onCommentCountUpdate,
+  onCreateSimilarPost,
 }) => {
   const [isLiking, setIsLiking] = useState(false);
   const [isLiked, setIsLiked] = useState(post.isLiked);
@@ -54,14 +56,21 @@ const PostCard: React.FC<PostCardProps> = ({
     // Update local comment count
     const newCount = commentCount + 1;
     setCommentCount(newCount);
-
+    
     // Notify parent component
     if (onCommentCountUpdate) {
       onCommentCountUpdate(post.id, newCount);
     }
   };
 
-  return (
+  const handleCreateSimilarPost = () => {
+    if (onCreateSimilarPost) {
+      // Extract meal type from the post date string
+      // The date format is like "10/21/2025 Breakfast"
+      const mealType = post.date.split(' ').pop() || 'Lunch';
+      onCreateSimilarPost(post.dininghall, mealType);
+    }
+  };  return (
     <View style={styles.post}>
       <View style={styles.userInfo}>
         <View style={styles.avatar}>
@@ -183,7 +192,7 @@ const PostCard: React.FC<PostCardProps> = ({
           </TouchableOpacity>
         </View>
         <View style={styles.actionsRight}>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={handleCreateSimilarPost}>
             <Icon name="plus" size={24} color="#000" />
           </TouchableOpacity>
           <TouchableOpacity style={{ marginLeft: 20 }}>
