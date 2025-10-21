@@ -32,6 +32,6 @@ export const api = {
     request<{ hall: string; schedule: DayMenu[] }>(
       `/dining/halls/${hallId}/menu`,
     ),
-  getMenuItems: (menuId: number): Promise<MenuItem[]> =>
-    request<MenuItem[]>(`/dining/menu/${menuId}/items`),
+  getMenuItems: (menuId: number, unitId: number): Promise<MenuItem[]> =>
+    request<MenuItem[]>(`/dining/menu/${menuId}/items?unitId=${unitId}`),
 };
