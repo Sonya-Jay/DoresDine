@@ -57,6 +57,8 @@ const DoresDineApp: React.FC = () => {
   const [modalVisible, setModalVisible] = useState<boolean>(false);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [initialDiningHall, setInitialDiningHall] = useState<string>('');
+  const [initialMealType, setInitialMealType] = useState<string>('');
 
   // Fetch posts from backend
   const fetchPosts = async () => {
@@ -184,6 +186,12 @@ const DoresDineApp: React.FC = () => {
     );
   };
 
+  const handleCreateSimilarPost = (diningHall: string, mealType: string) => {
+    setInitialDiningHall(diningHall);
+    setInitialMealType(mealType);
+    setModalVisible(true);
+  };
+
   const renderScreen = () => {
     switch (activeTab) {
       case 'Feed':
@@ -192,7 +200,11 @@ const DoresDineApp: React.FC = () => {
             <Header
               searchText={searchText}
               setSearchText={setSearchText}
-              onAddPress={() => setModalVisible(true)}
+              onAddPress={() => {
+                setInitialDiningHall('');
+                setInitialMealType('');
+                setModalVisible(true);
+              }}
             />
             <ScrollView style={styles.feed}>
               {loading ? (
@@ -208,6 +220,7 @@ const DoresDineApp: React.FC = () => {
                     post={p}
                     onLike={handleLike}
                     onCommentCountUpdate={handleCommentCountUpdate}
+                    onCreateSimilarPost={handleCreateSimilarPost}
                   />
                 ))
               ) : (
@@ -255,7 +268,7 @@ const DoresDineApp: React.FC = () => {
 
       <ScrollView style={styles.feed}>
         {posts.map(p => (
-          <PostCard key={p.id} post={p} onLike={handleLike} onCommentCountUpdate={handleCommentCountUpdate} />
+          <PostCard key={p.id} post={p} onLike={handleLike} onCommentCountUpdate={handleCommentCountUpdate} onCreateSimilarPost={handleCreateSimilarPost} />
         ))}
       </ScrollView> */}
 
@@ -265,6 +278,8 @@ const DoresDineApp: React.FC = () => {
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         onSubmit={handleCreatePost}
+        initialDiningHall={initialDiningHall}
+        initialMealType={initialMealType}
       />
     </SafeAreaView>
   );
