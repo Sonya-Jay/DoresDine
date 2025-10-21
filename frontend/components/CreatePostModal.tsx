@@ -34,6 +34,16 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const [notes, setNotes] = useState('');
   const [photos, setPhotos] = useState<string[]>([]);
 
+  const handleClose = () => {
+    // Reset all form fields when closing
+    setRating(5.0);
+    setMenuItems([]);
+    setCompanions([]);
+    setNotes('');
+    setPhotos([]);
+    onClose();
+  };
+
   const handleSubmit = () => {
     const postData: PostData = {
       restaurantId: restaurant.id,
@@ -47,7 +57,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
       photos,
     };
     onSubmit(postData);
-    onClose();
+    handleClose(); // This will reset the form and close
   };
 
   return (
@@ -55,14 +65,14 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
       visible={visible}
       animationType="slide"
       transparent={true}
-      onRequestClose={onClose}
+      onRequestClose={handleClose}
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           {/* Header */}
           <View style={styles.modalHeader}>
             <Text style={styles.restaurantName}>{restaurant.name}</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
               <Icon name="x" size={24} color="#000" />
             </TouchableOpacity>
           </View>
