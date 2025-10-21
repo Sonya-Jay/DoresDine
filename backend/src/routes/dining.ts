@@ -55,17 +55,11 @@ router.get("/halls/:id/menu", async (req, res) => {
 router.get("/menu/:menuId/items", async (req, res) => {
   try {
     const menuId = parseInt(req.params.menuId);
-    const cbordUnitId = parseInt(req.query.unitId as string);
-    if (isNaN(menuId)) {
-      return res.status(400).json({ error: "Invalid menu ID" });
-    }
-    const items = await cbordService.getMenuItems(menuId, cbordUnitId);
-    res.json(items || []);
-  } catch (error: any) {
+    const items = await cbordService.getMenuItems(menuId);
+    res.json(items);
+  } catch (error) {
     console.error("Error fetching menu items:", error);
-    res
-      .status(500)
-      .json({ error: error?.message || "Falied to fetch menu items" });
+    res.status(501).json({ error: "Not implemented yet" });
   }
 });
 

@@ -3,7 +3,7 @@ import axios, { AxiosInstance } from "axios";
 import { parse } from "node-html-parser";
 import { wrapper } from "axios-cookiejar-support";
 import { CookieJar } from "tough-cookie";
-import { DiningHall, DayMenu, MealPeriod, MenuItem } from "../types/dining";
+import { DiningHall, DayMenu, MealPeriod } from "../types/dining";
 
 const CBORD_BASE_URL = "https://netnutrition.cbord.com/nn-prod/vucampusdining";
 
@@ -194,33 +194,11 @@ class CbordService {
    * - menuId: the numeric id you parsed from onclick (e.g. menuListSelectMenu(8660973))
    * - tries common endpoints/payload shapes until one returns useful panels/html
    */
-  async getMenuItems(menuId: number, cbordUnitId: number): Promise<MenuItem[]> {
-    try {
-      // First, establish a session by visiting the main page
-      await this.axiosInstance.get("/", {
-        headers: {
-          Referer: `${CBORD_BASE_URL}/`,
-          Origin: CBORD_BASE_URL,
-        },
-      });
-
-      // select unit
-      const formBody = new URLSearchParams();
-      formBody.append("UnitOId", String(cbordUnitId));
-
-      await this.axiosInstance.post(
-        "/Unit/SelectUnitFromUnitsList",
-        `UnitOId=${cbordUnitId}`,
-        {
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        }
-      );
-
-      // Now make the request for menu items
-      const response = await this.axiosInstance.post(
-        "/Menu/SelectMenu",
-        `menuOid=${menuId}`,
-        {
+  async getMenuItems(menuId: number) {
+    // helper: try a POST and return res.data if success-like, else null
+    const tryPost = async (path: string, body: URLSearchParams | string) => {
+      try {
+        const res = await this.axiosInstance.post(path, body.toString(), {
           headers: {
             "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
             Accept: "application/json, text/javascript, */*; q=0.01",
@@ -228,92 +206,185 @@ class CbordService {
             Origin: CBORD_BASE_URL,
             "X-Requested-With": "XMLHttpRequest",
           },
-        }
-      );
-
-      if (!response.data || !response.data.success) {
-        console.log("Cbord menu items raw response:", response.data);
-        return [];
-        //throw new Error("Failed to fetch menu items from Cbord");
+          withCredentials: true,
+          jar: this.cookieJar as any,
+        });
+        if (res && res.data) return res.data;
+        return null;
+      } catch (err: any) {
+        // don't throw here; return null so we can try alternatives
+        console.warn(`POST ${path} failed:`, err?.message || err);
+        return null;
       }
+    };
 
-      const html = response.data.panels?.find(
-        (p: any) => p.id === "itemPanel"
-      )?.html;
+    // Ensure we have a session (GET /) so cookies are set
+    await this.axiosInstance
+      .get("/", {
+        headers: { Referer: `${CBORD_BASE_URL}/`, Origin: CBORD_BASE_URL },
+      })
+      .catch(() => {
+        /* ignore; we still try posts */
+      });
 
-      if (!html) {
-        console.warn(
-          "Item panel HTML not found. Full response data:",
-          response.data
-        );
-        return [];
+    // Candidate endpoints + payload shapes observed on similar NetNutrition installs
+    const candidates: { path: string; body: URLSearchParams }[] = [
+      // most likely
+      ((): any => {
+        const p = new URLSearchParams();
+        p.append("MenuOId", String(menuId)); // some installs use MenuOId
+        return { path: "/Menu/SelectMenu", body: p };
+      })(),
+      ((): any => {
+        const p = new URLSearchParams();
+        p.append("menuId", String(menuId)); // alternate name
+        return { path: "/Menu/SelectMenu", body: p };
+      })(),
+      ((): any => {
+        const p = new URLSearchParams();
+        p.append("MenuId", String(menuId)); // capitalized alt
+        return { path: "/Menu/SelectMenu", body: p };
+      })(),
+      // sometimes the site uses a "SelectMenuFromMenuList" variant
+      ((): any => {
+        const p = new URLSearchParams();
+        p.append("MenuOId", String(menuId));
+        return { path: "/Menu/SelectMenuFromMenuList", body: p };
+      })(),
+    ];
+
+    let data: any | null = null;
+    for (const c of candidates) {
+      data = await tryPost(c.path, c.body);
+      if (
+        data &&
+        (data.success || Array.isArray(data.panels) || typeof data === "object")
+      ) {
+        // plausible response — stop trying further endpoints
+        break;
       }
-
-      return this.parseMenuItems(html);
-    } catch (error: any) {
-      // don't throw here; return null so we can try alternatives
-
-      console.error("Error fetching menu items:", error);
-      return [];
     }
+
+    if (!data) {
+      throw new Error(
+        "Failed to fetch menu items from Cbord (no candidate returned data)"
+      );
+    }
+
+    // If response returns panels (like earlier), find the panel that contains items
+    const panels = data.panels ?? [];
+    const itemsHtml =
+      panels.find((p: any) => p.id === "itemPanel")?.html ||
+      panels.find((p: any) => p.id === "coursesPanel")?.html ||
+      panels.find((p: any) => p.id === "menuItemsPanel")?.html ||
+      panels.map((p: any) => p.html).join("\n"); // fallback: concat all html
+
+    if (!itemsHtml) {
+      // If it returned a different shape, return raw data for debugging
+      console.warn(
+        "Menu items panel not found. Returning raw data for inspection.",
+        { data }
+      );
+      return { raw: data };
+    }
+
+    // Parse the items HTML into structured items
+    const parsedItems = this.parseMenuItems(itemsHtml);
+    return parsedItems;
   }
 
   /**
    * Parse the HTML for menu items and normalize into MenuItem[]
    * This function uses node-html-parser (you already imported parse)
    */
-  private parseMenuItems(html: string): MenuItem[] {
+  private parseMenuItems(html: string) {
     const root = parse(html);
-    const items: MenuItem[] = [];
+    const items: any[] = [];
 
-    // Find all table rows with menu items
-    let itemRows = root.querySelectorAll(
-      "tr.cbo_nn_itemPrimaryRow, tr.cbo_nn_itemAlternateRow"
+    // Typical patterns:
+    // - Each menu item may be in an element with class .menuItem or .cbo_nn_menuItem
+    // - Stations may be headings like <h4 class="station"> or .course-title
+    // - Some menus group items under .list-group .list-group-item
+    // We'll try a few heuristics:
+
+    // 1) direct item nodes
+    const directItems = root.querySelectorAll(
+      ".menuItem, .cbo_nn_menuItem, .cbo_nn_item, .list-group-item"
     );
+    if (directItems.length > 0) {
+      directItems.forEach((node) => {
+        const nameNode =
+          node.querySelector(".menuItem__name, .item-name, .cbo_nn_itemName") ||
+          node.querySelector("h5, h4, .mb-0");
+        const descNode = node.querySelector(
+          ".menuItem__desc, .item-desc, .cbo_nn_itemDescription, p"
+        );
+        const caloriesNode = node.querySelector(".calories, .cbo_nn_calories");
 
-    // Fallback: check for div-based item rows (sometimes used in mobile layout)
-    if (itemRows.length === 0) {
-      console.warn("No table rows found, trying div-based selectors...");
-      itemRows = root.querySelectorAll("div.cbo_nn_itemRow");
-    }
-
-    if (itemRows.length === 0) {
-      console.warn("No menu items found in HTML. Dumping HTML for debugging:");
-      console.log(html);
-      return [];
-    }
-
-    itemRows.forEach((row) => {
-      // Get item name from the link
-      const itemLink = row.querySelector(
-        "a.cbo_nn_itemHover, span.cbo_nn_itemHover"
-      );
-      if (!itemLink) return;
-
-      const name = itemLink.text.trim();
-
-      // Get serving size
-      // const servingSizeTd = row.querySelectorAll("td")[2];
-      // const servingSize = servingSizeTd?.text.trim() || "";
-      const tds = row.querySelectorAll("td");
-      const servingSize = tds[2]?.text.trim() || "";
-
-      // Get allergens from images
-      const allergenImgs = itemLink.querySelectorAll("img");
-      const allergens: string[] = [];
-      allergenImgs.forEach((img) => {
-        const alt = img.getAttribute("alt");
-        if (alt) allergens.push(alt);
+        items.push({
+          id: node.getAttribute("data-id") || undefined,
+          name:
+            nameNode?.text?.trim() ||
+            node.text?.trim()?.split("\n")?.[0] ||
+            null,
+          description: descNode?.text?.trim() || null,
+          station:
+            node
+              .closest(".course, .station, .cbo_nn_course")
+              ?.querySelector("h4, .course-title")
+              ?.text?.trim() || null,
+          calories: caloriesNode
+            ? parseInt(caloriesNode.text.replace(/\D/g, ""), 10)
+            : undefined,
+        });
       });
 
-      items.push({
-        name,
-        description: servingSize,
-        allergens,
-      });
-    });
+      return items;
+    }
 
-    console.log(`Parsed ${items.length} menu items`);
+    // 2) look for stations/courses, and inside each, list items
+    const courseSections = root.querySelectorAll(
+      ".course, .cbo_nn_course, .station-group, .cbo_nn_station"
+    );
+    if (courseSections.length > 0) {
+      courseSections.forEach((course) => {
+        const stationName =
+          course
+            .querySelector("h4, .course-title, .station-title")
+            ?.text?.trim() || null;
+        const nodeItems = course.querySelectorAll(
+          "li, .cbo_nn_item, .menuItem"
+        );
+        nodeItems.forEach((ni) => {
+          items.push({
+            id: ni.getAttribute("data-id") || undefined,
+            name:
+              ni.querySelector(".item-name, h5, span")?.text?.trim() ||
+              ni.text?.trim() ||
+              null,
+            description:
+              ni.querySelector(".item-desc, p")?.text?.trim() || null,
+            station: stationName,
+          });
+        });
+      });
+      return items;
+    }
+
+    // 3) fallback: attempt to extract lines that look like "Item — description" or list lines
+    const textLines = root.text
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    // Heuristic: lines with " - " or " — " or ":" may be item + desc
+    for (const line of textLines) {
+      if (line.length < 2) continue;
+      // simple: if line has more than 3 words and not an obvious header, treat as item
+      if (line.split(" ").length > 2) {
+        items.push({ id: undefined, name: line, description: null });
+      }
+    }
+
     return items;
   }
 }
