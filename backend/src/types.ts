@@ -10,6 +10,7 @@ export interface Post {
   author_id: string;
   caption: string | null;
   rating: number;
+  menu_items: string[] | null;
   created_at: Date;
 }
 
@@ -28,6 +29,7 @@ export interface PostWithPhotos extends Post {
 export interface CreatePostRequest {
   caption?: string;
   rating?: number;
+  menu_items?: string[];
   photos?: Array<{
     storage_key: string;
     display_order: number;
