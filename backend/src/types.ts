@@ -9,6 +9,7 @@ export interface Post {
   id: string;
   author_id: string;
   caption: string | null;
+  rating: number;
   created_at: Date;
 }
 
@@ -26,6 +27,7 @@ export interface PostWithPhotos extends Post {
 
 export interface CreatePostRequest {
   caption?: string;
+  rating?: number;
   photos?: Array<{
     storage_key: string;
     display_order: number;

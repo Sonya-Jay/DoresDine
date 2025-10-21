@@ -31,6 +31,7 @@ CREATE TABLE posts (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     author_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     caption TEXT,
+    rating INTEGER CHECK (rating >= 1 AND rating <= 10),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

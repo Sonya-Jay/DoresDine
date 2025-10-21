@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import MenuItemSelector from './MenuItemSelector';
-import RatingSelector from './RatingSelector';
+import RatingSlider from './RatingSlider';
 import CompanionSelector from './CompanionSelector';
 import NotesInput from './NotesInput';
 import PhotoSelector from './PhotoSelector';
@@ -29,9 +29,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const [restaurant] = useState({ id: '1', name: 'Rand Dining Center' });
   const [mealType] = useState('Lunch');
   const [menuItems, setMenuItems] = useState<string[]>([]);
-  const [rating, setRating] = useState<'liked' | 'fine' | 'disliked' | null>(
-    null,
-  );
+  const [rating, setRating] = useState<number>(5.0);
   const [companions, setCompanions] = useState<string[]>([]);
   const [notes, setNotes] = useState('');
   const [photos, setPhotos] = useState<string[]>([]);
@@ -87,11 +85,8 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
               onItemsChange={setMenuItems}
             />
 
-            {/* Rating Selector */}
-            <RatingSelector
-              selectedRating={rating}
-              onRatingChange={setRating}
-            />
+            {/* Rating Slider */}
+            <RatingSlider value={rating} onValueChange={setRating} />
 
             {/* Companion Selector */}
             <CompanionSelector
@@ -169,6 +164,24 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: '700',
+  },
+  ratingContainer: {
+    backgroundColor: '#f8f8f8',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    alignItems: 'center',
+  },
+  ratingLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  ratingButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
   },
 });
 

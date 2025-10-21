@@ -19,7 +19,7 @@ export interface PostData {
   date: string;
   mealType: string;
   menuItems: string[];
-  rating: 'liked' | 'fine' | 'disliked' | null;
+  rating: number;
   companions: string[];
   notes: string;
   photos: string[];
