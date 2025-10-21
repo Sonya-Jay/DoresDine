@@ -13,7 +13,10 @@ import RatingSlider from './RatingSlider';
 import CompanionSelector from './CompanionSelector';
 import NotesInput from './NotesInput';
 import PhotoSelector from './PhotoSelector';
-import { PostData } from '../types';
+import DiningHallSelector from './DiningHallSelector';
+import MealTypeSelector from './MealTypeSelector';
+import { PostData, DiningHall } from '../types';
+import { DINING_HALLS, MEAL_TYPES, MealType } from '../data/diningHalls';
 
 interface CreatePostModalProps {
   visible: boolean;
@@ -26,8 +29,11 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
   onClose,
   onSubmit,
 }) => {
-  const [restaurant] = useState({ id: '1', name: 'Rand Dining Center' });
-  const [mealType] = useState('Lunch');
+  const [selectedDiningHall, setSelectedDiningHall] =
+    useState<DiningHall | null>(null);
+  const [selectedMealType, setSelectedMealType] = useState<MealType | null>(
+    null,
+  );
   const [menuItems, setMenuItems] = useState<string[]>([]);
   const [rating, setRating] = useState<number>(5.0);
   const [companions, setCompanions] = useState<string[]>([]);
@@ -36,6 +42,8 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
 
   const handleClose = () => {
     // Reset all form fields when closing
+    setSelectedDiningHall(null);
+    setSelectedMealType(null);
     setRating(5.0);
     setMenuItems([]);
     setCompanions([]);
@@ -45,19 +53,25 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
   };
 
   const handleSubmit = () => {
+    if (!selectedDiningHall) {
+      // Could add validation alert here
+      return;
+    }
+
     const postData: PostData = {
-      restaurantId: restaurant.id,
-      restaurantName: restaurant.name,
-      date: new Date().toLocaleDateString(),
-      mealType,
+      restaurantId: selectedDiningHall.id.toString(),
+      restaurantName: selectedDiningHall.name,
+      date: new Date().toISOString().split('T')[0],
+      mealType: selectedMealType || 'Lunch',
       menuItems,
       rating,
       companions,
       notes,
       photos,
     };
+
     onSubmit(postData);
-    handleClose(); // This will reset the form and close
+    handleClose();
   };
 
   return (
@@ -71,24 +85,43 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
         <View style={styles.modalContent}>
           {/* Header */}
           <View style={styles.modalHeader}>
-            <Text style={styles.restaurantName}>{restaurant.name}</Text>
+            <Text style={styles.modalTitle}>Create Post</Text>
             <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
               <Icon name="x" size={24} color="#000" />
             </TouchableOpacity>
           </View>
-          <Text style={styles.dateText}>
-            {new Date().toLocaleDateString('en-US', {
-              month: '2-digit',
-              day: '2-digit',
-              year: 'numeric',
-            })}{' '}
-            | {mealType}
-          </Text>
 
           <ScrollView
             style={styles.modalBody}
             showsVerticalScrollIndicator={false}
           >
+            {/* Dining Hall Selector */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Dining Hall</Text>
+              <DiningHallSelector
+                diningHalls={DINING_HALLS}
+                selectedDiningHall={selectedDiningHall}
+                onSelect={setSelectedDiningHall}
+              />
+            </View>
+
+            {/* Meal Type Selector */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Meal Type</Text>
+              <MealTypeSelector
+                mealTypes={MEAL_TYPES}
+                selectedMealType={selectedMealType}
+                onSelect={setSelectedMealType}
+              />
+            </View>
+
+            <Text style={styles.dateText}>
+              {new Date().toLocaleDateString('en-US', {
+                month: '2-digit',
+                day: '2-digit',
+                year: 'numeric',
+              })}
+            </Text>
             {/* Menu Item Selector */}
             <MenuItemSelector
               selectedItems={menuItems}
@@ -144,11 +177,20 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 8,
   },
-  restaurantName: {
-    fontSize: 22,
-    fontWeight: '700',
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
     color: '#000',
     flex: 1,
+  },
+  section: {
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000',
+    marginBottom: 8,
   },
   closeButton: {
     padding: 4,

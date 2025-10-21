@@ -3,6 +3,12 @@ export interface ImageData {
   rating: number;
 }
 
+export interface DiningHall {
+  id: number;
+  name: string;
+  cbordUnitId: number;
+}
+
 // Backend response format for posts
 export interface BackendPost {
   id: number;
@@ -10,6 +16,7 @@ export interface BackendPost {
   caption: string | null;
   rating: number | null;
   menu_items: string[] | null;
+  dining_hall_name: string | null;
   created_at: string;
   username: string;
   email: string;

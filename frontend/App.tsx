@@ -30,7 +30,7 @@ const convertBackendPostToFrontend = (backendPost: BackendPost): Post => {
   return {
     id: backendPost.id,
     username: backendPost.username,
-    dininghall: 'Rand Dining Center', // TODO: Add actual dining hall selection to create post form
+    dininghall: backendPost.dining_hall_name || 'Unknown Dining Hall',
     date: `${formattedDate} ${mealTime}`,
     visits: Math.floor(Math.random() * 50) + 1, // TODO: Implement real visit tracking
     images:
@@ -118,6 +118,7 @@ const DoresDineApp: React.FC = () => {
           caption: postData.notes || '',
           rating: postData.rating,
           menu_items: postData.menuItems,
+          dining_hall_name: postData.restaurantName,
           photos: postData.photos.map((photo, index) => ({
             storage_key: photo,
             display_order: index,

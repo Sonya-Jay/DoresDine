@@ -16,6 +16,7 @@ router.get("/", async (req: Request, res: Response): Promise<void> => {
         p.caption,
         CAST(p.rating AS FLOAT) as rating,
         p.menu_items,
+        p.dining_hall_name,
         p.created_at,
         u.username,
         u.email,
@@ -46,7 +47,7 @@ router.get("/", async (req: Request, res: Response): Promise<void> => {
         GROUP BY post_id
       ) c ON p.id = c.post_id
       LEFT JOIN likes ul ON p.id = ul.post_id AND ul.user_id = $1
-      GROUP BY p.id, p.author_id, p.caption, p.rating, p.menu_items, p.created_at, u.username, u.email, l.like_count, c.comment_count, ul.user_id
+      GROUP BY p.id, p.author_id, p.caption, p.rating, p.menu_items, p.dining_hall_name, p.created_at, u.username, u.email, l.like_count, c.comment_count, ul.user_id
       ORDER BY p.created_at DESC
     `;
 
@@ -79,7 +80,13 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const { caption, rating, menu_items, photos }: CreatePostRequest = req.body;
+    const {
+      caption,
+      rating,
+      menu_items,
+      dining_hall_name,
+      photos,
+    }: CreatePostRequest = req.body;
 
     // Validation
     if (caption !== undefined && caption !== null) {
@@ -172,10 +179,16 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
 
     // Insert post
     const postResult = await client.query<Post>(
-      `INSERT INTO posts (author_id, caption, rating, menu_items)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO posts (author_id, caption, rating, menu_items, dining_hall_name)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
-      [userId, caption || null, rating || null, menu_items || null]
+      [
+        userId,
+        caption || null,
+        rating || null,
+        menu_items || null,
+        dining_hall_name || null,
+      ]
     );
 
     const post = postResult.rows[0];
