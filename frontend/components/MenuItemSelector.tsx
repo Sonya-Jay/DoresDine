@@ -1,5 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  TextInput,
+} from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 
 interface MenuItemSelectorProps {
@@ -12,6 +18,18 @@ const MenuItemSelector: React.FC<MenuItemSelectorProps> = ({
   onItemsChange,
 }) => {
   const [expanded, setExpanded] = useState(false);
+  const [inputText, setInputText] = useState('');
+
+  const handleAddItem = () => {
+    if (inputText.trim() && !selectedItems.includes(inputText.trim())) {
+      onItemsChange([...selectedItems, inputText.trim()]);
+      setInputText('');
+    }
+  };
+
+  const handleRemoveItem = (item: string) => {
+    onItemsChange(selectedItems.filter(i => i !== item));
+  };
 
   return (
     <View style={styles.container}>
@@ -28,9 +46,39 @@ const MenuItemSelector: React.FC<MenuItemSelectorProps> = ({
       </TouchableOpacity>
       {expanded && (
         <View style={styles.content}>
-          <Text style={styles.placeholder}>Menu items would go here</Text>
-          {/* TODO: Add actual menu item selection UI */}
-          {/* This could be a searchable list, checkboxes, etc. */}
+          {/* TODO: Replace this temporary input with NetNutrition integration */}
+          <Text style={styles.tempLabel}>Type dish names</Text>
+
+          <View style={styles.inputRow}>
+            <TextInput
+              style={styles.textInput}
+              placeholder="Enter dish name..."
+              value={inputText}
+              onChangeText={setInputText}
+              onSubmitEditing={handleAddItem}
+            />
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={handleAddItem}
+              disabled={!inputText.trim()}
+            >
+              <Icon
+                name="plus"
+                size={20}
+                color={inputText.trim() ? '#007AFF' : '#ccc'}
+              />
+            </TouchableOpacity>
+          </View>
+
+          {/* Selected items list */}
+          {selectedItems.map((item, index) => (
+            <View key={index} style={styles.selectedItem}>
+              <Text style={styles.selectedItemText}>{item}</Text>
+              <TouchableOpacity onPress={() => handleRemoveItem(item)}>
+                <Icon name="x" size={16} color="#666" />
+              </TouchableOpacity>
+            </View>
+          ))}
         </View>
       )}
     </View>
@@ -39,9 +87,9 @@ const MenuItemSelector: React.FC<MenuItemSelectorProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#f8f8f8',
-    borderRadius: 16,
-    marginBottom: 12,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+    marginBottom: 16,
     overflow: 'hidden',
   },
   header: {
@@ -51,9 +99,8 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   headerText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   content: {
     padding: 16,
@@ -61,7 +108,45 @@ const styles = StyleSheet.create({
   },
   placeholder: {
     color: '#666',
+    fontStyle: 'italic',
+  },
+  tempLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 8,
+    fontStyle: 'italic',
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  textInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    backgroundColor: '#fff',
+    marginRight: 8,
+  },
+  addButton: {
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: '#f0f0f0',
+  },
+  selectedItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#e8f4f8',
+    padding: 8,
+    marginBottom: 4,
+    borderRadius: 6,
+  },
+  selectedItemText: {
     fontSize: 14,
+    color: '#333',
   },
 });
 
