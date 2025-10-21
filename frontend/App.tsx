@@ -107,7 +107,7 @@ const DoresDineApp: React.FC = () => {
 
   const handleCreatePost = async (postData: PostData) => {
     // TODO: Replace hardcoded user ID with real authentication/user selection
-    const userId = '00000000-0000-0000-0000-000000000001'; // <-- Updated to match UUID format
+    const userId = '00000000-0000-0000-0000-000000000001';
 
     try {
       const response = await fetch(`${API_URL}/posts`, {
@@ -149,7 +149,7 @@ const DoresDineApp: React.FC = () => {
   };
 
   const handleLike = async (postId: number) => {
-    const userId = '00000000-0000-0000-0000-000000000001'; // Use same hardcoded user ID
+    const userId = '00000000-0000-0000-0000-000000000001';
 
     try {
       const response = await fetch(`${API_URL}/posts/${postId}/like`, {
@@ -259,18 +259,6 @@ const DoresDineApp: React.FC = () => {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
       {renderScreen()}
-
-      {/* <Header
-        searchText={searchText}
-        setSearchText={setSearchText}
-        onAddPress={() => setModalVisible(true)}
-      />
-
-      <ScrollView style={styles.feed}>
-        {posts.map(p => (
-          <PostCard key={p.id} post={p} onLike={handleLike} onCommentCountUpdate={handleCommentCountUpdate} onCreateSimilarPost={handleCreateSimilarPost} />
-        ))}
-      </ScrollView> */}
 
       <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
 
