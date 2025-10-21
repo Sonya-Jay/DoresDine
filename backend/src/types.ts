@@ -14,6 +14,21 @@ export interface Post {
   created_at: Date;
 }
 
+export interface Like {
+  id: string;
+  post_id: string;
+  user_id: string;
+  created_at: Date;
+}
+
+export interface Comment {
+  id: string;
+  post_id: string;
+  author_id: string;
+  text: string;
+  created_at: Date;
+}
+
 export interface PostPhoto {
   id: string;
   post_id: string;

@@ -7,6 +7,8 @@ const router = Router();
 // GET /posts - Fetch all posts with photos and user info
 router.get("/", async (req: Request, res: Response): Promise<void> => {
   try {
+    const userId = req.headers['x-user-id'] as string;
+    
     const query = `
       SELECT 
         p.id,
@@ -26,15 +28,29 @@ router.get("/", async (req: Request, res: Response): Promise<void> => {
             ) ORDER BY pp.display_order
           ) FILTER (WHERE pp.id IS NOT NULL), 
           '[]'::json
-        ) as photos
+        ) as photos,
+        COALESCE(l.like_count, 0) as like_count,
+        COALESCE(c.comment_count, 0) as comment_count,
+        CASE WHEN ul.user_id IS NOT NULL THEN true ELSE false END as is_liked
       FROM posts p
       JOIN users u ON p.author_id = u.id
       LEFT JOIN post_photos pp ON p.id = pp.post_id
-      GROUP BY p.id, p.author_id, p.caption, p.rating, p.menu_items, p.created_at, u.username, u.email
+      LEFT JOIN (
+        SELECT post_id, COUNT(*) as like_count
+        FROM likes
+        GROUP BY post_id
+      ) l ON p.id = l.post_id
+      LEFT JOIN (
+        SELECT post_id, COUNT(*) as comment_count
+        FROM comments
+        GROUP BY post_id
+      ) c ON p.id = c.post_id
+      LEFT JOIN likes ul ON p.id = ul.post_id AND ul.user_id = $1
+      GROUP BY p.id, p.author_id, p.caption, p.rating, p.menu_items, p.created_at, u.username, u.email, l.like_count, c.comment_count, ul.user_id
       ORDER BY p.created_at DESC
     `;
 
-    const result = await pool.query(query);
+    const result = await pool.query(query, [userId]);
     res.json(result.rows);
   } catch (error: any) {
     console.error("Error fetching posts:", error);
@@ -143,11 +159,9 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
         }
 
         if (item.length > 200) {
-          res
-            .status(400)
-            .json({
-              error: `menu_items[${index}] must be 200 characters or less`,
-            });
+          res.status(400).json({
+            error: `menu_items[${index}] must be 200 characters or less`,
+          });
           return;
         }
       }
@@ -198,5 +212,158 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
     client.release();
   }
 });
+
+// POST /posts/:id/like - Toggle like on a post
+router.post("/:id/like", async (req: Request, res: Response): Promise<void> => {
+  const client = await pool.connect();
+
+  try {
+    // Auth stub: Require X-User-Id header
+    const userId = req.headers["x-user-id"] as string;
+    if (!userId) {
+      res.status(401).json({ error: "X-User-Id header is required" });
+      return;
+    }
+
+    const postId = req.params.id;
+
+    // Validate post exists
+    const postCheck = await client.query("SELECT id FROM posts WHERE id = $1", [
+      postId,
+    ]);
+    if (postCheck.rows.length === 0) {
+      res.status(404).json({ error: "Post not found" });
+      return;
+    }
+
+    // Check if user already liked this post
+    const existingLike = await client.query(
+      "SELECT id FROM likes WHERE post_id = $1 AND user_id = $2",
+      [postId, userId]
+    );
+
+    if (existingLike.rows.length > 0) {
+      // Unlike: Remove the like
+      await client.query(
+        "DELETE FROM likes WHERE post_id = $1 AND user_id = $2",
+        [postId, userId]
+      );
+      res.json({ liked: false, message: "Post unliked" });
+    } else {
+      // Like: Add the like
+      await client.query(
+        "INSERT INTO likes (post_id, user_id) VALUES ($1, $2)",
+        [postId, userId]
+      );
+      res.json({ liked: true, message: "Post liked" });
+    }
+  } catch (error: any) {
+    console.error("Error toggling like:", error);
+    res.status(500).json({ error: "Internal server error" });
+  } finally {
+    client.release();
+  }
+});
+
+// GET /posts/:id/comments - Get comments for a post
+router.get(
+  "/:id/comments",
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const postId = req.params.id;
+
+      const query = `
+      SELECT 
+        c.id,
+        c.text,
+        c.created_at,
+        u.username,
+        u.email
+      FROM comments c
+      JOIN users u ON c.author_id = u.id
+      WHERE c.post_id = $1
+      ORDER BY c.created_at ASC
+    `;
+
+      const result = await pool.query(query, [postId]);
+      res.json(result.rows);
+    } catch (error: any) {
+      console.error("Error fetching comments:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+// POST /posts/:id/comments - Add comment to a post
+router.post(
+  "/:id/comments",
+  async (req: Request, res: Response): Promise<void> => {
+    const client = await pool.connect();
+
+    try {
+      // Auth stub: Require X-User-Id header
+      const userId = req.headers["x-user-id"] as string;
+      if (!userId) {
+        res.status(401).json({ error: "X-User-Id header is required" });
+        return;
+      }
+
+      const postId = req.params.id;
+      const { text } = req.body;
+
+      // Validation
+      if (!text || typeof text !== "string" || text.trim().length === 0) {
+        res.status(400).json({ error: "Comment text is required" });
+        return;
+      }
+
+      if (text.length > 1000) {
+        res
+          .status(400)
+          .json({ error: "Comment must be 1000 characters or less" });
+        return;
+      }
+
+      // Validate post exists
+      const postCheck = await client.query(
+        "SELECT id FROM posts WHERE id = $1",
+        [postId]
+      );
+      if (postCheck.rows.length === 0) {
+        res.status(404).json({ error: "Post not found" });
+        return;
+      }
+
+      // Insert comment
+      const commentResult = await client.query(
+        `INSERT INTO comments (post_id, author_id, text)
+       VALUES ($1, $2, $3)
+       RETURNING *`,
+        [postId, userId, text.trim()]
+      );
+
+      // Get comment with user info
+      const query = `
+      SELECT 
+        c.id,
+        c.text,
+        c.created_at,
+        u.username,
+        u.email
+      FROM comments c
+      JOIN users u ON c.author_id = u.id
+      WHERE c.id = $1
+    `;
+
+      const result = await pool.query(query, [commentResult.rows[0].id]);
+      res.status(201).json(result.rows[0]);
+    } catch (error: any) {
+      console.error("Error creating comment:", error);
+      res.status(500).json({ error: "Internal server error" });
+    } finally {
+      client.release();
+    }
+  }
+);
 
 export default router;

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, Image, TouchableOpacity } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import styles from '../styles';
@@ -6,9 +6,41 @@ import { Post } from '../types';
 
 interface PostCardProps {
   post: Post;
+  onLike?: (postId: number) => Promise<void>;
 }
 
-const PostCard: React.FC<PostCardProps> = ({ post }) => {
+const PostCard: React.FC<PostCardProps> = ({ post, onLike }) => {
+  const [isLiking, setIsLiking] = useState(false);
+  const [isLiked, setIsLiked] = useState(post.isLiked);
+  const [likeCount, setLikeCount] = useState(post.likeCount);
+
+  // Update local state when post prop changes
+  React.useEffect(() => {
+    setIsLiked(post.isLiked);
+    setLikeCount(post.likeCount);
+  }, [post.isLiked, post.likeCount]);
+
+  const handleLike = async () => {
+    if (isLiking || !onLike) return;
+
+    // Optimistic update
+    const wasLiked = isLiked;
+    const oldCount = likeCount;
+    setIsLiked(!wasLiked);
+    setLikeCount(wasLiked ? oldCount - 1 : oldCount + 1);
+
+    setIsLiking(true);
+    try {
+      await onLike(post.id);
+    } catch (error) {
+      // Revert optimistic update on error
+      setIsLiked(wasLiked);
+      setLikeCount(oldCount);
+      console.error('Error liking post:', error);
+    } finally {
+      setIsLiking(false);
+    }
+  };
   return (
     <View style={styles.post}>
       <View style={styles.userInfo}>
@@ -113,8 +145,12 @@ const PostCard: React.FC<PostCardProps> = ({ post }) => {
 
       <View style={styles.actions}>
         <View style={styles.actionsLeft}>
-          <TouchableOpacity>
-            <Icon name="heart" size={24} color="#000" />
+          <TouchableOpacity onPress={handleLike} disabled={isLiking}>
+            {isLiked ? (
+              <Text style={styles.filledHeart}>❤️</Text>
+            ) : (
+              <Icon name="heart" size={24} color="#000" />
+            )}
           </TouchableOpacity>
           <TouchableOpacity style={{ marginLeft: 20 }}>
             <Icon name="message-square" size={24} color="#000" />
@@ -131,6 +167,21 @@ const PostCard: React.FC<PostCardProps> = ({ post }) => {
             <Icon name="bookmark" size={24} color="#000" />
           </TouchableOpacity>
         </View>
+      </View>
+
+      {/* Like and comment counts */}
+      <View style={styles.socialStats}>
+        {likeCount > 0 && (
+          <Text style={styles.likesText}>
+            {likeCount} {Number(likeCount) === 1 ? 'like' : 'likes'}
+          </Text>
+        )}
+        {post.commentCount > 0 && (
+          <Text style={styles.commentsText}>
+            View all {post.commentCount}{' '}
+            {Number(post.commentCount) === 1 ? 'comment' : 'comments'}
+          </Text>
+        )}
       </View>
     </View>
   );

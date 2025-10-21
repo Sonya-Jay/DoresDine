@@ -13,6 +13,9 @@ export interface BackendPost {
   created_at: string;
   username: string;
   email: string;
+  like_count: number;
+  comment_count: number;
+  is_liked: boolean;
   photos: Array<{
     id: number;
     storage_key: string;
@@ -31,6 +34,16 @@ export interface Post {
   notes: string;
   menuItems: string[];
   rating: number;
+  likeCount: number;
+  commentCount: number;
+  isLiked: boolean;
+}
+
+export interface Comment {
+  id: string;
+  text: string;
+  username: string;
+  created_at: string;
 }
 
 export interface PostData {

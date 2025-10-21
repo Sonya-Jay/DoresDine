@@ -221,6 +221,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  socialStats: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  likesText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#000',
+    marginBottom: 4,
+  },
+  commentsText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  filledHeart: {
+    fontSize: 24,
+    color: '#e91e63',
+  },
   bottomNav: {
     flexDirection: 'row',
     borderTopWidth: 1,

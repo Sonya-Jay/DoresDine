@@ -45,6 +45,9 @@ const convertBackendPostToFrontend = (backendPost: BackendPost): Post => {
     notes: backendPost.caption || '',
     menuItems: backendPost.menu_items || [],
     rating: backendPost.rating || 7.5,
+    likeCount: backendPost.like_count || 0,
+    commentCount: backendPost.comment_count || 0,
+    isLiked: backendPost.is_liked || false,
   };
 };
 
@@ -57,9 +60,15 @@ const DoresDineApp: React.FC = () => {
 
   // Fetch posts from backend
   const fetchPosts = async () => {
+    const userId = '00000000-0000-0000-0000-000000000001'; // Use same hardcoded user ID
+    
     try {
       setLoading(true);
-      const response = await fetch(`${API_URL}/posts`);
+      const response = await fetch(`${API_URL}/posts`, {
+        headers: {
+          'X-User-Id': userId,
+        },
+      });
       if (!response.ok) {
         throw new Error('Failed to fetch posts');
       }
@@ -136,6 +145,36 @@ const DoresDineApp: React.FC = () => {
     setModalVisible(false);
   };
 
+  const handleLike = async (postId: number) => {
+    const userId = '00000000-0000-0000-0000-000000000001'; // Use same hardcoded user ID
+
+    try {
+      const response = await fetch(`${API_URL}/posts/${postId}/like`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Id': userId,
+        },
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        console.error('Error liking post:', error);
+        Alert.alert(
+          'Error',
+          `Error liking post: ${error.error || 'Unknown error'}`,
+        );
+        return;
+      }
+
+      // Refresh posts to get updated like counts
+      fetchPosts();
+    } catch (error) {
+      console.error('Network error liking post:', error);
+      Alert.alert('Network Error', `Could not connect to server: ${error}`);
+    }
+  };
+
   const renderScreen = () => {
     switch (activeTab) {
       case 'Feed':
@@ -154,7 +193,9 @@ const DoresDineApp: React.FC = () => {
                   Loading posts...
                 </Text>
               ) : posts.length > 0 ? (
-                posts.map(p => <PostCard key={p.id} post={p} />)
+                posts.map(p => (
+                  <PostCard key={p.id} post={p} onLike={handleLike} />
+                ))
               ) : (
                 <Text
                   style={{ padding: 20, fontSize: 16, textAlign: 'center' }}
@@ -200,7 +241,7 @@ const DoresDineApp: React.FC = () => {
 
       <ScrollView style={styles.feed}>
         {posts.map(p => (
-          <PostCard key={p.id} post={p} />
+          <PostCard key={p.id} post={p} onLike={handleLike} />
         ))}
       </ScrollView> */}
 
