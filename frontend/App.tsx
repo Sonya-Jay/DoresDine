@@ -38,7 +38,7 @@ const convertBackendPostToFrontend = (backendPost: BackendPost): Post => {
         ? backendPost.photos.map(photo => ({
             uri: photo.storage_key.startsWith('http')
               ? photo.storage_key
-              : `https://images.unsplash.com/photo-1567337710282-00832b415979?w=400&h=400&fit=crop`, // Fallback food image
+              : `${API_URL}/${photo.storage_key}`, // Serve uploaded files from backend
             rating: backendPost.rating || 7.5, // Use rating from post or default to 7.5
           }))
         : [], // No placeholder image when no photos - will show menu items instead
