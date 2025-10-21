@@ -48,12 +48,14 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
   useEffect(() => {
     if (visible) {
       if (initialDiningHall) {
-        const diningHall = DINING_HALLS.find(dh => dh.name === initialDiningHall);
+        const diningHall = DINING_HALLS.find(
+          dh => dh.name === initialDiningHall,
+        );
         if (diningHall) {
           setSelectedDiningHall(diningHall);
         }
       }
-      
+
       if (initialMealType) {
         const mealType = MEAL_TYPES.find(mt => mt === initialMealType);
         if (mealType) {

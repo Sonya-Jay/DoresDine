@@ -56,7 +56,7 @@ const PostCard: React.FC<PostCardProps> = ({
     // Update local comment count
     const newCount = commentCount + 1;
     setCommentCount(newCount);
-    
+
     // Notify parent component
     if (onCommentCountUpdate) {
       onCommentCountUpdate(post.id, newCount);
@@ -70,7 +70,8 @@ const PostCard: React.FC<PostCardProps> = ({
       const mealType = post.date.split(' ').pop() || 'Lunch';
       onCreateSimilarPost(post.dininghall, mealType);
     }
-  };  return (
+  };
+  return (
     <View style={styles.post}>
       <View style={styles.userInfo}>
         <View style={styles.avatar}>
