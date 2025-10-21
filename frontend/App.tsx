@@ -52,8 +52,7 @@ const DoresDineApp: React.FC = () => {
 
   const handleCreatePost = async (postData: PostData) => {
     // TODO: Replace hardcoded user ID with real authentication/user selection
-    // For now, we'll create a test user or use an existing one
-    const userId = await getOrCreateTestUser();
+    const userId = '00000000-0000-0000-0000-000000000001'; // <-- Updated to match UUID format
 
     try {
       const response = await fetch(`${API_URL}/posts`, {

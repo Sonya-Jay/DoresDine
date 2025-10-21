@@ -1,7 +1,8 @@
-import { Pool } from 'pg';
+import { Pool } from "pg";
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgresql://postgres:password@localhost:5432/doresdine',
+  connectionString:
+    process.env.DATABASE_URL || "postgresql://localhost:5432/doresdine",
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
