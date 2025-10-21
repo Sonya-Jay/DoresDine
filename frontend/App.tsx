@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { SafeAreaView, StatusBar, ScrollView, Alert, Text } from 'react-native';
 import Header from './components/Header';
 import PostCard from './components/PostCard';
@@ -6,49 +6,93 @@ import BottomNav from './components/BottomNav';
 import CreatePostModal from './components/CreatePostModal';
 import MenusScreen from './components/MenusScreen';
 import styles from './styles';
-import { Post, PostData } from './types';
+import { Post, PostData, BackendPost } from './types';
 import { API_URL } from '@env';
 
-const samplePosts: Post[] = [
-  {
-    id: 1,
-    username: 'VandyDiner123',
-    dininghall: 'Rand Dining Center',
-    date: '09/19/2025 Lunch',
-    visits: 23,
-    images: [
-      {
-        uri: 'https://images.unsplash.com/photo-1567337710282-00832b415979?w=400',
-        rating: 5.8,
-      },
-      {
-        uri: 'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?w=400',
-        rating: 10.0,
-      },
-    ],
-    notes: 'Love rand cookies',
-  },
-  {
-    id: 2,
-    username: 'DiningHater01',
-    dininghall: 'The Kitchen at Kissam',
-    date: '09/19/2025 Lunch',
-    visits: 11,
-    images: [
-      {
-        uri: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400',
-        rating: 1.2,
-      },
-    ],
-    notes: '',
-  },
-];
+// Convert backend post format to frontend format for display
+const convertBackendPostToFrontend = (backendPost: BackendPost): Post => {
+  // Format the date in a readable way
+  const postDate = new Date(backendPost.created_at);
+  const formattedDate = postDate.toLocaleDateString('en-US', {
+    month: '2-digit',
+    day: '2-digit',
+    year: 'numeric',
+  });
+
+  const mealTime =
+    postDate.getHours() < 11
+      ? 'Breakfast'
+      : postDate.getHours() < 16
+      ? 'Lunch'
+      : 'Dinner';
+
+  // Create a consistent post template
+  return {
+    id: backendPost.id,
+    username: backendPost.username,
+    dininghall: 'Rand Dining Center', // TODO: Add actual dining hall selection to create post form
+    date: `${formattedDate} ${mealTime}`,
+    visits: Math.floor(Math.random() * 50) + 1, // TODO: Implement real visit tracking
+    images:
+      backendPost.photos.length > 0
+        ? backendPost.photos.map(photo => ({
+            uri: photo.storage_key.startsWith('http')
+              ? photo.storage_key
+              : `https://images.unsplash.com/photo-1567337710282-00832b415979?w=400&h=400&fit=crop`, // Fallback food image
+            rating: backendPost.rating || 7.5, // Use rating from post or default to 7.5
+          }))
+        : [], // No placeholder image when no photos - will show menu items instead
+    notes: backendPost.caption || '',
+    menuItems: backendPost.menu_items || [],
+    rating: backendPost.rating || 7.5,
+  };
+};
 
 const DoresDineApp: React.FC = () => {
   const [searchText, setSearchText] = useState<string>('');
   const [activeTab, setActiveTab] = useState<string>('Feed');
   const [modalVisible, setModalVisible] = useState<boolean>(false);
-  const [posts, setPosts] = useState<Post[]>(samplePosts);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  // Fetch posts from backend
+  const fetchPosts = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${API_URL}/posts`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch posts');
+      }
+      const backendPosts: BackendPost[] = await response.json();
+      const frontendPosts = backendPosts.map(convertBackendPostToFrontend);
+      setPosts(frontendPosts);
+    } catch (error) {
+      console.error('Error fetching posts:', error);
+      Alert.alert('Error', 'Failed to load posts');
+      // Set empty array if fetch fails
+      setPosts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load posts on component mount
+  useEffect(() => {
+    fetchPosts();
+  }, []);
+
+  // Debug: Log posts when they change
+  useEffect(() => {
+    console.log('Posts updated:', posts.length, 'posts');
+    posts.forEach((post, index) => {
+      console.log(`Post ${index + 1}:`, {
+        id: post.id,
+        username: post.username,
+        images: post.images.length,
+        notes: post.notes ? post.notes.substring(0, 50) + '...' : 'No notes',
+      });
+    });
+  }, [posts]);
 
   const handleCreatePost = async (postData: PostData) => {
     // TODO: Replace hardcoded user ID with real authentication/user selection
@@ -63,6 +107,8 @@ const DoresDineApp: React.FC = () => {
         },
         body: JSON.stringify({
           caption: postData.notes || '',
+          rating: postData.rating,
+          menu_items: postData.menuItems,
           photos: postData.photos.map((photo, index) => ({
             storage_key: photo,
             display_order: index,
@@ -79,8 +125,9 @@ const DoresDineApp: React.FC = () => {
       } else {
         const newPost = await response.json();
         console.log('Post created successfully:', newPost);
-        // TODO: Convert backend post format to frontend Post format
         Alert.alert('Success', 'Post created successfully!');
+        // Refresh the posts list to show the new post
+        fetchPosts();
       }
     } catch (error) {
       console.error('Network error creating post:', error);
@@ -89,51 +136,6 @@ const DoresDineApp: React.FC = () => {
     setModalVisible(false);
   };
 
-  // Helper function to get or create a test user
-  const getOrCreateTestUser = async (): Promise<string> => {
-    const testUsername = 'testuser';
-    const testEmail = 'testuser@example.com';
-
-    try {
-      // First, try to get existing user
-      const getResponse = await fetch(
-        `${API_URL}/users/username/${testUsername}`,
-      );
-
-      if (getResponse.ok) {
-        const user = await getResponse.json();
-        console.log('Using existing test user:', user.id);
-        return user.id;
-      }
-
-      // If user doesn't exist (404), create it
-      if (getResponse.status === 404) {
-        const createResponse = await fetch(`${API_URL}/users`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            username: testUsername,
-            email: testEmail,
-          }),
-        });
-
-        if (createResponse.ok) {
-          const user = await createResponse.json();
-          console.log('Created new test user:', user.id);
-          return user.id;
-        }
-
-        throw new Error('Failed to create test user');
-      }
-
-      throw new Error('Failed to fetch user');
-    } catch (error) {
-      console.error('Error getting/creating test user:', error);
-      throw error; // Re-throw so the post creation fails with a proper error message
-    }
-  };
   const renderScreen = () => {
     switch (activeTab) {
       case 'Feed':
@@ -145,9 +147,21 @@ const DoresDineApp: React.FC = () => {
               onAddPress={() => setModalVisible(true)}
             />
             <ScrollView style={styles.feed}>
-              {posts.map(p => (
-                <PostCard key={p.id} post={p} />
-              ))}
+              {loading ? (
+                <Text
+                  style={{ padding: 20, fontSize: 16, textAlign: 'center' }}
+                >
+                  Loading posts...
+                </Text>
+              ) : posts.length > 0 ? (
+                posts.map(p => <PostCard key={p.id} post={p} />)
+              ) : (
+                <Text
+                  style={{ padding: 20, fontSize: 16, textAlign: 'center' }}
+                >
+                  No posts yet. Be the first to share a meal!
+                </Text>
+              )}
             </ScrollView>
           </>
         );

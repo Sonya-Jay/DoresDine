@@ -153,6 +153,50 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#000',
   },
+  menuItemsContainer: {
+    backgroundColor: '#f8f8f8',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    minHeight: 120,
+  },
+  menuItemsHeader: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 12,
+  },
+  menuItemWrapper: {
+    marginBottom: 6,
+  },
+  menuItemText: {
+    fontSize: 14,
+    color: '#555',
+    lineHeight: 20,
+  },
+  mealRatingWrapper: {
+    alignItems: 'flex-end',
+    marginTop: 12,
+  },
+  mealRating: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 20,
+    borderWidth: 2,
+  },
+  noContentContainer: {
+    backgroundColor: '#f0f0f0',
+    borderRadius: 12,
+    padding: 24,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  noContentText: {
+    fontSize: 14,
+    color: '#999',
+    fontStyle: 'italic',
+  },
   notesContainer: {
     marginBottom: 12,
   },

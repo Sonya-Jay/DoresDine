@@ -37,36 +37,69 @@ const PostCard: React.FC<PostCardProps> = ({ post }) => {
       </View>
 
       <View style={styles.imagesContainer}>
-        {post.images.map((img, idx) => (
-          <View
-            key={idx}
-            style={[
-              styles.imageWrapper,
-              post.images.length === 1 && styles.singleImageWrapper,
-            ]}
-          >
-            <Image
-              source={{ uri: img.uri }}
-              style={styles.foodImage}
-              resizeMode="cover"
-            />
+        {post.images.length > 0 ? (
+          post.images.map((img, idx) => (
             <View
+              key={idx}
               style={[
-                styles.rating,
-                {
-                  borderColor:
-                    img.rating >= 7
-                      ? '#4CAF50'
-                      : img.rating >= 5
-                      ? '#FFA726'
-                      : '#f44336',
-                },
+                styles.imageWrapper,
+                post.images.length === 1 && styles.singleImageWrapper,
               ]}
             >
-              <Text style={styles.ratingText}>{img.rating}</Text>
+              <Image
+                source={{ uri: img.uri }}
+                style={styles.foodImage}
+                resizeMode="cover"
+              />
+              <View
+                style={[
+                  styles.rating,
+                  {
+                    borderColor:
+                      img.rating >= 7
+                        ? '#4CAF50'
+                        : img.rating >= 5
+                        ? '#FFA726'
+                        : '#f44336',
+                  },
+                ]}
+              >
+                <Text style={styles.ratingText}>{img.rating}</Text>
+              </View>
+            </View>
+          ))
+        ) : post.menuItems.length > 0 ? (
+          <View style={styles.menuItemsContainer}>
+            <Text style={styles.menuItemsHeader}>What was eaten:</Text>
+            {post.menuItems.map((item, idx) => (
+              <View key={idx} style={styles.menuItemWrapper}>
+                <Text style={styles.menuItemText}>• {item}</Text>
+              </View>
+            ))}
+            {/* Show rating for the overall meal when no photos */}
+            <View style={styles.mealRatingWrapper}>
+              <View
+                style={[
+                  styles.mealRating,
+                  {
+                    borderColor:
+                      post.rating >= 7
+                        ? '#4CAF50'
+                        : post.rating >= 5
+                        ? '#FFA726'
+                        : '#f44336',
+                  },
+                ]}
+              >
+                <Text style={styles.ratingText}>{post.rating}</Text>
+              </View>
             </View>
           </View>
-        ))}
+        ) : (
+          <View style={styles.noContentContainer}>
+            <Text style={styles.noContentText}>No photos or menu items</Text>
+          </View>
+        )}
       </View>
 
       {post.notes ? (
