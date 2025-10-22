@@ -19,12 +19,14 @@ const convertBackendPostToFrontend = (backendPost: BackendPost): Post => {
     year: 'numeric',
   });
 
+  // Use the actual meal type from the post, or fallback to time-based detection
   const mealTime =
-    postDate.getHours() < 11
+    backendPost.meal_type ||
+    (postDate.getHours() < 11
       ? 'Breakfast'
       : postDate.getHours() < 16
       ? 'Lunch'
-      : 'Dinner';
+      : 'Dinner');
 
   // Create a consistent post template
   return {
@@ -121,6 +123,7 @@ const DoresDineApp: React.FC = () => {
           rating: postData.rating,
           menu_items: postData.menuItems,
           dining_hall_name: postData.restaurantName,
+          meal_type: postData.mealType,
           photos: postData.photos.map((photo, index) => ({
             storage_key: photo,
             display_order: index,

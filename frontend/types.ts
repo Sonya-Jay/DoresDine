@@ -17,6 +17,7 @@ export interface BackendPost {
   rating: number | null;
   menu_items: string[] | null;
   dining_hall_name: string | null;
+  meal_type: string | null;
   created_at: string;
   username: string;
   email: string;

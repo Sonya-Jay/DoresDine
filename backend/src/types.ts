@@ -12,6 +12,7 @@ export interface Post {
   rating: number;
   menu_items: string[] | null;
   dining_hall_name: string | null;
+  meal_type: string | null;
   created_at: Date;
 }
 
@@ -47,6 +48,7 @@ export interface CreatePostRequest {
   rating?: number;
   menu_items?: string[];
   dining_hall_name?: string;
+  meal_type?: string;
   photos?: Array<{
     storage_key: string;
     display_order: number;
