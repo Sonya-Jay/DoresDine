@@ -1,7 +1,10 @@
 // components/api/client.ts
 import { API_URL } from '@env';
-import { DiningHall, DayMenu, MenuItem } from '../../../backend/src/types/dining';
-
+import {
+  DiningHall,
+  DayMenu,
+  MenuItem,
+} from '../../../backend/src/types/dining';
 
 const baseUrl = API_URL.replace(/\/$/, '');
 
@@ -25,13 +28,13 @@ async function request<T>(path: string, opts: RequestInit = {}): Promise<T> {
 }
 
 export const api = {
-    getHalls: (): Promise<DiningHall[]> => request<DiningHall[]>('/dining/halls'),
+  getHalls: (): Promise<DiningHall[]> => request<DiningHall[]>('/dining/halls'),
   getHallMenu: (
     hallId: number,
   ): Promise<{ hall: string; schedule: DayMenu[] }> =>
     request<{ hall: string; schedule: DayMenu[] }>(
       `/dining/halls/${hallId}/menu`,
     ),
-  getMenuItems: (menuId: number): Promise<MenuItem[]> =>
-    request<MenuItem[]>(`/dining/menu/${menuId}/items`),
+  getMenuItems: (menuId: number, unitId: number): Promise<MenuItem[]> =>
+    request<MenuItem[]>(`/dining/menu/${menuId}/items?unitId=${unitId}`),
 };
