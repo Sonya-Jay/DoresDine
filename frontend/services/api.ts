@@ -101,10 +101,28 @@ const transformPost = (backendPost: BackendPost): Post => {
   const formattedDate = `${dateStr} ${mealType}`;
   
   // Build images array from photos
-  const images = backendPost.photos?.map((photo) => ({
-    uri: getPhotoUrl(photo.storage_key),
-    rating: backendPost.rating || 5.0,
-  })) || [];
+  // Filter out any photos with empty storage_key and ensure we have valid URLs
+  // Also filter out HEIC files as React Native Image doesn't support them
+  const images = (backendPost.photos || [])
+    .filter((photo) => {
+      if (!photo.storage_key || photo.storage_key.trim().length === 0) {
+        return false;
+      }
+      // Filter out HEIC files - React Native Image doesn't support them
+      const extension = photo.storage_key.toLowerCase().split('.').pop();
+      if (extension === 'heic' || extension === 'heif') {
+        console.warn('Skipping HEIC file (not supported):', photo.storage_key);
+        return false;
+      }
+      return true;
+    })
+    .map((photo) => {
+      const photoUrl = getPhotoUrl(photo.storage_key);
+      return {
+        uri: photoUrl,
+        rating: backendPost.rating || 5.0,
+      };
+    });
   
   // Keep the original ID from backend (could be UUID string or number)
   // Components will use this ID for API calls
