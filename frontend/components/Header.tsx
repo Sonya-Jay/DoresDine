@@ -1,4 +1,4 @@
-import { usePathname, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
     ScrollView,
@@ -19,12 +19,8 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ searchText, setSearchText }) => {
   const router = useRouter();
-  const pathname = usePathname();
   const insets = useSafeAreaInsets();
   const [searchModalVisible, setSearchModalVisible] = useState(false);
-  
-  // Check if we're on the profile tab
-  const isProfileTab = pathname === "/(tabs)/index" || pathname?.includes("/profile");
 
   const handleAddPress = () => {
     try {
@@ -66,15 +62,13 @@ const Header: React.FC<HeaderProps> = ({ searchText, setSearchText }) => {
             <TouchableOpacity style={{ marginLeft: 20 }}>
               <Icon name="menu" size={24} color="#000" />
             </TouchableOpacity>
-            {isProfileTab && (
-              <TouchableOpacity
-                style={{ marginLeft: 20 }}
-                onPress={handleSettingsPress}
-                accessibilityLabel="Profile Settings"
-              >
-                <Icon name="settings" size={24} color="#007AFF" />
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity
+              style={{ marginLeft: 20 }}
+              onPress={handleSettingsPress}
+              accessibilityLabel="Profile Settings"
+            >
+              <Icon name="settings" size={24} color="#000" />
+            </TouchableOpacity>
             <TouchableOpacity
               style={{ marginLeft: 20 }}
               onPress={handleAddPress}
