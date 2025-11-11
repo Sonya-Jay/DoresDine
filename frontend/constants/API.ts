@@ -21,6 +21,15 @@ export const API_ENDPOINTS = {
   DINING_HALLS: '/api/dining/halls',
   MENU_ITEMS: (menuId: number, unitId: number) => `/api/dining/menu/${menuId}/items?unitId=${unitId}`,
   MENU_SCHEDULE: (hallId: number) => `/api/dining/halls/${hallId}/menu`,
+
+  // Friend/Follow endpoints
+  FOLLOWS_FOLLOWING: '/follows/following',
+  FOLLOWS_FOLLOWERS: '/follows/followers',
+  FOLLOWS_ACTIVITY: '/follows/activity',
+  FOLLOWS_SUGGESTIONS: '/follows/suggestions',
+  FOLLOW_USER: (userId: string) => `/follows/${userId}`,
+  UNFOLLOW_USER: (userId: string) => `/follows/${userId}`,
+  CHECK_FOLLOWING: (userId: string) => `/follows/check/${userId}`,
 } as const;
 
 // Helper to construct photo URL from storage_key

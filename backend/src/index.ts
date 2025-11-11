@@ -4,6 +4,7 @@ import pool from "./db";
 import { attachUserFromToken } from "./middleware/auth";
 import authRouter from "./routes/auth";
 import diningRouter from "./routes/dining";
+import followsRouter from "./routes/follows";
 import postsRouter from "./routes/posts";
 import searchRouter from "./routes/search";
 import uploadRouter from "./routes/upload";
@@ -40,6 +41,7 @@ app.use((req, res, next) => {
 app.use("/auth", authRouter);
 app.use("/users", usersRouter);
 app.use("/posts", postsRouter);
+app.use("/follows", followsRouter);
 app.use("/search", searchRouter);
 app.use("/upload", uploadRouter);
 app.use("/api/dining", diningRouter);
