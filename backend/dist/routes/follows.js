@@ -67,9 +67,10 @@ router.get("/followers", async (req, res) => {
 // GET /follows/activity - Get recent posts from users the current user is following
 router.get("/activity", async (req, res) => {
     try {
-        const userId = req.headers["x-user-id"];
+        // Get userId from JWT token (attached by middleware) or fallback to header
+        const userId = req.userId || req.headers["x-user-id"];
         if (!userId) {
-            res.status(401).json({ error: "X-User-Id header is required" });
+            res.status(401).json({ error: "Authentication required" });
             return;
         }
         const query = `

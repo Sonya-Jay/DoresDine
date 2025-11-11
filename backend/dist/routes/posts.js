@@ -52,8 +52,13 @@ router.get("/", async (req, res) => {
       GROUP BY p.id, p.author_id, p.caption, p.rating, p.menu_items, p.dining_hall_name, p.meal_type, p.created_at, u.username, u.email, l.like_count, c.comment_count, ul.user_id
       ORDER BY p.created_at DESC
     `;
-        const result = await db_1.default.query(query, [userId]);
-        res.json(result.rows);
+        const result = await db_1.default.query(query, [userId || null]);
+        // Parse rating from string to number if present
+        const rows = result.rows.map((row) => ({
+            ...row,
+            rating: row.rating !== null && row.rating !== undefined ? parseFloat(row.rating) : null,
+        }));
+        res.json(rows);
     }
     catch (error) {
         console.error("Error fetching posts:", error);
@@ -113,7 +118,12 @@ router.get("/me", async (req, res) => {
       ORDER BY p.created_at DESC
     `;
         const result = await db_1.default.query(query, [userId]);
-        res.json(result.rows);
+        // Parse rating from string to number if present
+        const rows = result.rows.map((row) => ({
+            ...row,
+            rating: row.rating !== null && row.rating !== undefined ? parseFloat(row.rating) : null,
+        }));
+        res.json(rows);
     }
     catch (error) {
         console.error("Error fetching user's posts:", error);
@@ -252,8 +262,11 @@ router.post("/", async (req, res) => {
         // Commit transaction
         await client.query("COMMIT");
         // Return post with photos
+        // Parse rating from NUMERIC to number (DB returns as string)
+        const parsedRating = post.rating !== null && post.rating !== undefined ? parseFloat(String(post.rating)) : null;
         const response = {
             ...post,
+            rating: parsedRating,
             photos: photoRecords,
         };
         res.status(201).json(response);

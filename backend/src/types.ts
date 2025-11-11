@@ -12,7 +12,7 @@ export interface Post {
   id: string;
   author_id: string;
   caption: string | null;
-  rating: number;
+  rating: number | null;
   menu_items: string[] | null;
   dining_hall_name: string | null;
   meal_type: string | null;

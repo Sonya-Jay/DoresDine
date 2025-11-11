@@ -52,8 +52,13 @@ router.get("/", async (req: Request, res: Response): Promise<void> => {
       ORDER BY p.created_at DESC
     `;
 
-    const result = await pool.query(query, [userId]);
-    res.json(result.rows);
+    const result = await pool.query(query, [userId || null]);
+    // Parse rating from string to number if present
+    const rows = result.rows.map((row: any) => ({
+      ...row,
+      rating: row.rating !== null && row.rating !== undefined ? parseFloat(row.rating) : null,
+    }));
+    res.json(rows);
   } catch (error: any) {
     console.error("Error fetching posts:", error);
     res.status(500).json({ error: "Internal server error" });
@@ -115,7 +120,12 @@ router.get("/me", async (req: Request, res: Response): Promise<void> => {
     `;
 
     const result = await pool.query(query, [userId]);
-    res.json(result.rows);
+    // Parse rating from string to number if present
+    const rows = result.rows.map((row: any) => ({
+      ...row,
+      rating: row.rating !== null && row.rating !== undefined ? parseFloat(row.rating) : null,
+    }));
+    res.json(rows);
   } catch (error: any) {
     console.error("Error fetching user's posts:", error);
     res.status(500).json({ error: "Internal server error" });
@@ -292,8 +302,11 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
     await client.query("COMMIT");
 
     // Return post with photos
+    // Parse rating from NUMERIC to number (DB returns as string)
+    const parsedRating = post.rating !== null && post.rating !== undefined ? parseFloat(String(post.rating)) : null;
     const response: PostWithPhotos = {
       ...post,
+      rating: parsedRating,
       photos: photoRecords,
     };
 

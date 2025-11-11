@@ -11,30 +11,50 @@ function generateVerificationCode() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-async function sendVerificationEmail(email: string, code: string) {
+async function sendVerificationEmail(email: string, code: string): Promise<boolean> {
   // If SMTP env provided, try to send; otherwise log to console for dev
   const host = process.env.SMTP_HOST;
   if (!host) {
-    console.log(`Verification code for ${email}: ${code}`);
-    return;
+    console.log(`📧 Verification code for ${email}: ${code}`);
+    console.log(`   (SMTP not configured - code logged to console)`);
+    return false; // Email not sent
   }
 
-  const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT || 587),
-    secure: process.env.SMTP_SECURE === "true", // true for 465
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-  });
+  try {
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT || 587),
+      secure: process.env.SMTP_SECURE === "true", // true for 465
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
 
-  await transporter.sendMail({
-    from: process.env.SMTP_FROM || `no-reply@doresdine.local`,
-    to: email,
-    subject: "DoresDine email verification code",
-    text: `Your verification code is: ${code}`,
-  });
+    await transporter.sendMail({
+      from: process.env.SMTP_FROM || `no-reply@doresdine.local`,
+      to: email,
+      subject: "DoresDine email verification code",
+      text: `Your verification code is: ${code}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px;">
+          <h2>DoresDine Email Verification</h2>
+          <p>Your verification code is:</p>
+          <h1 style="color: #007AFF; font-size: 32px; letter-spacing: 4px;">${code}</h1>
+          <p>This code will expire in 15 minutes.</p>
+          <p>If you didn't request this code, you can safely ignore this email.</p>
+        </div>
+      `,
+    });
+    
+    console.log(`✅ Verification email sent to ${email}`);
+    return true; // Email sent successfully
+  } catch (error: any) {
+    console.error(`❌ Failed to send email to ${email}:`, error.message);
+    // Log code to console as fallback
+    console.log(`📧 Verification code for ${email}: ${code}`);
+    return false; // Email not sent
+  }
 }
 
 // POST /auth/register
@@ -79,16 +99,24 @@ router.post("/register", async (req: Request, res: Response) => {
     );
 
     // Send verification email (or log)
-    await sendVerificationEmail(email.trim().toLowerCase(), verification_code);
+    const emailSent = await sendVerificationEmail(email.trim().toLowerCase(), verification_code);
 
     const user = result.rows[0];
     
-    // Always send email - if SMTP not configured, log to console
-    // Don't return code in response for security
-    return res.status(201).json({ 
+    // If SMTP is not configured, return the code in development mode
+    // This allows testing without email setup
+    const response: any = { 
       message: "User created, verify your email", 
       user: { id: user.id, email: user.email, first_name: user.first_name, last_name: user.last_name }
-    });
+    };
+    
+    // Only return code if SMTP is not configured (development mode)
+    if (!process.env.SMTP_HOST) {
+      response.verification_code = verification_code;
+      response.message = "User created. Check console for verification code (SMTP not configured)";
+    }
+    
+    return res.status(201).json(response);
   } catch (err: any) {
     console.error("Error in register:", err);
     if (err.code === "23505") {
@@ -114,8 +142,17 @@ router.post("/resend", async (req: Request, res: Response) => {
     );
     if (result.rows.length === 0) return res.status(404).json({ error: "User not found" });
 
-    await sendVerificationEmail(email.trim().toLowerCase(), code);
-    return res.json({ message: "Verification code sent" });
+    const emailSent = await sendVerificationEmail(email.trim().toLowerCase(), code);
+    
+    const response: any = { message: "Verification code sent" };
+    
+    // If SMTP is not configured, return the code in development mode
+    if (!process.env.SMTP_HOST) {
+      response.verification_code = code;
+      response.message = "Verification code sent. Check console for code (SMTP not configured)";
+    }
+    
+    return res.json(response);
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Internal server error" });
@@ -126,26 +163,43 @@ router.post("/resend", async (req: Request, res: Response) => {
 router.post("/verify", async (req: Request, res: Response) => {
   try {
     const { email, code } = req.body as { email: string; code: string };
-    if (!email || !code) return res.status(400).json({ error: "email and code required" });
+    
+    // Validate required fields with specific error messages
+    if (!email && !code) {
+      return res.status(400).json({ error: "Email and verification code are required" });
+    }
+    if (!email || !email.trim()) {
+      return res.status(400).json({ error: "Email is required" });
+    }
+    if (!code || !code.trim()) {
+      return res.status(400).json({ error: "Verification code is required" });
+    }
+
+    // Validate code format (6 digits)
+    if (!/^\d{6}$/.test(code.trim())) {
+      return res.status(400).json({ error: "Verification code must be 6 digits" });
+    }
 
     const result = await pool.query(
       `SELECT id, verification_code, verification_code_expires FROM users WHERE email = $1 LIMIT 1`,
       [email.trim().toLowerCase()]
     );
-    if (result.rows.length === 0) return res.status(404).json({ error: "User not found" });
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
 
     const user = result.rows[0];
     if (!user.verification_code || !user.verification_code_expires) {
-      return res.status(400).json({ error: "No verification code set for this user" });
+      return res.status(400).json({ error: "No verification code set for this user. Please request a new code." });
     }
 
     const now = new Date();
     if (now > new Date(user.verification_code_expires)) {
-      return res.status(400).json({ error: "Verification code expired" });
+      return res.status(400).json({ error: "Verification code has expired. Please request a new code." });
     }
 
-    if (code !== user.verification_code) {
-      return res.status(400).json({ error: "Invalid verification code" });
+    if (code.trim() !== user.verification_code) {
+      return res.status(400).json({ error: "Invalid verification code. Please check and try again." });
     }
 
     // mark verified and clear code
@@ -163,23 +217,61 @@ router.post("/verify", async (req: Request, res: Response) => {
 router.post("/login", async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body as { email: string; password: string };
-    if (!email || !password) return res.status(400).json({ error: "email and password required" });
+    
+    // Validate required fields with specific error messages
+    if (!email && !password) {
+      return res.status(400).json({ error: "Email and password are required" });
+    }
+    if (!email || !email.trim()) {
+      return res.status(400).json({ error: "Email is required" });
+    }
+    if (!password || !password.trim()) {
+      return res.status(400).json({ error: "Password is required" });
+    }
 
-    const result = await pool.query(`SELECT id, password_hash, email_verified FROM users WHERE email = $1 LIMIT 1`, [email.trim().toLowerCase()]);
-    if (result.rows.length === 0) return res.status(400).json({ error: "Invalid credentials" });
+    // Validate email format
+    const emailLower = email.trim().toLowerCase();
+    if (!emailLower.endsWith('@vanderbilt.edu')) {
+      return res.status(400).json({ error: "Only Vanderbilt email addresses (@vanderbilt.edu) are allowed" });
+    }
+
+    // Validate email username part
+    const emailUsername = emailLower.split('@')[0];
+    if (!emailUsername || emailUsername.length === 0) {
+      return res.status(400).json({ error: "Please enter your email username" });
+    }
+
+    // Validate password length
+    if (password.length < 6) {
+      return res.status(400).json({ error: "Password must be at least 6 characters" });
+    }
+
+    const result = await pool.query(
+      `SELECT id, password_hash, email_verified FROM users WHERE email = $1 LIMIT 1`,
+      [emailLower]
+    );
+    if (result.rows.length === 0) {
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
 
     const user = result.rows[0];
-    if (!user.password_hash) return res.status(400).json({ error: "Invalid credentials" });
+    if (!user.password_hash) {
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
 
     const ok = await bcrypt.compare(password, user.password_hash);
-    if (!ok) return res.status(400).json({ error: "Invalid credentials" });
+    if (!ok) {
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
 
-    if (!user.email_verified) return res.status(403).json({ error: "Email not verified" });
+    if (!user.email_verified) {
+      return res.status(403).json({ error: "Email not verified. Please verify your email before logging in." });
+    }
 
     const token = signToken(user.id);
     return res.json({ token });
   } catch (err) {
-    console.error(err);
+    console.error("Error in login:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
