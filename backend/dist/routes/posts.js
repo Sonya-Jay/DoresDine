@@ -80,6 +80,16 @@ router.post("/", async (req, res) => {
         }
         const { caption, rating, menu_items, dining_hall_name, meal_type, photos, } = req.body;
         // Validation
+        if (rating !== undefined && rating !== null) {
+            if (typeof rating !== "number") {
+                res.status(400).json({ error: "rating must be a number" });
+                return;
+            }
+            if (rating < 1.0 || rating > 10.0) {
+                res.status(400).json({ error: "rating must be between 1.0 and 10.0" });
+                return;
+            }
+        }
         if (caption !== undefined && caption !== null) {
             if (typeof caption !== "string") {
                 res.status(400).json({ error: "caption must be a string" });
@@ -154,12 +164,16 @@ router.post("/", async (req, res) => {
         // Begin transaction
         await client.query("BEGIN");
         // Insert post
+        // Round rating to 1 decimal place if provided
+        const roundedRating = rating !== undefined && rating !== null
+            ? Math.round(rating * 10) / 10
+            : null;
         const postResult = await client.query(`INSERT INTO posts (author_id, caption, rating, menu_items, dining_hall_name, meal_type)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`, [
             userId,
             caption || null,
-            rating || null,
+            roundedRating,
             menu_items || null,
             dining_hall_name || null,
             meal_type || null,

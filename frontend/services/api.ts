@@ -81,9 +81,12 @@ const getUserIdSync = (): string => {
 // Helper function to get headers with user ID
 const getHeaders = (includeContentType: boolean = true): HeadersInit => {
   const headers: HeadersInit = {};
-  // Prefer Authorization bearer token if available
-  if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
-  else headers['X-User-Id'] = getUserIdSync();
+  // Only use Authorization bearer token - no fallback to X-User-Id
+  // This ensures we require proper authentication
+  if (authToken) {
+    headers['Authorization'] = `Bearer ${authToken}`;
+  }
+  // If no token, don't add any auth header (will fail auth checks)
   
   if (includeContentType) {
     headers['Content-Type'] = 'application/json';
@@ -99,7 +102,19 @@ export const authRegister = async (payload: { first_name: string; last_name: str
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  if (!res.ok) throw new Error((await res.json()).error || 'Registration failed');
+  
+  if (!res.ok) {
+    let errorMessage = 'Registration failed';
+    try {
+      const errorData = await res.json();
+      errorMessage = errorData.error || errorMessage;
+    } catch (e) {
+      // If response is not JSON, use status text
+      errorMessage = res.statusText || errorMessage;
+    }
+    throw new Error(errorMessage);
+  }
+  
   return await res.json();
 };
 

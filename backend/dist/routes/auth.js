@@ -43,6 +43,11 @@ router.post("/register", async (req, res) => {
         if (!first_name || !last_name || !email || !password) {
             return res.status(400).json({ error: "Missing required fields" });
         }
+        // Validate email is vanderbilt.edu
+        const emailLower = email.trim().toLowerCase();
+        if (!emailLower.endsWith('@vanderbilt.edu')) {
+            return res.status(400).json({ error: "Only Vanderbilt email addresses (@vanderbilt.edu) are allowed" });
+        }
         if (typeof password !== "string" || password.length < 6) {
             return res
                 .status(400)
@@ -51,9 +56,11 @@ router.post("/register", async (req, res) => {
         const password_hash = await bcrypt_1.default.hash(password, 10);
         const verification_code = generateVerificationCode();
         const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
-        const result = await db_1.default.query(`INSERT INTO users (id, first_name, last_name, email, password_hash, verification_code, verification_code_expires)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING id, username, email, first_name, last_name, email_verified`, [(0, uuid_1.v4)(), first_name.trim(), last_name.trim(), email.trim().toLowerCase(), password_hash, verification_code, expires]);
+        // Generate a username from email (before @) if not provided
+        const username = email.trim().toLowerCase().split('@')[0];
+        const result = await db_1.default.query(`INSERT INTO users (id, username, first_name, last_name, email, password_hash, verification_code, verification_code_expires)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING id, email, first_name, last_name, email_verified`, [(0, uuid_1.v4)(), username, first_name.trim(), last_name.trim(), email.trim().toLowerCase(), password_hash, verification_code, expires]);
         // Send verification email (or log)
         await sendVerificationEmail(email.trim().toLowerCase(), verification_code);
         const user = result.rows[0];

@@ -12,7 +12,16 @@ const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
 // Middleware
-app.use(express.json());
+// Apply JSON parsing conditionally - skip for upload routes (multer needs raw body)
+// Increase body size limit for JSON (for large posts with many photos)
+app.use((req, res, next) => {
+  // Skip JSON parsing for file upload routes (multer needs raw multipart/form-data)
+  if (req.path.startsWith('/upload')) {
+    return next();
+  }
+  // Apply JSON parsing with increased limit for other routes
+  express.json({ limit: '20mb' })(req, res, next);
+});
 
 // Attach user from Authorization Bearer token (optional)
 app.use(attachUserFromToken);

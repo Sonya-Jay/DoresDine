@@ -18,7 +18,7 @@ export {
 
 export const unstable_settings = {
   // Ensure that reloading on `/modal` keeps a back button present.
-  initialRouteName: '(tabs)',
+  initialRouteName: 'login', // Start with login, will redirect to tabs if authenticated
 };
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
@@ -60,27 +60,40 @@ function RootLayoutNav() {
         await initAuthFromStorage();
         // If token exists but /users/me fails, treat user as unauthenticated
         await getMe();
+        // User is authenticated, navigate to tabs
+        // Only navigate if we're not already on tabs
+        const currentPath = router.pathname || '';
+        if (!currentPath.includes('(tabs)')) {
+          router.replace('/(tabs)');
+        }
       } catch (err) {
-        // Clear stored token and navigate to login
+        console.log('Auth check failed, staying on login:', err);
+        // Clear stored token and any old user ID
         try {
           await AsyncStorage.removeItem('authToken');
         } catch (e) {
           /* ignore */
         }
-        router.replace('/login');
+        // Ensure we're on login screen
+        const currentPath = router.pathname || '';
+        if (!currentPath.includes('login') && !currentPath.includes('register') && !currentPath.includes('verify')) {
+          router.replace('/login');
+        }
       } finally {
         setCheckedAuth(true);
       }
     })();
   }, [router]);
 
-  // While we check auth, avoid rendering the tabs
-  if (!checkedAuth) return null;
-
+  // Always render the Stack, even while checking auth
+  // The initial route is 'login', so it will show login while checking
   return (
     <SafeAreaProvider>
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <Stack>
+          <Stack.Screen name="login" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
+          <Stack.Screen name="register" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
+          <Stack.Screen name="verify" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
         </Stack>

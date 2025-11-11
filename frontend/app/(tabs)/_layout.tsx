@@ -45,6 +45,20 @@ export default function TabLayout() {
           presentation: 'modal',
         }}
       />
+      <Tabs.Screen
+        name="schedule-details"
+        options={{
+          title: 'Menu Schedule',
+          headerShown: false,
+        }}
+      />
+      <Tabs.Screen
+        name="menu-items"
+        options={{
+          title: 'Menu Items',
+          headerShown: false,
+        }}
+      />
     </Tabs>
   );
 }

@@ -56,4 +56,8 @@ frontend/android/
 # Logs
 *.log
 logs/
-node_modules
+
+# Deployment files
+backend/doresdine-backend-deploy.zip
+backend/deployment/
+*.zip
