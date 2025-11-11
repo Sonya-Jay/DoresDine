@@ -1,17 +1,19 @@
+import { getMe, initAuthFromStorage } from '@/services/api';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { useEffect, useState } from 'react';
 import 'react-native-reanimated';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { useColorScheme } from '@/components/useColorScheme';
 
 export {
-  // Catch any errors thrown by the Layout component.
-  ErrorBoundary,
+    // Catch any errors thrown by the Layout component.
+    ErrorBoundary
 } from 'expo-router';
 
 export const unstable_settings = {
@@ -48,6 +50,32 @@ export default function RootLayout() {
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
+  const router = useRouter();
+  const [checkedAuth, setCheckedAuth] = useState(false);
+
+  // On mount, initialize auth from storage and fetch current user.
+  useEffect(() => {
+    (async () => {
+      try {
+        await initAuthFromStorage();
+        // If token exists but /users/me fails, treat user as unauthenticated
+        await getMe();
+      } catch (err) {
+        // Clear stored token and navigate to login
+        try {
+          await AsyncStorage.removeItem('authToken');
+        } catch (e) {
+          /* ignore */
+        }
+        router.replace('/login');
+      } finally {
+        setCheckedAuth(true);
+      }
+    })();
+  }, [router]);
+
+  // While we check auth, avoid rendering the tabs
+  if (!checkedAuth) return null;
 
   return (
     <SafeAreaProvider>

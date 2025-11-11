@@ -1,16 +1,21 @@
 import "dotenv/config";
 import express from "express";
-import usersRouter from "./routes/users";
+import pool from "./db";
+import { attachUserFromToken } from "./middleware/auth";
+import authRouter from "./routes/auth";
+import diningRouter from "./routes/dining";
 import postsRouter from "./routes/posts";
 import uploadRouter from "./routes/upload";
-import pool from "./db";
-import diningRouter from "./routes/dining";
+import usersRouter from "./routes/users";
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
 // Middleware
 app.use(express.json());
+
+// Attach user from Authorization Bearer token (optional)
+app.use(attachUserFromToken);
 
 // Serve uploaded files statically
 app.use("/uploads", express.static("uploads"));
@@ -22,6 +27,7 @@ app.use((req, res, next) => {
 });
 
 // Routes
+app.use("/auth", authRouter);
 app.use("/users", usersRouter);
 app.use("/posts", postsRouter);
 app.use("/upload", uploadRouter);

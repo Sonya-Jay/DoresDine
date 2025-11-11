@@ -5,7 +5,29 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const db_1 = __importDefault(require("../db"));
+const auth_1 = require("../middleware/auth");
 const router = (0, express_1.Router)();
+// GET /users/me - return current authenticated user's profile
+router.get('/me', auth_1.requireAuth, async (req, res) => {
+    try {
+        // user id may be attached by middleware to req.userId or present in header
+        const userId = req.userId || req.headers['x-user-id'];
+        if (!userId) {
+            res.status(401).json({ error: 'Authentication required' });
+            return;
+        }
+        const result = await db_1.default.query(`SELECT id, username, email, first_name, last_name, email_verified, created_at FROM users WHERE id = $1 LIMIT 1`, [userId]);
+        if (result.rows.length === 0) {
+            res.status(404).json({ error: 'User not found' });
+            return;
+        }
+        res.status(200).json(result.rows[0]);
+    }
+    catch (error) {
+        console.error('Error fetching current user:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
 // GET /users/username/:username - Get user by username
 router.get('/username/:username', async (req, res) => {
     try {

@@ -5,15 +5,19 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 require("dotenv/config");
 const express_1 = __importDefault(require("express"));
-const users_1 = __importDefault(require("./routes/users"));
+const db_1 = __importDefault(require("./db"));
+const auth_1 = require("./middleware/auth");
+const auth_2 = __importDefault(require("./routes/auth"));
+const dining_1 = __importDefault(require("./routes/dining"));
 const posts_1 = __importDefault(require("./routes/posts"));
 const upload_1 = __importDefault(require("./routes/upload"));
-const db_1 = __importDefault(require("./db"));
-const dining_1 = __importDefault(require("./routes/dining"));
+const users_1 = __importDefault(require("./routes/users"));
 const app = (0, express_1.default)();
 const PORT = Number(process.env.PORT) || 3000;
 // Middleware
 app.use(express_1.default.json());
+// Attach user from Authorization Bearer token (optional)
+app.use(auth_1.attachUserFromToken);
 // Serve uploaded files statically
 app.use("/uploads", express_1.default.static("uploads"));
 // Request logging (simple)
@@ -22,6 +26,7 @@ app.use((req, res, next) => {
     next();
 });
 // Routes
+app.use("/auth", auth_2.default);
 app.use("/users", users_1.default);
 app.use("/posts", posts_1.default);
 app.use("/upload", upload_1.default);

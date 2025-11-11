@@ -1,8 +1,36 @@
 import { Request, Response, Router } from 'express';
 import pool from '../db';
+import { requireAuth } from '../middleware/auth';
 import { CreateUserRequest, User } from '../types';
 
 const router = Router();
+
+// GET /users/me - return current authenticated user's profile
+router.get('/me', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    // user id may be attached by middleware to req.userId or present in header
+    const userId = (req as any).userId || (req.headers as any)['x-user-id'];
+    if (!userId) {
+      res.status(401).json({ error: 'Authentication required' });
+      return;
+    }
+
+    const result = await pool.query(
+      `SELECT id, username, email, first_name, last_name, email_verified, created_at FROM users WHERE id = $1 LIMIT 1`,
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    res.status(200).json(result.rows[0]);
+  } catch (error) {
+    console.error('Error fetching current user:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 // GET /users/username/:username - Get user by username
 router.get('/username/:username', async (req: Request, res: Response): Promise<void> => {

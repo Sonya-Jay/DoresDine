@@ -1,8 +1,11 @@
-import { API_URL, API_ENDPOINTS, getPhotoUrl } from '@/constants/API';
-import { BackendPost, Post, Comment, PostData } from '@/types';
+import { API_ENDPOINTS, API_URL, getPhotoUrl } from '@/constants/API';
+import { BackendPost, Comment, Post, PostData } from '@/types';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // User ID storage - in production, use AsyncStorage or auth context
 let currentUserId: string | null = null;
+let authToken: string | null = null;
+let currentUser: any = null;
 
 // User interface for API responses
 interface User {
@@ -77,9 +80,10 @@ const getUserIdSync = (): string => {
 
 // Helper function to get headers with user ID
 const getHeaders = (includeContentType: boolean = true): HeadersInit => {
-  const headers: HeadersInit = {
-    'X-User-Id': getUserIdSync(),
-  };
+  const headers: HeadersInit = {};
+  // Prefer Authorization bearer token if available
+  if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+  else headers['X-User-Id'] = getUserIdSync();
   
   if (includeContentType) {
     headers['Content-Type'] = 'application/json';
@@ -87,6 +91,99 @@ const getHeaders = (includeContentType: boolean = true): HeadersInit => {
   
   return headers;
 };
+
+// Auth helpers
+export const authRegister = async (payload: { first_name: string; last_name: string; email: string; password: string; }) => {
+  const res = await fetch(`${API_URL}/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error((await res.json()).error || 'Registration failed');
+  return await res.json();
+};
+
+export const authResend = async (email: string) => {
+  const res = await fetch(`${API_URL}/auth/resend`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+  if (!res.ok) throw new Error((await res.json()).error || 'Failed to resend');
+  return await res.json();
+};
+
+export const authVerify = async (email: string, code: string) => {
+  const res = await fetch(`${API_URL}/auth/verify`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, code }),
+  });
+  if (!res.ok) throw new Error((await res.json()).error || 'Verification failed');
+  const data = await res.json();
+  if (data.token) {
+    authToken = data.token;
+    await AsyncStorage.setItem('authToken', authToken as string);
+  }
+  return data.token;
+};
+
+export const authLogin = async (email: string, password: string) => {
+  const res = await fetch(`${API_URL}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+  if (!res.ok) throw new Error((await res.json()).error || 'Login failed');
+  const data = await res.json();
+  if (data.token) {
+    authToken = data.token;
+    await AsyncStorage.setItem('authToken', authToken as string);
+  }
+  return data.token;
+};
+
+// Initialize token from storage (call on app startup if desired)
+export const initAuthFromStorage = async () => {
+  try {
+    const t = await AsyncStorage.getItem('authToken');
+    if (t) authToken = t;
+  } catch (err) {
+    console.error('Failed to load auth token', err);
+  }
+};
+
+export const getMe = async () => {
+  try {
+    const res = await fetch(`${API_URL}/users/me`, {
+      headers: getHeaders(false),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(err.error || 'Failed to fetch current user');
+    }
+    const user = await res.json();
+    currentUser = user;
+    currentUserId = user.id;
+    return user;
+  } catch (err) {
+    // rethrow so callers can handle redirect/cleanup
+    throw err;
+  }
+};
+
+export const logout = async () => {
+  authToken = null;
+  currentUser = null;
+  currentUserId = null;
+  try {
+    await AsyncStorage.removeItem('authToken');
+  } catch (err) {
+    console.error('Failed to clear auth token', err);
+  }
+};
+
+export const getCurrentUser = () => currentUser;
 
 // Transform backend post to frontend post format
 const transformPost = (backendPost: BackendPost): Post => {

@@ -56,3 +56,4 @@ frontend/android/
 # Logs
 *.log
 logs/
+node_modules
