@@ -43,20 +43,16 @@ export default function RegisterScreen() {
     try {
       setLoading(true);
       const fullEmail = getFullEmail();
-      const response = await api.authRegister({ 
+      await api.authRegister({ 
         first_name: firstName.trim(), 
         last_name: lastName.trim(), 
         email: fullEmail.toLowerCase(), 
         password 
       });
-      // Navigate to verify screen and pass email (and code if in dev mode)
-      const verifyParams: any = { email: fullEmail.toLowerCase() };
-      if (response.verification_code) {
-        verifyParams.code = response.verification_code;
-      }
+      // Navigate to verify screen - user should check their email
       router.push({
         pathname: '/verify',
-        params: verifyParams,
+        params: { email: fullEmail.toLowerCase() },
       });
     } catch (err: any) {
       console.error('Registration error:', err);

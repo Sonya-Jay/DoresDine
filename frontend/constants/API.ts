@@ -25,15 +25,14 @@ export const API_ENDPOINTS = {
 
 // Helper to construct photo URL from storage_key
 export const getPhotoUrl = (storageKey: string): string => {
-  // If storage_key is already a full URL, return it
+  // If storage_key is already a full URL (S3 or other), return it
   if (storageKey.startsWith('http://') || storageKey.startsWith('https://')) {
     return storageKey;
   }
   // Backend returns storage_key as relative path like "uploads/filename.jpg"
   // Backend serves uploads from /uploads route (see backend/src/index.ts)
+  // This is fallback for local storage (not recommended for production)
   const baseUrl = API_URL.replace(/\/$/, ''); // Remove trailing slash
-  // storage_key from backend is relative to project root, but served at /uploads
-  // So if storage_key is "uploads/file.jpg", we need to serve it as "/uploads/file.jpg"
   const key = storageKey.startsWith('/') ? storageKey : `/${storageKey}`;
   return `${baseUrl}${key}`;
 };

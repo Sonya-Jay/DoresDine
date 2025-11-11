@@ -64,17 +64,12 @@ router.post("/register", async (req, res) => {
         // Send verification email (or log)
         await sendVerificationEmail(email.trim().toLowerCase(), verification_code);
         const user = result.rows[0];
-        // In development (no SMTP), include verification code in response for testing
-        const isDevelopment = !process.env.SMTP_HOST;
-        const response = {
+        // Always send email - if SMTP not configured, log to console
+        // Don't return code in response for security
+        return res.status(201).json({
             message: "User created, verify your email",
             user: { id: user.id, email: user.email, first_name: user.first_name, last_name: user.last_name }
-        };
-        if (isDevelopment) {
-            response.verification_code = verification_code;
-            response.note = "Development mode: Verification code included. Check backend logs in production.";
-        }
-        return res.status(201).json(response);
+        });
     }
     catch (err) {
         console.error("Error in register:", err);
@@ -97,14 +92,7 @@ router.post("/resend", async (req, res) => {
         if (result.rows.length === 0)
             return res.status(404).json({ error: "User not found" });
         await sendVerificationEmail(email.trim().toLowerCase(), code);
-        // In development (no SMTP), include verification code in response for testing
-        const isDevelopment = !process.env.SMTP_HOST;
-        const response = { message: "Verification code sent" };
-        if (isDevelopment) {
-            response.verification_code = code;
-            response.note = "Development mode: Verification code included.";
-        }
-        return res.json(response);
+        return res.json({ message: "Verification code sent" });
     }
     catch (err) {
         console.error(err);

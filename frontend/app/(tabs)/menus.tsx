@@ -13,6 +13,7 @@ import BottomNav from "@/components/BottomNav";
 import Header from "@/components/Header";
 import { fetchDiningHalls } from "@/services/api";
 import { DiningHall } from "@/types";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // Helper function to determine if a dining hall is open (placeholder logic)
 // In a real app, this would check the schedule API
@@ -26,6 +27,7 @@ const isHallOpen = (hallName: string): boolean => {
 };
 
 export default function MenusScreen() {
+  const insets = useSafeAreaInsets();
   const [searchText, setSearchText] = useState("");
   const [halls, setHalls] = useState<DiningHall[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,6 +65,10 @@ export default function MenusScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: "#fff" }}>
       <FlatList
+        style={{ flex: 1 }}
+        contentContainerStyle={{ 
+          paddingBottom: 80, // Space for bottom nav
+        }}
         ListHeaderComponent={
           <>
             <Header searchText={searchText} setSearchText={setSearchText} />
@@ -95,7 +101,6 @@ export default function MenusScreen() {
             </TouchableOpacity>
           );
         }}
-        contentContainerStyle={styles.listContent}
         ListEmptyComponent={
           loading ? (
             <ActivityIndicator size="large" style={{ marginTop: 20 }} />
@@ -109,9 +114,19 @@ export default function MenusScreen() {
             </Text>
           )
         }
-        scrollEnabled={true}
+        showsVerticalScrollIndicator={false}
       />
-      <BottomNav />
+      <View style={{ 
+        position: 'absolute', 
+        bottom: 0, 
+        left: 0, 
+        right: 0,
+        backgroundColor: '#fff',
+        borderTopWidth: 1,
+        borderTopColor: '#f0f0f0',
+      }}>
+        <BottomNav />
+      </View>
     </View>
   );
 }
@@ -127,15 +142,12 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#000",
   },
-  listContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 100,
-  },
   facilityCard: {
     backgroundColor: "#D4A574",
     borderRadius: 12,
     padding: 20,
     marginBottom: 12,
+    marginHorizontal: 20,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
