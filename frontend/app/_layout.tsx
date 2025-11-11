@@ -62,7 +62,7 @@ function RootLayoutNav() {
         await getMe();
         // User is authenticated, navigate to tabs
         // Only navigate if we're not already on tabs
-        const currentPath = router.pathname || '';
+        const currentPath = (router as any).pathname || '';
         if (!currentPath.includes('(tabs)')) {
           router.replace('/(tabs)');
         }
@@ -75,7 +75,7 @@ function RootLayoutNav() {
           /* ignore */
         }
         // Ensure we're on login screen
-        const currentPath = router.pathname || '';
+        const currentPath = (router as any).pathname || '';
         if (!currentPath.includes('login') && !currentPath.includes('register') && !currentPath.includes('verify')) {
           router.replace('/login');
         }

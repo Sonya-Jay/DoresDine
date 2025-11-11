@@ -298,6 +298,37 @@ export const fetchPosts = async (): Promise<Post[]> => {
   }
 };
 
+// Fetch posts for the authenticated user (profile page)
+export const fetchMyPosts = async (): Promise<Post[]> => {
+  try {
+    const rawHeaders = getHeaders(false);
+    // Normalize headers into a plain object we can modify safely
+    const headersObj: Record<string, string> = {};
+    if (rawHeaders && typeof rawHeaders === 'object' && !Array.isArray(rawHeaders)) {
+      Object.assign(headersObj, rawHeaders as Record<string, string>);
+    }
+
+    // Include fallback X-User-Id header for development when no auth token is present
+    if (!headersObj['Authorization']) {
+      headersObj['X-User-Id'] = getUserIdSync();
+    }
+
+    const response = await fetch(`${API_URL}/posts/me`, {
+      headers: headersObj,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch my posts: ${response.statusText}`);
+    }
+
+    const backendPosts: BackendPost[] = await response.json();
+    return backendPosts.map(transformPost);
+  } catch (error) {
+    console.error('Error fetching my posts:', error);
+    throw error;
+  }
+};
+
 // Create a new post
 export const createPost = async (postData: PostData): Promise<Post> => {
   try {
