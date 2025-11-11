@@ -107,4 +107,51 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
+// PATCH /users/me - update current authenticated user's profile
+router.patch('/me', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as any).userId || (req.headers as any)['x-user-id'];
+    if (!userId) {
+      res.status(401).json({ error: 'Authentication required' });
+      return;
+    }
+
+    // Acceptable fields to update
+    const allowedFields = [
+      'first_name', 'last_name', 'username', 'bio', 'gender', 'birthday', 'email', 'phone',
+      'notification_pref', 'language', 'timezone', 'privacy', 'theme', 'profile_photo'
+    ];
+
+    const updates: Record<string, any> = {};
+    for (const field of allowedFields) {
+      if (field in req.body) {
+        updates[field] = req.body[field];
+      }
+    }
+
+    if (Object.keys(updates).length === 0) {
+      res.status(400).json({ error: 'No valid fields to update' });
+      return;
+    }
+
+    // Build SET clause and values
+    const setClauses = Object.keys(updates).map((field, i) => `${field} = $${i + 1}`);
+    const values = Object.values(updates);
+    values.push(userId); // For WHERE clause
+
+    const query = `UPDATE users SET ${setClauses.join(', ')} WHERE id = $${values.length} RETURNING *`;
+    const result = await pool.query<User>(query, values as any[]);
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    res.status(200).json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating user:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export default router;

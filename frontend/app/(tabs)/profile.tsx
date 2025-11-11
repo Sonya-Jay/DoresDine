@@ -1,9 +1,11 @@
 import BottomNav from "@/components/BottomNav";
 import Header from "@/components/Header";
 import { getCurrentUser, getMe, logout, updateProfile } from '@/services/api';
+import * as ImagePicker from "expo-image-picker";
 import { useRouter } from 'expo-router';
 import React, { useState } from "react";
 import { Alert, FlatList, Image, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import Icon from "react-native-vector-icons/Feather";
 
 export default function ProfileScreen() {
   const [searchText, setSearchText] = useState("");
@@ -18,14 +20,53 @@ export default function ProfileScreen() {
 
   // Open modal for editing a field
   const openEditModal = (field: string, value: string) => {
+    if (field === 'Profile Photo') {
+      handleEditPhoto();
+      return;
+    }
     setEditField(field);
     setEditValue(value);
     setModalVisible(true);
   };
 
+  // Handle profile photo edit
+  const handleEditPhoto = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permission denied", "We need camera roll permissions");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 0.8,
+    });
+    if (result.canceled || !result.assets || result.assets.length === 0) return;
+    const asset = result.assets[0];
+    try {
+      // Use uploadPhoto from services/api.ts
+      const { uploadPhoto } = await import("@/services/api");
+      const fileName = asset.fileName || `profile_${Date.now()}.jpg`;
+      const storageKey = await uploadPhoto(asset.uri, fileName);
+      await updateProfile({ profile_photo: storageKey });
+      const updatedUser = await getMe();
+      setUser(updatedUser);
+    } catch (err: any) {
+      Alert.alert("Error", err.message || "Failed to upload photo");
+    }
+  };
+
+  // Dropdown options for preference fields
+  const dropdownOptions: Record<string, string[]> = {
+    'Notifications': ['enabled', 'disabled', 'silent'],
+    'Language': ['English', 'Spanish', 'French', 'German', 'Chinese'],
+    'Time Zone': ['UTC', 'EST', 'CST', 'MST', 'PST', 'Local'],
+    'Privacy': ['Public', 'Private', 'Friends Only'],
+    'Theme': ['Light', 'Dark', 'System'],
+  };
+
   // Map field names to backend keys
   const fieldMap: Record<string, string> = {
-    'Name': 'display_name',
     'Username': 'username',
     'Bio': 'bio',
     'Gender': 'gender',
@@ -90,14 +131,32 @@ export default function ProfileScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={{ fontWeight: '700', fontSize: 18, marginBottom: 12 }}>Edit {editField}</Text>
-            <TextInput
-              style={styles.input}
-              value={editValue}
-              onChangeText={setEditValue}
-              placeholder={`Enter new ${editField}`}
-              autoFocus
-              editable={!loading}
-            />
+            
+            {editField && dropdownOptions[editField] ? (
+              <View style={{ width: '100%' }}>
+                {dropdownOptions[editField].map((option) => (
+                  <TouchableOpacity
+                    key={option}
+                    style={[styles.dropdownOption, editValue === option && styles.dropdownOptionSelected]}
+                    onPress={() => setEditValue(option)}
+                  >
+                    <Text style={[styles.dropdownOptionText, editValue === option && styles.dropdownOptionTextSelected]}>
+                      {option}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ) : (
+              <TextInput
+                style={styles.input}
+                value={editValue}
+                onChangeText={setEditValue}
+                placeholder={`Enter new ${editField}`}
+                autoFocus
+                editable={!loading}
+              />
+            )}
+            
             <View style={{ flexDirection: 'row', marginTop: 18 }}>
               <TouchableOpacity style={styles.saveButton} onPress={saveEdit} disabled={loading}>
                 <Text style={styles.saveButtonText}>{loading ? 'Saving...' : 'Save'}</Text>
@@ -121,10 +180,16 @@ export default function ProfileScreen() {
           <View style={{ padding: 20, alignItems: "center", marginTop: 20 }}>
             {/* Profile Photo */}
             <View style={{ alignItems: "center", marginBottom: 16 }}>
-              <Image
-                source={{ uri: user?.profile_photo || 'https://ui-avatars.com/api/?name=User' }}
-                style={styles.profilePhoto}
-              />
+              {user?.profile_photo ? (
+                <Image
+                  source={{ uri: user.profile_photo }}
+                  style={styles.profilePhoto}
+                />
+              ) : (
+                <View style={[styles.profilePhoto, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#eee' }]}> 
+                  <Icon name="camera" size={40} color="#aaa" />
+                </View>
+              )}
               <TouchableOpacity style={styles.editButton} onPress={() => openEditModal('Profile Photo', user?.profile_photo || '')}>
                 <Text style={styles.editButtonText}>Edit Photo</Text>
               </TouchableOpacity>
@@ -270,6 +335,28 @@ const styles = StyleSheet.create({
     color: '#333',
     fontWeight: '600',
     fontSize: 16,
+  },
+  dropdownOption: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 6,
+    marginBottom: 8,
+    backgroundColor: '#fafafa',
+  },
+  dropdownOptionSelected: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+  },
+  dropdownOptionText: {
+    color: '#333',
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  dropdownOptionTextSelected: {
+    color: '#fff',
+    fontWeight: '600',
   },
 });
 
