@@ -1,4 +1,5 @@
 import * as ImagePicker from "expo-image-picker";
+import * as ImageManipulator from "expo-image-manipulator";
 import React from "react";
 import { Alert, StyleSheet, Text, TouchableOpacity } from "react-native";
 import Icon from "react-native-vector-icons/Feather";
@@ -22,7 +23,7 @@ const PhotoSelector: React.FC<PhotoSelectorProps> = ({
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ImagePicker.MediaTypeOptions.Images, // Keep for now, will fix deprecation separately
       allowsEditing: false,
       aspect: [4, 3],
       quality: 0.8,
@@ -34,10 +35,30 @@ const PhotoSelector: React.FC<PhotoSelectorProps> = ({
       const asset = result.assets[0];
       if (!asset.uri) return;
 
-      // Upload the photo to backend
+      // Compress and resize image before uploading
       try {
-        const storageKey = await uploadPhoto(
+        // Resize to max 1920px width/height and compress to reduce file size
+        const manipulatedImage = await ImageManipulator.manipulateAsync(
           asset.uri,
+          [
+            { resize: { width: 1920 } }, // Resize to max 1920px width (maintains aspect ratio)
+          ],
+          {
+            compress: 0.7, // Compress to 70% quality (reduces file size significantly)
+            format: ImageManipulator.SaveFormat.JPEG, // Use JPEG for better compression
+          }
+        );
+
+        console.log("Image compressed:", {
+          original: asset.uri,
+          compressed: manipulatedImage.uri,
+          width: manipulatedImage.width,
+          height: manipulatedImage.height,
+        });
+
+        // Upload the compressed photo to backend
+        const storageKey = await uploadPhoto(
+          manipulatedImage.uri,
           asset.fileName || "photo.jpg"
         );
         onPhotosChange([...photos, storageKey]);

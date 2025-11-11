@@ -3,7 +3,8 @@ import Header from "@/components/Header";
 import PostCard from "@/components/PostCard";
 import { fetchPosts, getOrCreateUser, toggleLikePost } from "@/services/api";
 import { Post } from "@/types";
-import React, { useEffect, useState } from "react";
+import { useFocusEffect } from "@react-navigation/native";
+import React, { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, FlatList, RefreshControl, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -14,6 +15,7 @@ export default function FeedScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const hasLoadedRef = useRef(false);
 
   // Initialize user on mount
   useEffect(() => {
@@ -32,6 +34,7 @@ export default function FeedScreen() {
       setError(null);
       const fetchedPosts = await fetchPosts();
       setPosts(fetchedPosts);
+      hasLoadedRef.current = true;
     } catch (err: any) {
       console.error("Error fetching posts:", err);
       setError(err.message || "Failed to load posts");
@@ -44,6 +47,16 @@ export default function FeedScreen() {
   useEffect(() => {
     loadPosts();
   }, []);
+
+  // Refresh posts when screen comes into focus (e.g., after creating a post)
+  useFocusEffect(
+    React.useCallback(() => {
+      // Only refresh if we've already done the initial load
+      if (hasLoadedRef.current && !loading) {
+        loadPosts();
+      }
+    }, [loading])
+  );
 
   const handleRefresh = () => {
     setRefreshing(true);
