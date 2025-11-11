@@ -198,10 +198,28 @@ const transformPost = (backendPost: BackendPost): Post => {
   const formattedDate = `${dateStr} ${mealType}`;
   
   // Build images array from photos
-  const images = backendPost.photos?.map((photo) => ({
-    uri: getPhotoUrl(photo.storage_key),
-    rating: backendPost.rating || 5.0,
-  })) || [];
+  // Filter out any photos with empty storage_key and ensure we have valid URLs
+  // Also filter out HEIC files as React Native Image doesn't support them
+  const images = (backendPost.photos || [])
+    .filter((photo) => {
+      if (!photo.storage_key || photo.storage_key.trim().length === 0) {
+        return false;
+      }
+      // Filter out HEIC files - React Native Image doesn't support them
+      const extension = photo.storage_key.toLowerCase().split('.').pop();
+      if (extension === 'heic' || extension === 'heif') {
+        console.warn('Skipping HEIC file (not supported):', photo.storage_key);
+        return false;
+      }
+      return true;
+    })
+    .map((photo) => {
+      const photoUrl = getPhotoUrl(photo.storage_key);
+      return {
+        uri: photoUrl,
+        rating: backendPost.rating || 5.0,
+      };
+    });
   
   // Keep the original ID from backend (could be UUID string or number)
   // Components will use this ID for API calls
@@ -243,18 +261,31 @@ export const fetchPosts = async (): Promise<Post[]> => {
 // Create a new post
 export const createPost = async (postData: PostData): Promise<Post> => {
   try {
+    // Ensure user ID is set before creating post
+    const userId = await getUserId();
+    console.log('Creating post with user ID:', userId);
+    
     // Transform frontend PostData to backend CreatePostRequest format
+    // Backend expects rating as NUMERIC(3,1) between 1.0-10.0 (supports 1 decimal place)
     const backendData = {
       caption: postData.notes || null,
-      rating: postData.rating || null,
+      rating: postData.rating ? Math.max(1.0, Math.min(10.0, Number(postData.rating.toFixed(1)))) : null,
       menu_items: postData.menuItems.length > 0 ? postData.menuItems : null,
       dining_hall_name: postData.restaurantName || null,
       meal_type: postData.mealType || null,
-      photos: postData.photos.map((storageKey, index) => ({
-        storage_key: storageKey,
-        display_order: index,
-      })),
+      // Send null if no photos, otherwise send array
+      photos: postData.photos.length > 0 
+        ? postData.photos.map((storageKey, index) => ({
+            storage_key: storageKey,
+            display_order: index,
+          }))
+        : null,
     };
+    
+    console.log('Creating post with data:', {
+      ...backendData,
+      photos: backendData.photos ? `${backendData.photos.length} photos` : 'no photos',
+    });
     
     const response = await fetch(`${API_URL}${API_ENDPOINTS.POSTS}`, {
       method: 'POST',
@@ -263,13 +294,30 @@ export const createPost = async (postData: PostData): Promise<Post> => {
     });
     
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: response.statusText }));
-      throw new Error(error.error || 'Failed to create post');
+      const errorText = await response.text();
+      let errorMessage = response.statusText;
+      
+      try {
+        const errorData = JSON.parse(errorText);
+        errorMessage = errorData.error || errorMessage;
+      } catch (e) {
+        // If not JSON, use the text or status text
+        errorMessage = errorText || errorMessage;
+      }
+      
+      console.error('Post creation failed:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorMessage,
+      });
+      
+      throw new Error(errorMessage || 'Failed to create post');
     }
     
     const backendPost: BackendPost = await response.json();
+    console.log('Post created successfully:', backendPost.id);
     return transformPost(backendPost);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating post:', error);
     throw error;
   }
@@ -355,29 +403,51 @@ export const addComment = async (postId: number | string, text: string): Promise
 // Upload a photo
 export const uploadPhoto = async (photoUri: string, fileName: string = 'photo.jpg'): Promise<string> => {
   try {
+    // Determine file type from URI or filename
+    const fileExtension = fileName.split('.').pop()?.toLowerCase() || 'jpg';
+    const mimeType = fileExtension === 'png' ? 'image/png' : 
+                     fileExtension === 'gif' ? 'image/gif' : 
+                     'image/jpeg';
+    
+    // Create FormData - React Native format
     const formData = new FormData();
+    
+    // For React Native, we need to format it correctly
+    // The uri should be a local file path or data URI
     formData.append('photo', {
       uri: photoUri,
-      name: fileName,
-      type: 'image/jpeg',
+      name: fileName || `photo.${fileExtension}`,
+      type: mimeType,
     } as any);
+    
+    console.log('Uploading photo:', { uri: photoUri, fileName, mimeType });
     
     const response = await fetch(`${API_URL}${API_ENDPOINTS.UPLOAD_PHOTO}`, {
       method: 'POST',
       body: formData,
       headers: {
         'X-User-Id': getUserIdSync(),
-        // Don't set Content-Type for FormData, let the browser set it
+        // Don't set Content-Type - let React Native set it with boundary
       },
     });
     
     if (!response.ok) {
-      throw new Error(`Failed to upload photo: ${response.statusText}`);
+      // Try to get error message from response
+      let errorMessage = response.statusText;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorMessage;
+      } catch (e) {
+        // If response is not JSON, use status text
+      }
+      console.error('Upload failed:', response.status, errorMessage);
+      throw new Error(`Failed to upload photo: ${errorMessage}`);
     }
     
-    const { storage_key } = await response.json();
-    return storage_key;
-  } catch (error) {
+    const result = await response.json();
+    console.log('Upload successful:', result);
+    return result.storage_key;
+  } catch (error: any) {
     console.error('Error uploading photo:', error);
     throw error;
   }

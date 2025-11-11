@@ -43,11 +43,19 @@ export default function CreatePostScreen() {
     }
   }, [params.diningHall, params.mealType]);
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const handleSubmit = async () => {
     if (!selectedDiningHall) {
       Alert.alert("Error", "Please select a dining hall");
       return;
     }
+
+    if (isSubmitting) {
+      return; // Prevent double submission
+    }
+
+    setIsSubmitting(true);
 
     const postData: PostData = {
       restaurantId: selectedDiningHall.id.toString(),
@@ -62,11 +70,23 @@ export default function CreatePostScreen() {
     };
 
     try {
+      console.log("Submitting post:", {
+        diningHall: postData.restaurantName,
+        mealType: postData.mealType,
+        menuItems: postData.menuItems.length,
+        photos: postData.photos.length,
+        rating: postData.rating,
+      });
+      
       await createPost(postData);
+      console.log("Post created successfully!");
       router.back();
     } catch (error: any) {
       console.error("Error creating post:", error);
-      Alert.alert("Error", error.message || "Failed to create post");
+      const errorMessage = error.message || "Failed to create post";
+      Alert.alert("Error Creating Post", errorMessage);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -142,11 +162,16 @@ export default function CreatePostScreen() {
       {/* Post Button */}
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 20) }]}>
         <TouchableOpacity
-          style={[styles.postButton, !selectedDiningHall && styles.postButtonDisabled]}
+          style={[
+            styles.postButton, 
+            (!selectedDiningHall || isSubmitting) && styles.postButtonDisabled
+          ]}
           onPress={handleSubmit}
-          disabled={!selectedDiningHall}
+          disabled={!selectedDiningHall || isSubmitting}
         >
-          <Text style={styles.postButtonText}>Post</Text>
+          <Text style={styles.postButtonText}>
+            {isSubmitting ? "Posting..." : "Post"}
+          </Text>
         </TouchableOpacity>
       </View>
     </View>

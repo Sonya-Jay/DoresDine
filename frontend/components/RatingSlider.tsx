@@ -17,7 +17,7 @@ const RatingSlider: React.FC<RatingSliderProps> = ({
       <View style={styles.sliderContainer}>
         <Slider
           style={styles.slider}
-          minimumValue={0}
+          minimumValue={1}
           maximumValue={10}
           step={0.1}
           value={value}

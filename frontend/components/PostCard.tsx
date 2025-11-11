@@ -114,6 +114,10 @@ const PostCard: React.FC<PostCardProps> = ({
                 source={{ uri: img.uri }}
                 style={styles.foodImage}
                 resizeMode="cover"
+                onError={(error) => {
+                  console.warn('Image load error (will show placeholder):', img.uri);
+                  // Image will fail to load, but we'll keep the container for layout
+                }}
               />
               <View
                 style={[
