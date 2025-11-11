@@ -20,6 +20,23 @@ const s3Client = process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_
     })
     : null;
 const S3_BUCKET = process.env.S3_BUCKET_NAME || "";
+// Log S3 configuration status
+if (!s3Client || !S3_BUCKET) {
+    console.warn("⚠️  S3 is NOT configured - using local storage (files will be lost on server restart)");
+    if (!process.env.AWS_ACCESS_KEY_ID) {
+        console.warn("   Missing: AWS_ACCESS_KEY_ID");
+    }
+    if (!process.env.AWS_SECRET_ACCESS_KEY) {
+        console.warn("   Missing: AWS_SECRET_ACCESS_KEY");
+    }
+    if (!S3_BUCKET) {
+        console.warn("   Missing: S3_BUCKET_NAME");
+    }
+    console.warn("   See backend/SETUP_S3.md for instructions");
+}
+else {
+    console.log("✅ S3 is configured - files will be stored in:", S3_BUCKET);
+}
 // Configure multer for memory storage (we'll upload to S3 or local disk)
 const storage = multer_1.default.memoryStorage();
 // Configure multer with file size limits (20MB max)
@@ -49,6 +66,7 @@ router.post("/photo", async (req, res) => {
         try {
             // If S3 is configured, upload to S3
             if (s3Client && S3_BUCKET) {
+                console.log("📤 Uploading to S3...");
                 const unique = Date.now() + "-" + Math.round(Math.random() * 1e9);
                 const fileExtension = path_1.default.extname(file.originalname || ".jpg");
                 const s3Key = `uploads/${unique}${fileExtension}`;
@@ -58,22 +76,52 @@ router.post("/photo", async (req, res) => {
                         fileExtension === ".png" ? "image/png" :
                             fileExtension === ".gif" ? "image/gif" : "application/octet-stream");
                 // Upload to S3
+                // Note: ACL "public-read" is deprecated and may not work if bucket has ACLs disabled
+                // Instead, configure bucket policy to allow public reads
+                // Remove ACL and rely on bucket policy for public access
                 const command = new client_s3_1.PutObjectCommand({
                     Bucket: S3_BUCKET,
                     Key: s3Key,
                     Body: file.buffer,
                     ContentType: contentType,
-                    // Make files publicly readable
-                    ACL: "public-read",
+                    // ACL removed - use bucket policy for public access instead
+                    // If you need public access, configure bucket policy:
+                    // {
+                    //   "Effect": "Allow",
+                    //   "Principal": "*",
+                    //   "Action": "s3:GetObject",
+                    //   "Resource": "arn:aws:s3:::YOUR_BUCKET_NAME/uploads/*"
+                    // }
                 });
                 await s3Client.send(command);
                 // Return S3 URL as storage_key
-                const s3Url = `https://${S3_BUCKET}.s3.${process.env.AWS_REGION || "us-east-2"}.amazonaws.com/${s3Key}`;
-                console.log("File uploaded to S3:", s3Url);
+                // Use virtual-hosted-style URL format (standard)
+                // If bucket name contains dots, use path-style URL instead
+                const region = process.env.AWS_REGION || "us-east-2";
+                let s3Url;
+                // Encode the S3 key to handle special characters properly
+                // But preserve slashes for path structure
+                const encodedKey = encodeURIComponent(s3Key).replace(/%2F/g, '/');
+                if (S3_BUCKET.includes('.') || S3_BUCKET.length > 63) {
+                    // Path-style URL for buckets with dots or very long names
+                    s3Url = `https://s3.${region}.amazonaws.com/${S3_BUCKET}/${encodedKey}`;
+                }
+                else {
+                    // Virtual-hosted-style URL (standard) - most common
+                    s3Url = `https://${S3_BUCKET}.s3.${region}.amazonaws.com/${encodedKey}`;
+                }
+                console.log("✅ File uploaded to S3 successfully");
+                console.log("   URL:", s3Url);
+                console.log("   Key:", s3Key);
+                console.log("   Bucket:", S3_BUCKET);
+                console.log("   Region:", region);
+                console.log("   ContentType:", contentType);
                 res.json({ storage_key: s3Url });
             }
             else {
                 // Fallback to local storage if S3 not configured
+                console.warn("⚠️  Uploading to LOCAL STORAGE (files will be lost on server restart/scale)");
+                console.warn("   Configure S3 by setting AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and S3_BUCKET_NAME environment variables");
                 const uploadDir = path_1.default.join(__dirname, "../../uploads");
                 if (!fs_1.default.existsSync(uploadDir)) {
                     fs_1.default.mkdirSync(uploadDir, { recursive: true });
@@ -86,7 +134,8 @@ router.post("/photo", async (req, res) => {
                 // Return relative path
                 const projectRoot = path_1.default.join(__dirname, "../..");
                 const storage_key = path_1.default.relative(projectRoot, filePath).replace(/\\/g, "/");
-                console.log("File uploaded to local storage:", storage_key);
+                console.log("⚠️  File uploaded to LOCAL storage:", storage_key);
+                console.warn("   WARNING: This file will be LOST when the server restarts or scales!");
                 res.json({ storage_key });
             }
         }

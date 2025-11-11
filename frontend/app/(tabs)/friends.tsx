@@ -179,9 +179,12 @@ export default function FriendsScreen() {
         throw new Error("Failed to toggle follow");
       }
 
-      // Refresh friends and suggestions lists
-      await fetchFriends();
-      await fetchSuggestions();
+      // Refresh friends, suggestions, and activity feed
+      await Promise.all([
+        fetchFriends(),
+        fetchSuggestions(),
+        fetchActivity(), // Refresh activity feed to show new posts from followed user
+      ]);
     } catch (err: any) {
       console.error("Error toggling follow:", err);
       throw err;

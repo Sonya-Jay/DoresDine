@@ -58,12 +58,88 @@ class CbordService {
         }));
     }
     /**
-     * Get all dining halls
+     * Get unit status from Cbord API
+     * This method should be updated based on the actual API endpoint you find in the network tab
+     *
+     * Possible endpoints to check:
+     * - GET /Unit/GetUnitsList (or similar)
+     * - POST /Unit/GetUnitsList
+     * - Check the response from /Unit/SelectUnitFromUnitsList for status info
+     *
+     * @returns Map of cbordUnitId -> isOpen status
+     */
+    async getUnitStatusFromAPI() {
+        const unitStatusMap = new Map();
+        try {
+            // TODO: Replace this with the actual endpoint you find in the network tab
+            // Example: If you find an endpoint like /Unit/GetUnitsList
+            // The endpoint should return unit status information
+            // Example structure:
+            // const response = await this.axiosInstance.post("/Unit/GetUnitsList", {}, { headers: {...} });
+            // Parse response.data to extract unit status
+            // For now, return empty map (will fall back to schedule checking)
+            return unitStatusMap;
+        }
+        catch (error) {
+            console.error("Error fetching unit status from API:", error);
+            return unitStatusMap;
+        }
+    }
+    /**
+     * Get all dining halls with open/closed status
+     * First tries to get status from API, then falls back to checking schedules
      */
     async getDiningHalls() {
-        // For now, return the hardcoded list
-        // Later you could scrape the main page to get open/closed status
-        return exports.DINING_HALLS;
+        const hallsWithStatus = [];
+        try {
+            // Try to get status from API endpoint (if available)
+            const unitStatusMap = await this.getUnitStatusFromAPI();
+            const hasStatusFromAPI = unitStatusMap.size > 0;
+            // Get today's date for schedule checking fallback
+            const today = new Date();
+            const todayFormatted = today.toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            for (const hall of exports.DINING_HALLS) {
+                let isOpen = false;
+                // First, check if we got status from the API
+                if (hasStatusFromAPI && unitStatusMap.has(hall.cbordUnitId)) {
+                    isOpen = unitStatusMap.get(hall.cbordUnitId) ?? false;
+                }
+                else {
+                    // Fallback: check schedule to determine if open
+                    try {
+                        const schedule = await this.getMenuSchedule(hall.cbordUnitId);
+                        // Check if there are any meals scheduled for today
+                        const todayMenu = schedule.find(day => {
+                            const normalizedDayDate = day.date.trim();
+                            const normalizedToday = todayFormatted.trim();
+                            return normalizedDayDate === normalizedToday;
+                        });
+                        // Hall is open if it has meals scheduled for today
+                        isOpen = !!(todayMenu && todayMenu.meals && todayMenu.meals.length > 0);
+                    }
+                    catch (error) {
+                        // If we can't fetch the schedule, default to closed
+                        console.error(`Error checking schedule for ${hall.name}:`, error);
+                        isOpen = false;
+                    }
+                }
+                hallsWithStatus.push({
+                    ...hall,
+                    isOpen,
+                });
+            }
+        }
+        catch (error) {
+            console.error("Error fetching dining halls:", error);
+            // Fallback: return halls without status
+            return exports.DINING_HALLS.map(hall => ({ ...hall, isOpen: false }));
+        }
+        return hallsWithStatus;
     }
     /**
      * Get menu schedule for a specific dining hall

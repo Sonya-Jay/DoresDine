@@ -109,6 +109,11 @@ export default function SettingsProfileScreen() {
   const handleLogout = async () => {
     try {
       await logout();
+      // Update auth state immediately
+      if ((global as any).setAuthState) {
+        (global as any).setAuthState(false);
+      }
+      // Replace navigation stack with login (prevents going back)
       router.replace('/login');
     } catch (err: any) {
       console.error('Logout failed', err);

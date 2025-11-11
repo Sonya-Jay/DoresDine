@@ -15,15 +15,10 @@ import { fetchDiningHalls } from "@/services/api";
 import { DiningHall } from "@/types";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-// Helper function to determine if a dining hall is open (placeholder logic)
-// In a real app, this would check the schedule API
-const isHallOpen = (hallName: string): boolean => {
-  // Placeholder: some halls are closed, most are open
-  const closedHalls = [
-    "E. Bronson Ingram Dining Center",
-    "Cafe Carmichael",
-  ];
-  return !closedHalls.includes(hallName);
+// Helper function to determine if a dining hall is open
+// Uses the isOpen property from the API, defaults to false if not provided
+const isHallOpen = (hall: DiningHall): boolean => {
+  return hall.isOpen ?? false;
 };
 
 export default function MenusScreen() {
@@ -80,7 +75,7 @@ export default function MenusScreen() {
         data={filteredHalls}
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => {
-          const isOpen = isHallOpen(item.name);
+          const isOpen = isHallOpen(item);
           return (
             <TouchableOpacity
               style={styles.facilityCard}

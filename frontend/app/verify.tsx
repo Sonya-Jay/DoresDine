@@ -14,7 +14,12 @@ export default function VerifyScreen() {
       setLoading(true);
       const token = await api.authVerify(String(email), code);
       if (token) {
-        router.replace('/');
+        // Update auth state immediately
+        if ((global as any).setAuthState) {
+          (global as any).setAuthState(true);
+        }
+        // Replace the entire navigation stack with tabs (prevents going back)
+        router.replace('/(tabs)');
       }
     } catch (err: any) {
       Alert.alert('Verification failed', err.message || 'Unable to verify');

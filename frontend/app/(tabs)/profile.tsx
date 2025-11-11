@@ -3,7 +3,8 @@ import Header from "@/components/Header";
 import PostCard from "@/components/PostCard";
 import { fetchMyPosts, toggleLikePost } from "@/services/api";
 import { Post } from "@/types";
-import React, { useEffect, useRef, useState } from "react";
+import { useFocusEffect } from "expo-router";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, FlatList, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -31,8 +32,20 @@ export default function ProfileScreen() {
   };
 
   useEffect(() => {
-    loadPosts();
+    if (!hasLoadedRef.current) {
+      loadPosts();
+      hasLoadedRef.current = true;
+    }
   }, []);
+
+  // Refresh posts when screen comes into focus (but not on initial load)
+  useFocusEffect(
+    useCallback(() => {
+      if (hasLoadedRef.current) {
+        loadPosts();
+      }
+    }, [])
+  );
 
   const handleLike = async (postId: number | string) => {
     try {
@@ -64,8 +77,12 @@ export default function ProfileScreen() {
   };
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: '#fff' }}>
       <FlatList
+        style={{ flex: 1 }}
+        contentContainerStyle={{ 
+          paddingBottom: 80, // Space for bottom nav
+        }}
         ListHeaderComponent={<Header searchText={searchText} setSearchText={setSearchText} />}
         data={posts}
         keyExtractor={(item) => String(item.id)}
@@ -75,7 +92,7 @@ export default function ProfileScreen() {
         ListEmptyComponent={
           loading ? (
             <View style={{ padding: 20, alignItems: "center", marginTop: 40 }}>
-              <ActivityIndicator size="large" />
+              <ActivityIndicator size="large" color="#D4A574" />
             </View>
           ) : error ? (
             <View style={{ padding: 20, alignItems: "center", marginTop: 40 }}>
@@ -83,15 +100,30 @@ export default function ProfileScreen() {
             </View>
           ) : (
             <View style={{ padding: 20, alignItems: "center", marginTop: 40 }}>
-              <Text style={{ fontSize: 18, fontWeight: "600", marginBottom: 8 }}>Profile</Text>
+              <Text style={{ fontSize: 18, fontWeight: "600", marginBottom: 8 }}>No Posts Yet</Text>
               <Text style={{ fontSize: 16, color: "#666", textAlign: "center" }}>You haven't posted anything yet.</Text>
             </View>
           )
         }
-        refreshing={loading}
-        onRefresh={loadPosts}
+        refreshing={refreshing}
+        onRefresh={async () => {
+          setRefreshing(true);
+          await loadPosts();
+          setRefreshing(false);
+        }}
+        showsVerticalScrollIndicator={false}
       />
-      <BottomNav />
+      <View style={{ 
+        position: 'absolute', 
+        bottom: 0, 
+        left: 0, 
+        right: 0,
+        backgroundColor: '#fff',
+        borderTopWidth: 1,
+        borderTopColor: '#f0f0f0',
+      }}>
+        <BottomNav />
+      </View>
     </View>
   );
 }

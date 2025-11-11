@@ -63,9 +63,10 @@ router.get("/", async (req: Request, res: Response): Promise<void> => {
 // GET /posts/me - Fetch all posts authored by the authenticated user
 router.get("/me", async (req: Request, res: Response): Promise<void> => {
   try {
-    const userId = req.headers["x-user-id"] as string;
+    // Get userId from JWT token (attached by middleware) or fallback to header
+    const userId = (req as any).userId || req.headers["x-user-id"] as string;
     if (!userId) {
-      res.status(401).json({ error: "X-User-Id header is required" });
+      res.status(401).json({ error: "Authentication required" });
       return;
     }
 

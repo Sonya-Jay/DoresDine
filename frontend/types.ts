@@ -7,6 +7,7 @@ export interface DiningHall {
   id: number;
   name: string;
   cbordUnitId: number;
+  isOpen?: boolean;
 }
 
 export type DayMenu = {

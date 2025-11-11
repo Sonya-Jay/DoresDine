@@ -147,8 +147,12 @@ export const authResend = async (email: string) => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email }),
   });
-  if (!res.ok) throw new Error((await res.json()).error || 'Failed to resend');
+  
   const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to resend');
+  }
+  
   // Return the full response including verification_code if present (dev mode)
   return data;
 };
@@ -159,8 +163,12 @@ export const authVerify = async (email: string, code: string) => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, code }),
   });
-  if (!res.ok) throw new Error((await res.json()).error || 'Verification failed');
+  
   const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || 'Verification failed');
+  }
+  
   if (data.token) {
     authToken = data.token;
     await AsyncStorage.setItem('authToken', authToken as string);
@@ -174,8 +182,12 @@ export const authLogin = async (email: string, password: string) => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
   });
-  if (!res.ok) throw new Error((await res.json()).error || 'Login failed');
+  
   const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || 'Login failed');
+  }
+  
   if (data.token) {
     authToken = data.token;
     await AsyncStorage.setItem('authToken', authToken as string);
@@ -301,24 +313,23 @@ export const fetchPosts = async (): Promise<Post[]> => {
 // Fetch posts for the authenticated user (profile page)
 export const fetchMyPosts = async (): Promise<Post[]> => {
   try {
-    const rawHeaders = getHeaders(false);
-    // Normalize headers into a plain object we can modify safely
-    const headersObj: Record<string, string> = {};
-    if (rawHeaders && typeof rawHeaders === 'object' && !Array.isArray(rawHeaders)) {
-      Object.assign(headersObj, rawHeaders as Record<string, string>);
-    }
-
-    // Include fallback X-User-Id header for development when no auth token is present
-    if (!headersObj['Authorization']) {
-      headersObj['X-User-Id'] = getUserIdSync();
-    }
-
+    // Ensure we have auth token or user ID
+    await initAuthFromStorage();
+    
     const response = await fetch(`${API_URL}/posts/me`, {
-      headers: headersObj,
+      headers: getHeaders(false),
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch my posts: ${response.statusText}`);
+      const errorText = await response.text();
+      let errorMessage = response.statusText;
+      try {
+        const errorData = JSON.parse(errorText);
+        errorMessage = errorData.error || errorMessage;
+      } catch {
+        errorMessage = errorText || errorMessage;
+      }
+      throw new Error(errorMessage);
     }
 
     const backendPosts: BackendPost[] = await response.json();

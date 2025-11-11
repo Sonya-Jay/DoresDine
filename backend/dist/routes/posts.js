@@ -60,6 +60,66 @@ router.get("/", async (req, res) => {
         res.status(500).json({ error: "Internal server error" });
     }
 });
+// GET /posts/me - Fetch all posts authored by the authenticated user
+router.get("/me", async (req, res) => {
+    try {
+        // Get userId from JWT token (attached by middleware) or fallback to header
+        const userId = req.userId || req.headers["x-user-id"];
+        if (!userId) {
+            res.status(401).json({ error: "Authentication required" });
+            return;
+        }
+        const query = `
+      SELECT 
+        p.id,
+        p.author_id,
+        p.caption,
+        CAST(p.rating AS FLOAT) as rating,
+        p.menu_items,
+        p.dining_hall_name,
+        p.meal_type,
+        p.created_at,
+        u.username,
+        u.email,
+        COALESCE(
+          JSON_AGG(
+            JSON_BUILD_OBJECT(
+              'id', pp.id,
+              'storage_key', pp.storage_key,
+              'display_order', pp.display_order
+            ) ORDER BY pp.display_order
+          ) FILTER (WHERE pp.id IS NOT NULL), 
+          '[]'::json
+        ) as photos,
+        COALESCE(l.like_count, 0) as like_count,
+        COALESCE(c.comment_count, 0) as comment_count,
+        CASE WHEN ul.user_id IS NOT NULL THEN true ELSE false END as is_liked
+      FROM posts p
+      JOIN users u ON p.author_id = u.id
+      LEFT JOIN post_photos pp ON p.id = pp.post_id
+      LEFT JOIN (
+        SELECT post_id, COUNT(*) as like_count
+        FROM likes
+        GROUP BY post_id
+      ) l ON p.id = l.post_id
+      LEFT JOIN (
+        SELECT post_id, COUNT(*) as comment_count
+        FROM comments
+        GROUP BY post_id
+      ) c ON p.id = c.post_id
+      LEFT JOIN likes ul ON p.id = ul.post_id AND ul.user_id = $1
+      WHERE p.author_id = $1
+      GROUP BY p.id, p.author_id, p.caption, p.rating, p.menu_items, p.dining_hall_name, p.meal_type, p.created_at, u.username, u.email, l.like_count, c.comment_count, ul.user_id
+      ORDER BY p.created_at DESC
+    `;
+        const result = await db_1.default.query(query, [userId]);
+        res.json(result.rows);
+    }
+    catch (error) {
+        console.error("Error fetching user's posts:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
 // POST /posts - Create a new post with optional photos
 router.post("/", async (req, res) => {
     const client = await db_1.default.connect();
