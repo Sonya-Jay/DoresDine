@@ -5,6 +5,7 @@ import { attachUserFromToken } from "./middleware/auth";
 import authRouter from "./routes/auth";
 import diningRouter from "./routes/dining";
 import postsRouter from "./routes/posts";
+import searchRouter from "./routes/search";
 import uploadRouter from "./routes/upload";
 import usersRouter from "./routes/users";
 
@@ -39,6 +40,7 @@ app.use((req, res, next) => {
 app.use("/auth", authRouter);
 app.use("/users", usersRouter);
 app.use("/posts", postsRouter);
+app.use("/search", searchRouter);
 app.use("/upload", uploadRouter);
 app.use("/api/dining", diningRouter);
 

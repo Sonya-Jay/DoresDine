@@ -508,3 +508,121 @@ export const fetchDiningHalls = async () => {
   }
 };
 
+// Search API functions
+export interface SearchUser {
+  id: string;
+  username: string;
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  created_at: string;
+}
+
+export interface SearchDiningHall {
+  id: number;
+  name: string;
+  cbordUnitId: number;
+}
+
+export interface SearchDish {
+  name: string;
+  frequency: number;
+}
+
+export interface SearchResults {
+  users: SearchUser[];
+  diningHalls: SearchDiningHall[];
+  query: string;
+}
+
+// Search all (users, dining halls)
+export const search = async (query: string): Promise<SearchResults> => {
+  try {
+    if (!query || query.trim().length < 2) {
+      return { users: [], diningHalls: [], query };
+    }
+
+    const response = await fetch(`${API_URL}/search?q=${encodeURIComponent(query.trim())}`, {
+      headers: getHeaders(false),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to search: ${response.statusText}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error searching:', error);
+    throw error;
+  }
+};
+
+// Search users
+export const searchUsers = async (query: string): Promise<SearchUser[]> => {
+  try {
+    if (!query || query.trim().length < 2) {
+      return [];
+    }
+
+    const response = await fetch(`${API_URL}/search/users?q=${encodeURIComponent(query.trim())}`, {
+      headers: getHeaders(false),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to search users: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    return data.users;
+  } catch (error) {
+    console.error('Error searching users:', error);
+    throw error;
+  }
+};
+
+// Search dining halls
+export const searchDiningHalls = async (query: string): Promise<SearchDiningHall[]> => {
+  try {
+    if (!query || query.trim().length < 2) {
+      return [];
+    }
+
+    const response = await fetch(`${API_URL}/search/dining-halls?q=${encodeURIComponent(query.trim())}`, {
+      headers: getHeaders(false),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to search dining halls: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    return data.diningHalls;
+  } catch (error) {
+    console.error('Error searching dining halls:', error);
+    throw error;
+  }
+};
+
+// Search dishes
+export const searchDishes = async (query: string): Promise<SearchDish[]> => {
+  try {
+    if (!query || query.trim().length < 2) {
+      return [];
+    }
+
+    const response = await fetch(`${API_URL}/search/dishes?q=${encodeURIComponent(query.trim())}`, {
+      headers: getHeaders(false),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to search dishes: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    return data.dishes;
+  } catch (error) {
+    console.error('Error searching dishes:', error);
+    throw error;
+  }
+};
+

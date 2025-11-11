@@ -440,6 +440,134 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#D4A574",
   },
+  // Search Page Styles
+  searchContainer: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
+  searchTabs: {
+    flexDirection: "row",
+    paddingHorizontal: 20,
+    marginVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+  },
+  searchTab: {
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    marginRight: 12,
+    borderBottomWidth: 2,
+    borderBottomColor: "transparent",
+  },
+  searchTabActive: {
+    borderBottomColor: "#D4A574",
+  },
+  searchTabText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#999",
+  },
+  searchTabTextActive: {
+    color: "#000",
+  },
+  searchResults: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  searchResultItem: {
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+  },
+  searchResultName: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#000",
+    marginBottom: 4,
+  },
+  searchResultSubtitle: {
+    fontSize: 14,
+    color: "#666",
+    marginBottom: 4,
+  },
+  searchResultFrequency: {
+    fontSize: 12,
+    color: "#999",
+    fontStyle: "italic",
+  },
+  emptySearchState: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 40,
+  },
+  emptySearchTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#333",
+    marginBottom: 8,
+  },
+  emptySearchText: {
+    fontSize: 14,
+    color: "#999",
+    textAlign: "center",
+    paddingHorizontal: 20,
+  },
+  searchLoading: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 40,
+  },
+  // Search Results Dropdown/Modal Styles
+  searchResultsOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
+    justifyContent: "flex-start",
+  },
+  searchResultsDropdown: {
+    backgroundColor: "#fff",
+    marginHorizontal: 20,
+    marginVertical: 60,
+    borderRadius: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
+    maxHeight: 400,
+  },
+  searchResultDropdownItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+  },
+  searchResultDropdownName: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#000",
+    marginBottom: 2,
+  },
+  searchResultDropdownSubtitle: {
+    fontSize: 13,
+    color: "#666",
+  },
+  searchResultsLoadingContainer: {
+    paddingVertical: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  searchResultsEmptyContainer: {
+    paddingVertical: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  searchResultsEmptyText: {
+    fontSize: 14,
+    color: "#999",
+    fontStyle: "italic",
+  },
 });
 
 export default styles;

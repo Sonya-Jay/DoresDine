@@ -1,16 +1,16 @@
 import { useRouter } from "expo-router";
-import React from "react";
+import React, { useState } from "react";
 import {
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-  Platform,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/Feather";
 import styles from "../styles";
+import SearchResultsModal from "./SearchResultsModal";
 
 interface HeaderProps {
   searchText: string;
@@ -20,6 +20,7 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ searchText, setSearchText }) => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const [searchModalVisible, setSearchModalVisible] = useState(false);
 
   const handleAddPress = () => {
     try {
@@ -34,57 +35,77 @@ const Header: React.FC<HeaderProps> = ({ searchText, setSearchText }) => {
     }
   };
 
+  const handleSearchChange = (text: string) => {
+    setSearchText(text);
+    if (text.trim().length >= 2) {
+      setSearchModalVisible(true);
+    } else {
+      setSearchModalVisible(false);
+    }
+  };
+
   return (
-    <View style={[styles.header, { paddingTop: Math.max(insets.top, 15) }]}>
-      <View style={styles.headerTop}>
-        <Text style={styles.logo}>
-          Dores<Text style={styles.logoAccent}>Dine</Text>
-        </Text>
-        <View style={styles.headerIcons}>
-          <TouchableOpacity>
-            <Icon name="bell" size={24} color="#000" />
-          </TouchableOpacity>
-          <TouchableOpacity style={{ marginLeft: 20 }}>
-            <Icon name="menu" size={24} color="#000" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={{ marginLeft: 20 }}
-            onPress={handleAddPress}
-            accessibilityLabel="Add Post"
-          >
-            <Icon name="plus" size={26} color="#007AFF" />
-          </TouchableOpacity>
+    <>
+      <View style={[styles.header, { paddingTop: Math.max(insets.top, 15) }]}>
+        <View style={styles.headerTop}>
+          <Text style={styles.logo}>
+            Dores<Text style={styles.logoAccent}>Dine</Text>
+          </Text>
+          <View style={styles.headerIcons}>
+            <TouchableOpacity>
+              <Icon name="bell" size={24} color="#000" />
+            </TouchableOpacity>
+            <TouchableOpacity style={{ marginLeft: 20 }}>
+              <Icon name="menu" size={24} color="#000" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={{ marginLeft: 20 }}
+              onPress={handleAddPress}
+              accessibilityLabel="Add Post"
+            >
+              <Icon name="plus" size={26} color="#007AFF" />
+            </TouchableOpacity>
+          </View>
         </View>
+
+        <View style={styles.searchBar}>
+          <TextInput
+            placeholder="Search a menu, member, etc."
+            value={searchText}
+            onChangeText={handleSearchChange}
+            style={styles.searchInput}
+            placeholderTextColor="#999"
+          />
+          {searchText ? (
+            <TouchableOpacity onPress={() => { 
+              setSearchText("");
+              setSearchModalVisible(false);
+            }}>
+              <Icon name="x" size={20} color="#999" />
+            </TouchableOpacity>
+          ) : null}
+        </View>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.filterContainer}
+          contentContainerStyle={styles.filterContentContainer}
+        >
+          {["Trending", "Friend Recs", "Filter By"].map((filter, idx) => (
+            <TouchableOpacity key={idx} style={styles.filterButton}>
+              <Text style={styles.filterText}>{filter}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
 
-      <View style={styles.searchBar}>
-        <TextInput
-          placeholder="Search a menu, member, etc."
-          value={searchText}
-          onChangeText={setSearchText}
-          style={styles.searchInput}
-          placeholderTextColor="#999"
-        />
-        {searchText ? (
-          <TouchableOpacity onPress={() => setSearchText("")}>
-            <Icon name="x" size={20} color="#999" />
-          </TouchableOpacity>
-        ) : null}
-      </View>
-
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.filterContainer}
-        contentContainerStyle={styles.filterContentContainer}
-      >
-        {["Trending", "Friend Recs", "Filter By"].map((filter, idx) => (
-          <TouchableOpacity key={idx} style={styles.filterButton}>
-            <Text style={styles.filterText}>{filter}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-    </View>
+      <SearchResultsModal
+        visible={searchModalVisible}
+        searchText={searchText}
+        onClose={() => setSearchModalVisible(false)}
+      />
+    </>
   );
 };
 
