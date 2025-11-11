@@ -1,0 +1,324 @@
+import { API_URL, API_ENDPOINTS, getPhotoUrl } from '@/constants/API';
+import { BackendPost, Post, Comment, PostData } from '@/types';
+
+// User ID storage - in production, use AsyncStorage or auth context
+let currentUserId: string | null = null;
+
+// User interface for API responses
+interface User {
+  id: string;
+  username: string;
+  email: string;
+  created_at: string;
+}
+
+// Create or get a user
+export const getOrCreateUser = async (username: string = 'testuser', email: string = 'testuser@example.com'): Promise<string> => {
+  // If we already have a user ID, return it
+  if (currentUserId) {
+    return currentUserId;
+  }
+
+  try {
+    // Try to create a user
+    const response = await fetch(`${API_URL}/users`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ username, email }),
+    });
+
+    if (response.ok) {
+      const user: User = await response.json();
+      currentUserId = user.id;
+      console.log('✅ User created:', user.id);
+      return user.id;
+    } else {
+      // User might already exist, try to get by username
+      const error = await response.json().catch(() => ({ error: response.statusText }));
+      
+      if (response.status === 409 && error.error?.includes('already exists')) {
+        // User exists, try to fetch by username
+        const getUserResponse = await fetch(`${API_URL}/users/username/${username}`);
+        if (getUserResponse.ok) {
+          const user: User = await getUserResponse.json();
+          currentUserId = user.id;
+          console.log('✅ User found:', user.id);
+          return user.id;
+        }
+      }
+      
+      throw new Error(error.error || 'Failed to create/get user');
+    }
+  } catch (error: any) {
+    console.error('Error creating/getting user:', error);
+    // Fallback to the user we created earlier
+    currentUserId = 'd14e38ed-daed-4328-a9e7-f4beb8a7ba8c';
+    return currentUserId;
+  }
+};
+
+// Get current user ID (will create one if needed)
+const getUserId = async (): Promise<string> => {
+  if (currentUserId) {
+    return currentUserId;
+  }
+  
+  // Create/get user on first call
+  return await getOrCreateUser();
+};
+
+// Synchronous version for headers (uses stored ID or fallback)
+const getUserIdSync = (): string => {
+  // Use the created user ID as fallback
+  return currentUserId || 'd14e38ed-daed-4328-a9e7-f4beb8a7ba8c';
+};
+
+// Helper function to get headers with user ID
+const getHeaders = (includeContentType: boolean = true): HeadersInit => {
+  const headers: HeadersInit = {
+    'X-User-Id': getUserIdSync(),
+  };
+  
+  if (includeContentType) {
+    headers['Content-Type'] = 'application/json';
+  }
+  
+  return headers;
+};
+
+// Transform backend post to frontend post format
+const transformPost = (backendPost: BackendPost): Post => {
+  // Extract date and format it
+  const date = new Date(backendPost.created_at);
+  const dateStr = date.toLocaleDateString('en-US', {
+    month: '2-digit',
+    day: '2-digit',
+    year: 'numeric',
+  });
+  const mealType = backendPost.meal_type || 'Lunch';
+  const formattedDate = `${dateStr} ${mealType}`;
+  
+  // Build images array from photos
+  const images = backendPost.photos?.map((photo) => ({
+    uri: getPhotoUrl(photo.storage_key),
+    rating: backendPost.rating || 5.0,
+  })) || [];
+  
+  // Keep the original ID from backend (could be UUID string or number)
+  // Components will use this ID for API calls
+  return {
+    id: backendPost.id, // Keep original ID (string UUID or number)
+    username: backendPost.username,
+    dininghall: backendPost.dining_hall_name || 'Unknown',
+    date: formattedDate,
+    visits: 1, // TODO: Get from backend if available
+    images,
+    notes: backendPost.caption || '',
+    menuItems: backendPost.menu_items || [],
+    rating: backendPost.rating || 5.0,
+    likeCount: backendPost.like_count || 0,
+    commentCount: backendPost.comment_count || 0,
+    isLiked: backendPost.is_liked || false,
+  };
+};
+
+// Fetch all posts
+export const fetchPosts = async (): Promise<Post[]> => {
+  try {
+    const response = await fetch(`${API_URL}${API_ENDPOINTS.POSTS}`, {
+      headers: getHeaders(false),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch posts: ${response.statusText}`);
+    }
+    
+    const backendPosts: BackendPost[] = await response.json();
+    return backendPosts.map(transformPost);
+  } catch (error) {
+    console.error('Error fetching posts:', error);
+    throw error;
+  }
+};
+
+// Create a new post
+export const createPost = async (postData: PostData): Promise<Post> => {
+  try {
+    // Transform frontend PostData to backend CreatePostRequest format
+    const backendData = {
+      caption: postData.notes || null,
+      rating: postData.rating || null,
+      menu_items: postData.menuItems.length > 0 ? postData.menuItems : null,
+      dining_hall_name: postData.restaurantName || null,
+      meal_type: postData.mealType || null,
+      photos: postData.photos.map((storageKey, index) => ({
+        storage_key: storageKey,
+        display_order: index,
+      })),
+    };
+    
+    const response = await fetch(`${API_URL}${API_ENDPOINTS.POSTS}`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(backendData),
+    });
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: response.statusText }));
+      throw new Error(error.error || 'Failed to create post');
+    }
+    
+    const backendPost: BackendPost = await response.json();
+    return transformPost(backendPost);
+  } catch (error) {
+    console.error('Error creating post:', error);
+    throw error;
+  }
+};
+
+// Like/unlike a post
+// Note: postId can be number or string (UUID) from backend
+export const toggleLikePost = async (postId: number | string): Promise<void> => {
+  try {
+    // Backend expects string UUID in URL, so convert to string
+    const postIdStr = String(postId);
+    const response = await fetch(`${API_URL}/posts/${postIdStr}/like`, {
+      method: 'POST',
+      headers: getHeaders(),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to like post: ${response.statusText}`);
+    }
+    
+    // Backend returns { liked: boolean, message: string }
+    await response.json();
+  } catch (error) {
+    console.error('Error liking post:', error);
+    throw error;
+  }
+};
+
+// Fetch comments for a post
+export const fetchComments = async (postId: number | string): Promise<Comment[]> => {
+  try {
+    const postIdStr = String(postId);
+    const response = await fetch(`${API_URL}/posts/${postIdStr}/comments`, {
+      headers: getHeaders(false),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch comments: ${response.statusText}`);
+    }
+    
+    const comments = await response.json();
+    // Backend returns comments with id (UUID string), text, created_at, username, email
+    return comments.map((c: any) => ({
+      id: String(c.id), // Ensure ID is string for Comment type
+      text: c.text,
+      username: c.username,
+      created_at: c.created_at,
+    }));
+  } catch (error) {
+    console.error('Error fetching comments:', error);
+    throw error;
+  }
+};
+
+// Add a comment to a post
+export const addComment = async (postId: number | string, text: string): Promise<Comment> => {
+  try {
+    const postIdStr = String(postId);
+    const response = await fetch(`${API_URL}/posts/${postIdStr}/comments`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ text }),
+    });
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: response.statusText }));
+      throw new Error(error.error || 'Failed to post comment');
+    }
+    
+    const comment = await response.json();
+    return {
+      id: String(comment.id), // Ensure ID is string for Comment type
+      text: comment.text,
+      username: comment.username,
+      created_at: comment.created_at,
+    };
+  } catch (error) {
+    console.error('Error posting comment:', error);
+    throw error;
+  }
+};
+
+// Upload a photo
+export const uploadPhoto = async (photoUri: string, fileName: string = 'photo.jpg'): Promise<string> => {
+  try {
+    const formData = new FormData();
+    formData.append('photo', {
+      uri: photoUri,
+      name: fileName,
+      type: 'image/jpeg',
+    } as any);
+    
+    const response = await fetch(`${API_URL}${API_ENDPOINTS.UPLOAD_PHOTO}`, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'X-User-Id': getUserIdSync(),
+        // Don't set Content-Type for FormData, let the browser set it
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to upload photo: ${response.statusText}`);
+    }
+    
+    const { storage_key } = await response.json();
+    return storage_key;
+  } catch (error) {
+    console.error('Error uploading photo:', error);
+    throw error;
+  }
+};
+
+// Fetch menu items
+export const fetchMenuItems = async (menuId: number, unitId: number) => {
+  try {
+    const response = await fetch(`${API_URL}${API_ENDPOINTS.MENU_ITEMS(menuId, unitId)}`, {
+      headers: getHeaders(false),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch menu items: ${response.statusText}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching menu items:', error);
+    throw error;
+  }
+};
+
+// Fetch dining halls
+export const fetchDiningHalls = async () => {
+  try {
+    const response = await fetch(`${API_URL}${API_ENDPOINTS.DINING_HALLS}`, {
+      headers: getHeaders(false),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch dining halls: ${response.statusText}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching dining halls:', error);
+    throw error;
+  }
+};
+
