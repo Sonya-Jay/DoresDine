@@ -1,287 +1,84 @@
 import BottomNav from "@/components/BottomNav";
 import Header from "@/components/Header";
 import {
-    search,
-    SearchDiningHall,
-    searchDiningHalls,
-    SearchDish,
-    searchDishes,
-    SearchUser,
-    searchUsers,
+  getTrendingDishes,
+  SearchDish,
 } from "@/services/api";
 import styles from "@/styles";
-import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, FlatList, Text, TouchableOpacity, View } from "react-native";
 import Icon from "react-native-vector-icons/Feather";
 
-type SearchTab = "all" | "users" | "dining" | "dishes";
-
-export default function SearchScreen() {
+export default function TrendingScreen() {
   const [searchText, setSearchText] = useState("");
-  const [activeTab, setActiveTab] = useState<SearchTab>("all");
-  const [loading, setLoading] = useState(false);
-  const [users, setUsers] = useState<SearchUser[]>([]);
-  const [diningHalls, setDiningHalls] = useState<SearchDiningHall[]>([]);
+  const [loading, setLoading] = useState(true);
   const [dishes, setDishes] = useState<SearchDish[]>([]);
-  const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
 
-  // Debounce search
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchText.trim().length >= 2) {
-        performSearch();
-      } else {
-        // Clear results if search is empty
-        setUsers([]);
-        setDiningHalls([]);
-        setDishes([]);
-      }
-    }, 300);
+    fetchTrendingDishes();
+  }, []);
 
-    return () => clearTimeout(timer);
-  }, [searchText, activeTab]);
-
-  const performSearch = async () => {
+  const fetchTrendingDishes = async () => {
     setLoading(true);
+    setError(null);
     try {
-      if (activeTab === "all") {
-        const results = await search(searchText);
-        setUsers(results.users);
-        setDiningHalls(results.diningHalls);
-        setDishes([]);
-      } else if (activeTab === "users") {
-        const results = await searchUsers(searchText);
-        setUsers(results);
-      } else if (activeTab === "dining") {
-        const results = await searchDiningHalls(searchText);
-        setDiningHalls(results);
-      } else if (activeTab === "dishes") {
-        const results = await searchDishes(searchText);
-        setDishes(results);
-      }
-    } catch (error) {
-      console.error("Search error:", error);
+      const trendingDishes = await getTrendingDishes(20);
+      setDishes(trendingDishes);
+    } catch (err: any) {
+      console.error("Error fetching trending dishes:", err);
+      setError(err.message || "Failed to load trending dishes");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleUserPress = (user: SearchUser) => {
-    // Navigate to user profile
-    console.log("Navigate to user:", user.username);
-    // TODO: Implement user profile navigation
+  const handleRefresh = () => {
+    fetchTrendingDishes();
   };
 
-  const handleDiningHallPress = (hall: SearchDiningHall) => {
-    // Navigate to dining hall menu
-    console.log("Navigate to dining hall:", hall.name);
-    router.push({
-      pathname: "/(tabs)/menu-items",
-      params: { hallId: String(hall.id), hallName: hall.name },
-    } as any);
-  };
+  const renderDishItem = ({ item, index }: { item: SearchDish; index: number }) => {
+    // Calculate rank color based on position
+    const getRankColor = (rank: number) => {
+      if (rank === 0) return "#FFD700"; // Gold for #1
+      if (rank === 1) return "#C0C0C0"; // Silver for #2
+      if (rank === 2) return "#CD7F32"; // Bronze for #3
+      return "#D4A574"; // Regular tan color
+    };
 
-  const renderUserItem = ({ item }: { item: SearchUser }) => (
-    <TouchableOpacity
-      style={styles.searchResultItem}
-      onPress={() => handleUserPress(item)}
-    >
-      <View style={{ flexDirection: "row", alignItems: "center" }}>
-        <View
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: 20,
-            backgroundColor: "#D4A574",
-            alignItems: "center",
-            justifyContent: "center",
-            marginRight: 12,
-          }}
-        >
-          <Icon name="user" size={20} color="#fff" />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.searchResultName}>{item.username}</Text>
-          {item.first_name && item.last_name && (
-            <Text style={styles.searchResultSubtitle}>
-              {item.first_name} {item.last_name}
-            </Text>
+    const getRankIcon = (rank: number) => {
+      if (rank === 0) return "🥇";
+      if (rank === 1) return "🥈";
+      if (rank === 2) return "🥉";
+      return null;
+    };
+
+    return (
+      <View style={styles.trendingDishItem}>
+        <View style={[styles.trendingRankBadge, { backgroundColor: getRankColor(index) }]}>
+          {getRankIcon(index) ? (
+            <Text style={styles.trendingRankEmoji}>{getRankIcon(index)}</Text>
+          ) : (
+            <Text style={styles.trendingRankText}>#{index + 1}</Text>
           )}
-          <Text style={styles.searchResultSubtitle}>{item.email}</Text>
+        </View>
+        
+        <View style={{ flex: 1, marginLeft: 12 }}>
+          <Text style={styles.trendingDishName}>{item.name}</Text>
+          <View style={styles.trendingDishStats}>
+            <Icon name="trending-up" size={14} color="#FF6B35" />
+            <Text style={styles.trendingDishFrequency}>
+              {" "}
+              {item.frequency} mention{item.frequency !== 1 ? "s" : ""}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.trendingTrendIndicator}>
+          <Icon name="arrow-up" size={16} color="#10B981" />
         </View>
       </View>
-    </TouchableOpacity>
-  );
-
-  const renderDiningHallItem = ({ item }: { item: SearchDiningHall }) => (
-    <TouchableOpacity
-      style={styles.searchResultItem}
-      onPress={() => handleDiningHallPress(item)}
-    >
-      <View style={{ flexDirection: "row", alignItems: "center" }}>
-        <View
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: 8,
-            backgroundColor: "#D4A574",
-            alignItems: "center",
-            justifyContent: "center",
-            marginRight: 12,
-          }}
-        >
-          <Icon name="home" size={20} color="#fff" />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.searchResultName}>{item.name}</Text>
-          <Text style={styles.searchResultSubtitle}>Dining Hall</Text>
-        </View>
-        <Icon name="chevron-right" size={20} color="#999" />
-      </View>
-    </TouchableOpacity>
-  );
-
-  const renderDishItem = ({ item }: { item: SearchDish }) => (
-    <View style={styles.searchResultItem}>
-      <View style={{ flexDirection: "row", alignItems: "center" }}>
-        <View
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: 8,
-            backgroundColor: "#FFC107",
-            alignItems: "center",
-            justifyContent: "center",
-            marginRight: 12,
-          }}
-        >
-          <Icon name="utensils" size={20} color="#fff" />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.searchResultName}>{item.name}</Text>
-          <Text style={styles.searchResultFrequency}>
-            Mentioned {item.frequency} time{item.frequency !== 1 ? "s" : ""}
-          </Text>
-        </View>
-      </View>
-    </View>
-  );
-
-  const renderContent = () => {
-    if (searchText.trim().length < 2) {
-      return (
-        <View style={styles.emptySearchState}>
-          <Icon name="search" size={48} color="#ddd" style={{ marginBottom: 16 }} />
-          <Text style={styles.emptySearchTitle}>Start searching</Text>
-          <Text style={styles.emptySearchText}>
-            Search for dining halls, members, or dishes
-          </Text>
-        </View>
-      );
-    }
-
-    if (loading) {
-      return (
-        <View style={styles.searchLoading}>
-          <ActivityIndicator size="large" color="#D4A574" />
-        </View>
-      );
-    }
-
-    if (activeTab === "all") {
-      if (users.length === 0 && diningHalls.length === 0 && dishes.length === 0) {
-        return (
-          <View style={styles.emptySearchState}>
-            <Text style={styles.emptySearchTitle}>No results found</Text>
-            <Text style={styles.emptySearchText}>Try a different search term</Text>
-          </View>
-        );
-      }
-      return (
-        <FlatList
-          data={[
-            ...users.map((u) => ({ type: "user" as const, data: u })),
-            ...diningHalls.map((h) => ({ type: "dining" as const, data: h })),
-            ...dishes.map((d) => ({ type: "dish" as const, data: d })),
-          ]}
-          renderItem={({ item }) => {
-            if (item.type === "user") {
-              return renderUserItem({ item: item.data as SearchUser });
-            } else if (item.type === "dining") {
-              return renderDiningHallItem({ item: item.data as SearchDiningHall });
-            } else {
-              return renderDishItem({ item: item.data as SearchDish });
-            }
-          }}
-          keyExtractor={(item, idx) =>
-            item.type === "user"
-              ? (item.data as SearchUser).id
-              : item.type === "dining"
-              ? `hall-${(item.data as SearchDiningHall).id}`
-              : `dish-${idx}`
-          }
-          scrollEnabled={false}
-        />
-      );
-    }
-
-    if (activeTab === "users") {
-      if (users.length === 0) {
-        return (
-          <View style={styles.emptySearchState}>
-            <Text style={styles.emptySearchTitle}>No users found</Text>
-            <Text style={styles.emptySearchText}>Try a different search term</Text>
-          </View>
-        );
-      }
-      return (
-        <FlatList
-          data={users}
-          renderItem={renderUserItem}
-          keyExtractor={(item) => item.id}
-          scrollEnabled={false}
-        />
-      );
-    }
-
-    if (activeTab === "dining") {
-      if (diningHalls.length === 0) {
-        return (
-          <View style={styles.emptySearchState}>
-            <Text style={styles.emptySearchTitle}>No dining halls found</Text>
-            <Text style={styles.emptySearchText}>Try a different search term</Text>
-          </View>
-        );
-      }
-      return (
-        <FlatList
-          data={diningHalls}
-          renderItem={renderDiningHallItem}
-          keyExtractor={(item) => `hall-${item.id}`}
-          scrollEnabled={false}
-        />
-      );
-    }
-
-    if (activeTab === "dishes") {
-      if (dishes.length === 0) {
-        return (
-          <View style={styles.emptySearchState}>
-            <Text style={styles.emptySearchTitle}>No dishes found</Text>
-            <Text style={styles.emptySearchText}>Try a different search term</Text>
-          </View>
-        );
-      }
-      return (
-        <FlatList
-          data={dishes}
-          renderItem={renderDishItem}
-          keyExtractor={(item, idx) => `dish-${idx}`}
-          scrollEnabled={false}
-        />
-      );
-    }
+    );
   };
 
   return (
@@ -290,43 +87,45 @@ export default function SearchScreen() {
         ListHeaderComponent={
           <>
             <Header searchText={searchText} setSearchText={setSearchText} />
-            {searchText.trim().length >= 2 && (
-              <View style={styles.searchTabs}>
-                {(["all", "users", "dining", "dishes"] as const).map((tab) => (
-                  <TouchableOpacity
-                    key={tab}
-                    style={[
-                      styles.searchTab,
-                      activeTab === tab && styles.searchTabActive,
-                    ]}
-                    onPress={() => setActiveTab(tab)}
-                  >
-                    <Text
-                      style={[
-                        styles.searchTabText,
-                        activeTab === tab && styles.searchTabTextActive,
-                      ]}
-                    >
-                      {tab === "all"
-                        ? "All"
-                        : tab === "users"
-                        ? "Members"
-                        : tab === "dining"
-                        ? "Dining"
-                        : "Dishes"}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
+            <View style={styles.trendingHeader}>
+              <Text style={styles.trendingTitle}>🔥 Trending Now</Text>
+              <Text style={styles.trendingSubtitle}>
+                Most mentioned dishes this week
+              </Text>
+            </View>
           </>
         }
-        data={[]}
-        renderItem={() => null}
-        keyExtractor={() => "search"}
+        data={dishes}
+        renderItem={renderDishItem}
+        keyExtractor={(item, idx) => `trending-${idx}`}
+        scrollEnabled
+        onRefresh={handleRefresh}
+        refreshing={loading && dishes.length > 0}
         ListEmptyComponent={
-          <View style={styles.searchResults}>
-            {renderContent()}
+          <View style={styles.trendingEmptyContainer}>
+            {loading ? (
+              <ActivityIndicator size="large" color="#D4A574" style={{ marginTop: 40 }} />
+            ) : error ? (
+              <>
+                <Icon name="alert-circle" size={48} color="#f44336" style={{ marginBottom: 16 }} />
+                <Text style={styles.trendingEmptyTitle}>Couldn't load trending dishes</Text>
+                <Text style={styles.trendingEmptyText}>{error}</Text>
+                <TouchableOpacity
+                  style={styles.trendingRetryButton}
+                  onPress={handleRefresh}
+                >
+                  <Text style={styles.trendingRetryText}>Try again</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <Icon name="trending-up" size={48} color="#ddd" style={{ marginBottom: 16 }} />
+                <Text style={styles.trendingEmptyTitle}>No trending dishes yet</Text>
+                <Text style={styles.trendingEmptyText}>
+                  Dishes will appear here as they get mentioned more
+                </Text>
+              </>
+            )}
           </View>
         }
       />

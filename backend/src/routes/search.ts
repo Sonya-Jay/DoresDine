@@ -85,6 +85,19 @@ router.get('/dishes', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
+// GET /search/trending-dishes - Get top trending dishes
+router.get('/trending-dishes', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const limit = Math.min(Number(req.query.limit) || 20, 100); // Max 100
+
+    const dishes = await getTrendingDishes(limit);
+    res.json({ dishes });
+  } catch (error) {
+    console.error('Error fetching trending dishes:', error);
+    res.status(500).json({ error: 'Failed to fetch trending dishes' });
+  }
+});
+
 // Helper functions
 async function searchUsers(query: string): Promise<any[]> {
   try {
@@ -155,6 +168,33 @@ async function searchDishes(query: string): Promise<any[]> {
     }));
   } catch (error) {
     console.error('Error in searchDishes:', error);
+    return [];
+  }
+}
+
+async function getTrendingDishes(limit: number): Promise<any[]> {
+  try {
+    // Get top dishes by frequency across all posts
+    const result = await pool.query(
+      `SELECT DISTINCT 
+         menu_item,
+         COUNT(*) as frequency
+       FROM (
+         SELECT unnest(menu_items) as menu_item FROM posts WHERE menu_items IS NOT NULL
+       ) AS menu_items_flat
+       GROUP BY menu_item
+       ORDER BY frequency DESC
+       LIMIT $1`,
+      [limit]
+    );
+
+    // Transform to just return the dish names with frequency
+    return result.rows.map((row: any) => ({
+      name: row.menu_item,
+      frequency: row.frequency,
+    }));
+  } catch (error) {
+    console.error('Error in getTrendingDishes:', error);
     return [];
   }
 }

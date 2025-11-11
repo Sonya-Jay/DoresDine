@@ -626,3 +626,22 @@ export const searchDishes = async (query: string): Promise<SearchDish[]> => {
   }
 };
 
+// Get trending dishes (top by frequency)
+export const getTrendingDishes = async (limit: number = 20): Promise<SearchDish[]> => {
+  try {
+    const response = await fetch(`${API_URL}/search/trending-dishes?limit=${limit}`, {
+      headers: getHeaders(false),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch trending dishes: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    return data.dishes;
+  } catch (error) {
+    console.error('Error fetching trending dishes:', error);
+    throw error;
+  }
+};
+

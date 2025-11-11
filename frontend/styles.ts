@@ -568,6 +568,100 @@ const styles = StyleSheet.create({
     color: "#999",
     fontStyle: "italic",
   },
+  // Trending Page Styles
+  trendingHeader: {
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+    backgroundColor: "#fff",
+  },
+  trendingTitle: {
+    fontSize: 28,
+    fontWeight: "700",
+    color: "#000",
+    marginBottom: 4,
+  },
+  trendingSubtitle: {
+    fontSize: 14,
+    color: "#666",
+  },
+  trendingDishItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+  },
+  trendingRankBadge: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  trendingRankEmoji: {
+    fontSize: 20,
+  },
+  trendingRankText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#fff",
+  },
+  trendingDishName: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#000",
+    marginBottom: 6,
+  },
+  trendingDishStats: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  trendingDishFrequency: {
+    fontSize: 13,
+    color: "#666",
+    fontWeight: "500",
+  },
+  trendingTrendIndicator: {
+    marginLeft: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  trendingEmptyContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 80,
+    paddingHorizontal: 20,
+  },
+  trendingEmptyTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#333",
+    marginBottom: 8,
+  },
+  trendingEmptyText: {
+    fontSize: 14,
+    color: "#999",
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  trendingRetryButton: {
+    backgroundColor: "#D4A574",
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginTop: 12,
+  },
+  trendingRetryText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#fff",
+  },
 });
 
 export default styles;
