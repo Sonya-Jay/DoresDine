@@ -13,7 +13,7 @@ import BottomNav from "@/components/BottomNav";
 import Header from "@/components/Header";
 import FriendCard from "@/components/FriendCard";
 import PostCard from "@/components/PostCard";
-import { API_ENDPOINTS, API_URL } from "@/constants/API";
+import { API_ENDPOINTS, API_URL, getPhotoUrl } from "@/constants/API";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Post } from "@/types";
 
@@ -97,24 +97,34 @@ export default function FriendsScreen() {
       const data = await response.json();
 
       // Transform backend posts to frontend Post type
-      const transformedPosts: Post[] = data.map((post: any) => ({
-        id: post.id,
-        username: post.username,
-        email: post.email,
-        dininghall: post.dining_hall_name || "Unknown",
-        date: new Date(post.created_at).toLocaleDateString("en-US", {
-          month: "numeric",
-          day: "numeric",
-          year: "numeric",
-        }) + ` ${post.meal_type || ""}`,
-        visits: 0, // Not tracked in current schema
-        rating: post.rating || 0,
-        caption: post.caption || "",
-        images: post.photos?.map((p: any) => p.storage_key) || [],
-        likeCount: post.like_count || 0,
-        commentCount: post.comment_count || 0,
-        isLiked: post.is_liked || false,
-      }));
+      const transformedPosts: Post[] = data.map((post: any) => {
+        // Build images array from photos with proper format
+        const images = (post.photos || [])
+          .filter((photo: any) => photo.storage_key && photo.storage_key.trim().length > 0)
+          .map((photo: any) => ({
+            uri: getPhotoUrl(photo.storage_key),
+            rating: post.rating || 5.0,
+          }));
+
+        return {
+          id: post.id,
+          username: post.username,
+          dininghall: post.dining_hall_name || "Unknown",
+          date: new Date(post.created_at).toLocaleDateString("en-US", {
+            month: "2-digit",
+            day: "2-digit",
+            year: "numeric",
+          }) + ` ${post.meal_type || ""}`,
+          visits: 1,
+          rating: post.rating || 5.0,
+          notes: post.caption || "",
+          menuItems: post.menu_items || [],
+          images,
+          likeCount: post.like_count || 0,
+          commentCount: post.comment_count || 0,
+          isLiked: post.is_liked || false,
+        };
+      });
 
       setActivityPosts(transformedPosts);
     } catch (err: any) {

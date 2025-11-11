@@ -101,7 +101,7 @@ const PostCard: React.FC<PostCardProps> = ({
       </View>
 
       <View style={styles.imagesContainer}>
-        {post.images.length > 0 ? (
+        {post.images && post.images.length > 0 ? (
           post.images.map((img, idx) => (
             <View
               key={idx}
