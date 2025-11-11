@@ -1,7 +1,7 @@
 import BottomNav from "@/components/BottomNav";
 import Header from "@/components/Header";
 import React, { useState } from "react";
-import { View, Text, FlatList } from "react-native";
+import { FlatList, Text, View } from "react-native";
 
 export default function ProfileScreen() {
   const [searchText, setSearchText] = useState("");
