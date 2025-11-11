@@ -9,7 +9,9 @@ const db_1 = __importDefault(require("./db"));
 const auth_1 = require("./middleware/auth");
 const auth_2 = __importDefault(require("./routes/auth"));
 const dining_1 = __importDefault(require("./routes/dining"));
+const follows_1 = __importDefault(require("./routes/follows"));
 const posts_1 = __importDefault(require("./routes/posts"));
+const search_1 = __importDefault(require("./routes/search"));
 const upload_1 = __importDefault(require("./routes/upload"));
 const users_1 = __importDefault(require("./routes/users"));
 const app = (0, express_1.default)();
@@ -38,6 +40,8 @@ app.use((req, res, next) => {
 app.use("/auth", auth_2.default);
 app.use("/users", users_1.default);
 app.use("/posts", posts_1.default);
+app.use("/follows", follows_1.default);
+app.use("/search", search_1.default);
 app.use("/upload", upload_1.default);
 app.use("/api/dining", dining_1.default);
 // Health check

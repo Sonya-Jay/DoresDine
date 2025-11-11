@@ -56,7 +56,10 @@ const DiningHallSelector: React.FC<DiningHallSelectorProps> = ({
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Select Dining Hall</Text>
-            <TouchableOpacity onPress={() => setModalVisible(false)}>
+            <TouchableOpacity 
+              testID="close-modal-button"
+              onPress={() => setModalVisible(false)}
+            >
               <Icon name="x" size={24} color="#000" />
             </TouchableOpacity>
           </View>

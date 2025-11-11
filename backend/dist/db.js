@@ -6,7 +6,8 @@ const pool = new pg_1.Pool({
     max: 20,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 2000,
-    ssl: { rejectUnauthorized: false },
+    // Only use SSL in production
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
 // Test the connection immediately
 pool

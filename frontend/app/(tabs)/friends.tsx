@@ -326,7 +326,7 @@ export default function FriendsScreen() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1 }}>
+      <View style={{ flex: 1, backgroundColor: '#fff' }}>
         <FlatList
           ListHeaderComponent={
             <Header searchText={searchText} setSearchText={setSearchText} />
@@ -346,7 +346,7 @@ export default function FriendsScreen() {
   }
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: '#fff' }}>
       <FlatList
         ListHeaderComponent={
           <>

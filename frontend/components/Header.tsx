@@ -1,11 +1,11 @@
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-    ScrollView,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/Feather";
@@ -88,10 +88,13 @@ const Header: React.FC<HeaderProps> = ({ searchText, setSearchText }) => {
             placeholderTextColor="#999"
           />
           {searchText ? (
-            <TouchableOpacity onPress={() => { 
-              setSearchText("");
-              setSearchModalVisible(false);
-            }}>
+            <TouchableOpacity 
+              testID="clear-search-button"
+              onPress={() => { 
+                setSearchText("");
+                setSearchModalVisible(false);
+              }}
+            >
               <Icon name="x" size={20} color="#999" />
             </TouchableOpacity>
           ) : null}

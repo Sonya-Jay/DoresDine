@@ -181,7 +181,11 @@ const PostCard: React.FC<PostCardProps> = ({
 
       <View style={styles.actions}>
         <View style={styles.actionsLeft}>
-          <TouchableOpacity onPress={handleLike} disabled={isLiking}>
+          <TouchableOpacity 
+            testID="like-button"
+            onPress={handleLike} 
+            disabled={isLiking}
+          >
             {isLiked ? (
               <Text style={styles.filledHeart}>❤️</Text>
             ) : (
@@ -189,6 +193,7 @@ const PostCard: React.FC<PostCardProps> = ({
             )}
           </TouchableOpacity>
           <TouchableOpacity
+            testID="comment-button"
             style={{ marginLeft: 20 }}
             onPress={() => setCommentsModalVisible(true)}
           >
@@ -199,7 +204,10 @@ const PostCard: React.FC<PostCardProps> = ({
           </TouchableOpacity>
         </View>
         <View style={styles.actionsRight}>
-          <TouchableOpacity onPress={handleCreateSimilarPost}>
+          <TouchableOpacity 
+            testID="create-similar-button"
+            onPress={handleCreateSimilarPost}
+          >
             <Icon name="plus" size={24} color="#000" />
           </TouchableOpacity>
           <TouchableOpacity style={{ marginLeft: 20 }}>
