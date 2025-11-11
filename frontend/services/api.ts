@@ -115,7 +115,9 @@ export const authRegister = async (payload: { first_name: string; last_name: str
     throw new Error(errorMessage);
   }
   
-  return await res.json();
+  const data = await res.json();
+  // Return the full response including verification_code if present (dev mode)
+  return data;
 };
 
 export const authResend = async (email: string) => {
@@ -125,7 +127,9 @@ export const authResend = async (email: string) => {
     body: JSON.stringify({ email }),
   });
   if (!res.ok) throw new Error((await res.json()).error || 'Failed to resend');
-  return await res.json();
+  const data = await res.json();
+  // Return the full response including verification_code if present (dev mode)
+  return data;
 };
 
 export const authVerify = async (email: string, code: string) => {

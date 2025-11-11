@@ -82,7 +82,20 @@ router.post("/register", async (req: Request, res: Response) => {
     await sendVerificationEmail(email.trim().toLowerCase(), verification_code);
 
     const user = result.rows[0];
-    return res.status(201).json({ message: "User created, verify your email", user: { id: user.id, email: user.email, first_name: user.first_name, last_name: user.last_name } });
+    
+    // In development (no SMTP), include verification code in response for testing
+    const isDevelopment = !process.env.SMTP_HOST;
+    const response: any = { 
+      message: "User created, verify your email", 
+      user: { id: user.id, email: user.email, first_name: user.first_name, last_name: user.last_name }
+    };
+    
+    if (isDevelopment) {
+      response.verification_code = verification_code;
+      response.note = "Development mode: Verification code included. Check backend logs in production.";
+    }
+    
+    return res.status(201).json(response);
   } catch (err: any) {
     console.error("Error in register:", err);
     if (err.code === "23505") {
@@ -109,7 +122,17 @@ router.post("/resend", async (req: Request, res: Response) => {
     if (result.rows.length === 0) return res.status(404).json({ error: "User not found" });
 
     await sendVerificationEmail(email.trim().toLowerCase(), code);
-    return res.json({ message: "Verification code sent" });
+    
+    // In development (no SMTP), include verification code in response for testing
+    const isDevelopment = !process.env.SMTP_HOST;
+    const response: any = { message: "Verification code sent" };
+    
+    if (isDevelopment) {
+      response.verification_code = code;
+      response.note = "Development mode: Verification code included.";
+    }
+    
+    return res.json(response);
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Internal server error" });
