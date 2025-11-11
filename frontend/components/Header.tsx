@@ -39,6 +39,10 @@ const Header: React.FC<HeaderProps> = ({ searchText, setSearchText }) => {
     router.push("/(tabs)/settings-profile" as any);
   };
 
+  const handleTrendingPress = () => {
+    router.push("/(tabs)/search" as any);
+  };
+
   const handleSearchChange = (text: string) => {
     setSearchText(text);
     if (text.trim().length >= 2) {
@@ -107,7 +111,11 @@ const Header: React.FC<HeaderProps> = ({ searchText, setSearchText }) => {
           contentContainerStyle={styles.filterContentContainer}
         >
           {["Trending", "Friend Recs", "Filter By"].map((filter, idx) => (
-            <TouchableOpacity key={idx} style={styles.filterButton}>
+            <TouchableOpacity
+              key={idx}
+              style={styles.filterButton}
+              onPress={filter === "Trending" ? handleTrendingPress : undefined}
+            >
               <Text style={styles.filterText}>{filter}</Text>
             </TouchableOpacity>
           ))}
