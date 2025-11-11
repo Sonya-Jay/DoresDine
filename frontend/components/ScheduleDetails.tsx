@@ -116,7 +116,11 @@ const ScheduleDetailScreen: React.FC<Props> = ({ hall, onBack }) => {
 
       {/* Dining Hall Header with Back Button */}
       <View style={styles.diningHallHeader}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
+        <TouchableOpacity 
+          testID="back-button"
+          onPress={onBack} 
+          style={styles.backButton}
+        >
           <Icon name="arrow-back" size={24} color="#000" />
         </TouchableOpacity>
         <Text style={styles.diningHallTitle}>{hall.name}</Text>
@@ -133,11 +137,18 @@ const ScheduleDetailScreen: React.FC<Props> = ({ hall, onBack }) => {
 
         {!loading &&
           !error &&
-          schedule?.map(day => (
+          schedule?.map(day => {
+            const filteredMeals = day.meals.filter((meal: MealPeriod) =>
+              meal.name.toLowerCase().includes(searchText.toLowerCase())
+            );
+            
+            if (filteredMeals.length === 0) return null;
+            
+            return (
             <View key={day.date} style={styles.daySection}>
               <Text style={styles.dayHeader}>{day.date}</Text>
 
-              {day.meals.map((meal: MealPeriod) => (
+              {filteredMeals.map((meal: MealPeriod) => (
                 <View key={meal.id}>
                   <TouchableOpacity
                     style={styles.mealButton}
@@ -173,7 +184,8 @@ const ScheduleDetailScreen: React.FC<Props> = ({ hall, onBack }) => {
                 </View>
               ))}
             </View>
-          ))}
+          );
+          })}
       </ScrollView>
     </SafeAreaView>
   );

@@ -52,7 +52,10 @@ const Header: React.FC<HeaderProps> = ({
           placeholderTextColor="#999"
         />
         {searchText ? (
-          <TouchableOpacity onPress={() => setSearchText('')}>
+          <TouchableOpacity 
+            testID="clear-search-button"
+            onPress={() => setSearchText('')}
+          >
             <Icon name="x" size={20} color="#999" />
           </TouchableOpacity>
         ) : null}

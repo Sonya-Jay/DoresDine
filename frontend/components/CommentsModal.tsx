@@ -127,7 +127,10 @@ const CommentsModal: React.FC<CommentsModalProps> = ({
         {/* Header */}
         <View style={styles.commentsHeader}>
           <Text style={styles.commentsTitle}>Comments</Text>
-          <TouchableOpacity onPress={onClose}>
+          <TouchableOpacity 
+            testID="close-comments-button"
+            onPress={onClose}
+          >
             <Icon name="x" size={24} color="#000" />
           </TouchableOpacity>
         </View>
@@ -166,6 +169,7 @@ const CommentsModal: React.FC<CommentsModalProps> = ({
             maxLength={500}
           />
           <TouchableOpacity
+            testID="submit-comment-button"
             style={[
               styles.submitCommentButton,
               !newComment.trim() && styles.submitCommentButtonDisabled,

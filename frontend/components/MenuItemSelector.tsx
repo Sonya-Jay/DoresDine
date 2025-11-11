@@ -74,7 +74,10 @@ const MenuItemSelector: React.FC<MenuItemSelectorProps> = ({
           {selectedItems.map((item, index) => (
             <View key={index} style={styles.selectedItem}>
               <Text style={styles.selectedItemText}>{item}</Text>
-              <TouchableOpacity onPress={() => handleRemoveItem(item)}>
+              <TouchableOpacity 
+                testID={`remove-item-${index}`}
+                onPress={() => handleRemoveItem(item)}
+              >
                 <Icon name="x" size={16} color="#666" />
               </TouchableOpacity>
             </View>
