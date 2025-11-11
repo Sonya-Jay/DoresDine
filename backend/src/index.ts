@@ -7,7 +7,7 @@ import pool from "./db";
 import diningRouter from "./routes/dining";
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 // Middleware
 app.use(express.json());
@@ -28,13 +28,37 @@ app.use("/upload", uploadRouter);
 app.use("/api/dining", diningRouter);
 
 // Health check
+// app.get("/health", async (req, res) => {
+//   try {
+//     await pool.query("SELECT 1");
+//     res.json({ status: "ok", database: "connected" });
+//   } catch (error) {
+//     res.status(503).json({ status: "error", database: "disconnected" });
+//   }
+// });
 app.get("/health", async (req, res) => {
   try {
     await pool.query("SELECT 1");
     res.json({ status: "ok", database: "connected" });
-  } catch (error) {
-    res.status(503).json({ status: "error", database: "disconnected" });
+  } catch (error: any) {
+    console.error("DB ERROR:", error.message, error);
+    res.status(503).json({
+      status: "error",
+      database: "disconnected",
+      message: error.message,
+      detail: error.detail || null,
+      code: error.code || null,
+    });
   }
+});
+
+// Checking database
+app.get("/debug-env", (req, res) => {
+  res.json({
+    DATABASE_URL: process.env.DATABASE_URL,
+    NODE_ENV: process.env.NODE_ENV,
+    PORT: process.env.PORT,
+  });
 });
 
 // 404 handler
@@ -43,9 +67,9 @@ app.use((req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-  console.log(`Health check: http://localhost:${PORT}/health`);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server running on port ${PORT}`);
+  console.log(`Health check: /health`);
 });
 
 // Graceful shutdown
