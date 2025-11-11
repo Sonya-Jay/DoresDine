@@ -1,3 +1,24 @@
+// Update current user profile
+export const updateProfile = async (updates: Partial<User & { bio?: string; first_name?: string; last_name?: string; gender?: string; birthday?: string; phone?: string; notification_pref?: string; language?: string; timezone?: string; privacy?: string; theme?: string; profile_photo?: string; password?: string; }>) => {
+  const res = await fetch(`${API_URL}/users/me`, {
+    method: 'PATCH',
+    headers: getHeaders(),
+    body: JSON.stringify(updates),
+  });
+  if (!res.ok) {
+    let errorMessage = 'Profile update failed';
+    try {
+      const errorData = await res.json();
+      errorMessage = errorData.error || errorMessage;
+    } catch (e) {
+      errorMessage = res.statusText || errorMessage;
+    }
+    throw new Error(errorMessage);
+  }
+  const user = await res.json();
+  currentUser = user;
+  return user;
+};
 import { API_ENDPOINTS, API_URL, getPhotoUrl } from '@/constants/API';
 import { BackendPost, Comment, Post, PostData } from '@/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
