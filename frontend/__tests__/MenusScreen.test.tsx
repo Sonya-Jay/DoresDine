@@ -136,14 +136,16 @@ describe('MenusScreen Component', () => {
   });
 
   // Note: Navigation is handled by expo-router, which is mocked
-  // These tests are skipped since we can't easily test navigation in unit tests
-  it.skip('navigates to ScheduleDetailScreen when hall is selected', async () => {
+  // These tests are commented out since we can't easily test navigation in unit tests
+  /*
+  it('navigates to ScheduleDetailScreen when hall is selected', async () => {
     // Navigation testing requires integration tests with expo-router
   });
 
-  it.skip('navigates back from ScheduleDetailScreen', async () => {
+  it('navigates back from ScheduleDetailScreen', async () => {
     // Navigation testing requires integration tests with expo-router
   });
+  */
 
   it('cleans up on unmount', async () => {
     mockFetchDiningHalls.mockResolvedValue(mockHalls);

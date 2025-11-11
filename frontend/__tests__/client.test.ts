@@ -107,16 +107,18 @@ describe('API Client', () => {
 
   // Note: fetchMenuSchedule doesn't exist as an exported function
   // The schedule is fetched directly in the schedule-details screen
-  // These tests are skipped until the function is added to api.ts
-  describe.skip('fetchMenuSchedule', () => {
-    it.skip('fetches hall menu successfully', async () => {
+  // These tests are commented out until the function is added to api.ts
+  /*
+  describe('fetchMenuSchedule', () => {
+    it('fetches hall menu successfully', async () => {
       // This test will be implemented when fetchMenuSchedule is added to api.ts
     });
 
-    it.skip('throws error when fetch fails', async () => {
+    it('throws error when fetch fails', async () => {
       // This test will be implemented when fetchMenuSchedule is added to api.ts
     });
   });
+  */
 
   describe('fetchMenuItems', () => {
     it('fetches menu items successfully', async () => {

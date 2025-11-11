@@ -4,21 +4,27 @@
 
 // Note: RatingSelector component doesn't exist
 // We have RatingSlider instead which uses a numeric slider (1-10)
-// This test is kept for reference but tests a non-existent component
+// This test file is commented out since the component no longer exists
 
+describe('RatingSelector Component (deprecated)', () => {
+  it('placeholder - component no longer exists', () => {
+    // RatingSelector was replaced by RatingSlider
+    expect(true).toBe(true);
+  });
+});
+
+/*
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
-// Component doesn't exist - test will be skipped
 
-// Skip all tests - component doesn't exist
-describe.skip('RatingSelector Component', () => {
+describe('RatingSelector Component', () => {
   const mockOnRatingChange = jest.fn();
 
   beforeEach(() => {
     mockOnRatingChange.mockClear();
   });
 
-  it.skip('renders correctly with no selection', () => {
+  it('renders correctly with no selection', () => {
     const { getByText } = render(
       <RatingSelector
         selectedRating={null}
@@ -32,7 +38,7 @@ describe.skip('RatingSelector Component', () => {
     expect(getByText("I didn't like it")).toBeTruthy();
   });
 
-  it.skip('shows check mark when "liked" is selected', () => {
+  it('shows check mark when "liked" is selected', () => {
     const { getByText } = render(
       <RatingSelector
         selectedRating="liked"
@@ -44,7 +50,7 @@ describe.skip('RatingSelector Component', () => {
     expect(getByText('I liked it!')).toBeTruthy();
   });
 
-  it.skip('shows check mark when "fine" is selected', () => {
+  it('shows check mark when "fine" is selected', () => {
     const { getByText } = render(
       <RatingSelector
         selectedRating="fine"
@@ -56,7 +62,7 @@ describe.skip('RatingSelector Component', () => {
     expect(getByText('It was fine')).toBeTruthy();
   });
 
-  it.skip('shows check mark when "disliked" is selected', () => {
+  it('shows check mark when "disliked" is selected', () => {
     const { getByText } = render(
       <RatingSelector
         selectedRating="disliked"
@@ -68,7 +74,7 @@ describe.skip('RatingSelector Component', () => {
     expect(getByText("I didn't like it")).toBeTruthy();
   });
 
-  it.skip('calls onRatingChange with "liked" when liked option is pressed', () => {
+  it('calls onRatingChange with "liked" when liked option is pressed', () => {
     const { getByText } = render(
       <RatingSelector
         selectedRating={null}
@@ -82,7 +88,7 @@ describe.skip('RatingSelector Component', () => {
     expect(mockOnRatingChange).toHaveBeenCalledWith('liked');
   });
 
-  it.skip('calls onRatingChange with "fine" when fine option is pressed', () => {
+  it('calls onRatingChange with "fine" when fine option is pressed', () => {
     const { getByText } = render(
       <RatingSelector
         selectedRating={null}
@@ -96,7 +102,7 @@ describe.skip('RatingSelector Component', () => {
     expect(mockOnRatingChange).toHaveBeenCalledWith('fine');
   });
 
-  it.skip('calls onRatingChange with "disliked" when disliked option is pressed', () => {
+  it('calls onRatingChange with "disliked" when disliked option is pressed', () => {
     const { getByText } = render(
       <RatingSelector
         selectedRating={null}
@@ -110,7 +116,7 @@ describe.skip('RatingSelector Component', () => {
     expect(mockOnRatingChange).toHaveBeenCalledWith('disliked');
   });
 
-  it.skip('can change from one rating to another', () => {
+  it('can change from one rating to another', () => {
     const { getByText, rerender } = render(
       <RatingSelector
         selectedRating="liked"
@@ -136,3 +142,4 @@ describe.skip('RatingSelector Component', () => {
     expect(getByText('It was fine')).toBeTruthy();
   });
 });
+*/

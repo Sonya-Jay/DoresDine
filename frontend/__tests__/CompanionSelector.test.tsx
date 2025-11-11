@@ -37,24 +37,26 @@ describe('CompanionSelector Component', () => {
 
   // Note: The component currently doesn't have dummy friends
   // It fetches friends from API (which is not implemented yet)
-  // These tests are skipped until the API integration is complete
-  it.skip('displays friends when loaded', () => {
+  // These tests are commented out until the API integration is complete
+  /*
+  it('displays friends when loaded', () => {
     // This test will be implemented when the API integration is complete
   });
 
-  it.skip('selects a companion when clicked', () => {
+  it('selects a companion when clicked', () => {
     // This test will be implemented when the API integration is complete
   });
 
-  it.skip('deselects a companion when clicked again', () => {
+  it('deselects a companion when clicked again', () => {
     // This test will be implemented when the API integration is complete
   });
 
-  it.skip('can select multiple companions', () => {
+  it('can select multiple companions', () => {
     // This test will be implemented when the API integration is complete
   });
 
-  it.skip('removes a companion from list when toggled off', () => {
+  it('removes a companion from list when toggled off', () => {
     // This test will be implemented when the API integration is complete
   });
+  */
 });

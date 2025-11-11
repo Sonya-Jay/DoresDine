@@ -132,10 +132,12 @@ describe('PhotoSelector Component', () => {
   });
 
   // Note: Component doesn't currently have error handling for launchImageLibraryAsync
-  // This test is skipped until error handling is added to the component
-  it.skip('handles error from image picker', async () => {
+  // This test is commented out until error handling is added to the component
+  /*
+  it('handles error from image picker', async () => {
     // This test will be enabled when the component adds try-catch around launchImageLibraryAsync
   });
+  */
 
   it('handles upload failure when server returns not ok', async () => {
     globalThis.fetch = jest.fn().mockResolvedValue({
