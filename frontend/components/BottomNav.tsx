@@ -19,7 +19,7 @@ const BottomNav: React.FC = () => {
   const items: NavItem[] = [
     { icon: "grid", label: "Feed", route: "/(tabs)" },
     { icon: "file-text", label: "Menus", route: "/(tabs)/menus" },
-    { icon: "search", label: "Search", route: "/(tabs)/search" },
+    { icon: "trending-up", label: "Trending", route: "/(tabs)/search" },
     { icon: "users", label: "Friends", route: "/(tabs)/friends" },
     { icon: "user", label: "Profile", route: "/(tabs)/profile" },
   ];

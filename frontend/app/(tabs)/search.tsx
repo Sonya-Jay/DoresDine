@@ -1,8 +1,8 @@
 import BottomNav from "@/components/BottomNav";
 import Header from "@/components/Header";
 import {
-  getTrendingDishes,
-  SearchDish,
+    getTrendingDishes,
+    SearchDish,
 } from "@/services/api";
 import styles from "@/styles";
 import React, { useEffect, useState } from "react";
