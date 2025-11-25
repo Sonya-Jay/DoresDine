@@ -8,6 +8,7 @@ import {
   View,
   StyleSheet,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/Feather";
 import BottomNav from "@/components/BottomNav";
 import Header from "@/components/Header";
@@ -23,6 +24,7 @@ interface MenuScheduleResponse {
 export default function ScheduleDetailsScreen() {
   const params = useLocalSearchParams<{ hallId: string; hallName: string }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [searchText, setSearchText] = useState("");
   const [schedule, setSchedule] = useState<DayMenu[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,24 +71,48 @@ export default function ScheduleDetailsScreen() {
   // Backend already returns dates formatted as "Tuesday, November 11, 2025"
   // So we can use them directly
 
+  // Calculate header height dynamically
+  const headerHeight = Math.max(insets.top, 15) + 40 + 12 + 12 + 12 + 12 + 40 + 3; // ~180-190px
+  const bottomNavHeight = 60 + Math.max(insets.bottom, 8);
+
   return (
     <View style={{ flex: 1, backgroundColor: "#fff" }}>
+      {/* Fixed Header */}
+      <View style={{ 
+        position: 'absolute', 
+        top: 0, 
+        left: 0, 
+        right: 0,
+        zIndex: 10,
+        backgroundColor: '#fff',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 5,
+      }}>
+        <Header searchText={searchText} setSearchText={setSearchText} />
+      </View>
+      
+      {/* Scrollable Content */}
       <FlatList
+        contentContainerStyle={{
+          paddingTop: headerHeight + 60, // Header + back button section
+          paddingBottom: bottomNavHeight,
+          paddingHorizontal: 20,
+        }}
         ListHeaderComponent={
-          <>
-            <Header searchText={searchText} setSearchText={setSearchText} />
-            <View style={styles.header}>
-              <TouchableOpacity
-                onPress={() => router.back()}
-                style={styles.backButton}
-              >
-                <Icon name="arrow-left" size={24} color="#000" />
-              </TouchableOpacity>
-              <Text style={styles.hallTitle}>
-                {params.hallName || "Dining Hall"}
-              </Text>
-            </View>
-          </>
+          <View style={styles.header}>
+            <TouchableOpacity
+              onPress={() => router.back()}
+              style={styles.backButton}
+            >
+              <Icon name="arrow-left" size={24} color="#000" />
+            </TouchableOpacity>
+            <Text style={styles.hallTitle}>
+              {params.hallName || "Dining Hall"}
+            </Text>
+          </View>
         }
         data={schedule}
         keyExtractor={(item, index) => `${item.date}-${index}`}
@@ -124,7 +150,6 @@ export default function ScheduleDetailsScreen() {
             )}
           </View>
         )}
-        contentContainerStyle={styles.listContent}
         ListEmptyComponent={
           loading ? (
             <ActivityIndicator size="large" style={{ marginTop: 20 }} />
@@ -162,7 +187,20 @@ export default function ScheduleDetailsScreen() {
         }
         scrollEnabled={true}
       />
-      <BottomNav />
+      
+      {/* Fixed Bottom Nav */}
+      <View style={{ 
+        position: 'absolute', 
+        bottom: 0, 
+        left: 0, 
+        right: 0,
+        zIndex: 10,
+        backgroundColor: '#fff',
+        borderTopWidth: 1,
+        borderTopColor: '#f0f0f0',
+      }}>
+        <BottomNav />
+      </View>
     </View>
   );
 }
@@ -184,10 +222,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "600",
     color: "#000",
-  },
-  listContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 100,
   },
   daySection: {
     marginTop: 24,
