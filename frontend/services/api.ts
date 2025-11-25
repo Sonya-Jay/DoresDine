@@ -305,8 +305,8 @@ const transformPost = (backendPost: BackendPost): Post => {
     notes: backendPost.caption || '',
     menuItems: backendPost.menu_items || [],
     rating: backendPost.rating || 5.0,
-    likeCount: backendPost.like_count || 0,
-    commentCount: backendPost.comment_count || 0,
+    likeCount: Number(backendPost.like_count) || 0,
+    commentCount: Number(backendPost.comment_count) || 0,
     isLiked: backendPost.is_liked || false,
   };
 };

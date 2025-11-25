@@ -49,15 +49,16 @@ export default function ProfileScreen() {
 
   const handleLike = async (postId: number | string) => {
     try {
-      // Optimistic UI update
+      // Optimistic UI update - ensure we're working with numbers
       setPosts((prev) =>
         prev.map((p) => {
           if (String(p.id) === String(postId)) {
             const liked = !p.isLiked;
+            const currentCount = Number(p.likeCount) || 0;
             return {
               ...p,
               isLiked: liked,
-              likeCount: liked ? p.likeCount + 1 : Math.max(0, p.likeCount - 1),
+              likeCount: liked ? currentCount + 1 : Math.max(0, currentCount - 1),
             } as Post;
           }
           return p;

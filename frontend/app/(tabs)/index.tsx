@@ -67,14 +67,16 @@ export default function FeedScreen() {
   const handleLike = async (postId: number | string) => {
     try {
       await toggleLikePost(postId);
-      // Update local state optimistically
+      // Update local state optimistically - ensure we're working with numbers
       setPosts((prevPosts) =>
         prevPosts.map((post) =>
           post.id === postId
             ? {
                 ...post,
                 isLiked: !post.isLiked,
-                likeCount: post.isLiked ? post.likeCount - 1 : post.likeCount + 1,
+                likeCount: post.isLiked 
+                  ? Math.max(0, (Number(post.likeCount) || 0) - 1)
+                  : (Number(post.likeCount) || 0) + 1,
               }
             : post
         )

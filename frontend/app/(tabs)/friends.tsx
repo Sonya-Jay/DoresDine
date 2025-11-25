@@ -122,8 +122,8 @@ export default function FriendsScreen() {
           notes: post.caption || "",
           menuItems: post.menu_items || [],
           images,
-          likeCount: post.like_count || 0,
-          commentCount: post.comment_count || 0,
+          likeCount: Number(post.like_count) || 0,
+          commentCount: Number(post.comment_count) || 0,
           isLiked: post.is_liked || false,
         };
       });
@@ -205,14 +205,16 @@ export default function FriendsScreen() {
         throw new Error("Failed to like post");
       }
 
-      // Update local state
+      // Update local state - ensure we're working with numbers
       setActivityPosts((prevPosts) =>
         prevPosts.map((post) =>
           post.id === postId
             ? {
                 ...post,
                 isLiked: !post.isLiked,
-                likeCount: post.isLiked ? post.likeCount - 1 : post.likeCount + 1,
+                likeCount: post.isLiked 
+                  ? Math.max(0, (Number(post.likeCount) || 0) - 1)
+                  : (Number(post.likeCount) || 0) + 1,
               }
             : post
         )

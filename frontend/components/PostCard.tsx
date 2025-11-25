@@ -20,25 +20,25 @@ const PostCard: React.FC<PostCardProps> = ({
 }) => {
   const [isLiking, setIsLiking] = useState(false);
   const [isLiked, setIsLiked] = useState(post.isLiked);
-  const [likeCount, setLikeCount] = useState(post.likeCount);
+  const [likeCount, setLikeCount] = useState(Number(post.likeCount) || 0);
   const [commentsModalVisible, setCommentsModalVisible] = useState(false);
-  const [commentCount, setCommentCount] = useState(post.commentCount);
+  const [commentCount, setCommentCount] = useState(Number(post.commentCount) || 0);
 
   // Update local state when post prop changes
   React.useEffect(() => {
     setIsLiked(post.isLiked);
-    setLikeCount(post.likeCount);
-    setCommentCount(post.commentCount);
+    setLikeCount(Number(post.likeCount) || 0);
+    setCommentCount(Number(post.commentCount) || 0);
   }, [post.isLiked, post.likeCount, post.commentCount]);
 
   const handleLike = async () => {
     if (isLiking || !onLike) return;
 
-    // Optimistic update
+    // Optimistic update - ensure we're working with numbers
     const wasLiked = isLiked;
-    const oldCount = likeCount;
+    const oldCount = Number(likeCount) || 0;
     setIsLiked(!wasLiked);
-    setLikeCount(wasLiked ? oldCount - 1 : oldCount + 1);
+    setLikeCount(wasLiked ? Math.max(0, oldCount - 1) : oldCount + 1);
 
     setIsLiking(true);
     try {
@@ -220,14 +220,14 @@ const PostCard: React.FC<PostCardProps> = ({
       <View style={styles.socialStats}>
         {likeCount > 0 && (
           <Text style={styles.likesText}>
-            {likeCount} {Number(likeCount) === 1 ? "like" : "likes"}
+            {likeCount} {likeCount === 1 ? "like" : "likes"}
           </Text>
         )}
         {commentCount > 0 && (
           <TouchableOpacity onPress={() => setCommentsModalVisible(true)}>
             <Text style={styles.commentsText}>
-              View all {Number(commentCount)}{" "}
-              {Number(commentCount) === 1 ? "comment" : "comments"}
+              View all {commentCount}{" "}
+              {commentCount === 1 ? "comment" : "comments"}
             </Text>
           </TouchableOpacity>
         )}
