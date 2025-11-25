@@ -43,6 +43,10 @@ const Header: React.FC<HeaderProps> = ({ searchText, setSearchText }) => {
     router.push("/(tabs)/search" as any);
   };
 
+  const handleLogoPress = () => {
+    router.push("/(tabs)" as any);
+  };
+
   const handleSearchChange = (text: string) => {
     setSearchText(text);
     if (text.trim().length >= 2) {
@@ -56,9 +60,11 @@ const Header: React.FC<HeaderProps> = ({ searchText, setSearchText }) => {
     <>
       <View style={[styles.header, { paddingTop: Math.max(insets.top, 15) }]}>
         <View style={styles.headerTop}>
-          <Text style={styles.logo}>
-            Dores<Text style={styles.logoAccent}>Dine</Text>
-          </Text>
+          <TouchableOpacity onPress={handleLogoPress} activeOpacity={0.7}>
+            <Text style={styles.logo}>
+              Dores<Text style={styles.logoAccent}>Dine</Text>
+            </Text>
+          </TouchableOpacity>
           <View style={styles.headerIcons}>
             <TouchableOpacity>
               <Icon name="bell" size={24} color="#000" />
