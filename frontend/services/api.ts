@@ -177,22 +177,42 @@ export const authVerify = async (email: string, code: string) => {
 };
 
 export const authLogin = async (email: string, password: string) => {
-  const res = await fetch(`${API_URL}/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
-  });
-  
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.error || 'Login failed');
+  try {
+    const res = await fetch(`${API_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    
+    // Parse JSON response
+    let data;
+    try {
+      data = await res.json();
+    } catch (parseError) {
+      // If response is not JSON, throw error with status text
+      throw new Error(res.statusText || 'Invalid response from server');
+    }
+    
+    // Check if response is OK
+    if (!res.ok) {
+      throw new Error(data.error || `Login failed: ${res.status} ${res.statusText}`);
+    }
+    
+    // Store token if present
+    if (data.token) {
+      authToken = data.token;
+      await AsyncStorage.setItem('authToken', authToken as string);
+      return data.token;
+    } else {
+      throw new Error('No token received from server');
+    }
+  } catch (error: any) {
+    // Re-throw with more context if it's a network error
+    if (error.message && (error.message.includes('Failed to fetch') || error.message.includes('Network request failed'))) {
+      throw new Error('Network error: Could not connect to server. Please check your internet connection.');
+    }
+    throw error;
   }
-  
-  if (data.token) {
-    authToken = data.token;
-    await AsyncStorage.setItem('authToken', authToken as string);
-  }
-  return data.token;
 };
 
 // Initialize token from storage (call on app startup if desired)

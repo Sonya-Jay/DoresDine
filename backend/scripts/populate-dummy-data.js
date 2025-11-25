@@ -3,20 +3,32 @@ const { Pool } = require('pg');
 const bcrypt = require('bcrypt');
 const { v4: uuidv4 } = require('uuid');
 
-// Food images from Unsplash (free to use)
+// Food images from Unsplash (free to use, high quality)
 const FOOD_IMAGES = [
-  'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&h=600&fit=crop', // Salad
-  'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800&h=600&fit=crop', // Pizza
-  'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800&h=600&fit=crop', // Pasta
-  'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=800&h=600&fit=crop', // Burger
-  'https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=800&h=600&fit=crop', // Food
-  'https://images.unsplash.com/photo-1512058564366-18510be2db19?w=800&h=600&fit=crop', // Sushi
-  'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&h=600&fit=crop', // Breakfast
-  'https://images.unsplash.com/photo-1495521821757-a1efb6729352?w=800&h=600&fit=crop', // Food bowl
-  'https://images.unsplash.com/photo-1504113888839-1c8eb50233d3?w=800&h=600&fit=crop', // Tacos
-  'https://images.unsplash.com/photo-1476718406336-bb5a9690ee2a?w=800&h=600&fit=crop', // Dessert
-  'https://images.unsplash.com/photo-1551782450-17144efb9c50?w=800&h=600&fit=crop', // Burger
-  'https://images.unsplash.com/photo-1506084868230-bb9d95c24759?w=800&h=600&fit=crop', // Soup
+  'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=1200&h=800&fit=crop&q=80', // Salad
+  'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=1200&h=800&fit=crop&q=80', // Pizza
+  'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=1200&h=800&fit=crop&q=80', // Pasta
+  'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=1200&h=800&fit=crop&q=80', // Burger
+  'https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=1200&h=800&fit=crop&q=80', // Food
+  'https://images.unsplash.com/photo-1512058564366-18510be2db19?w=1200&h=800&fit=crop&q=80', // Sushi
+  'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1200&h=800&fit=crop&q=80', // Breakfast
+  'https://images.unsplash.com/photo-1495521821757-a1efb6729352?w=1200&h=800&fit=crop&q=80', // Food bowl
+  'https://images.unsplash.com/photo-1504113888839-1c8eb50233d3?w=1200&h=800&fit=crop&q=80', // Tacos
+  'https://images.unsplash.com/photo-1476718406336-bb5a9690ee2a?w=1200&h=800&fit=crop&q=80', // Dessert
+  'https://images.unsplash.com/photo-1551782450-17144efb9c50?w=1200&h=800&fit=crop&q=80', // Burger
+  'https://images.unsplash.com/photo-1506084868230-bb9d95c24759?w=1200&h=800&fit=crop&q=80', // Soup
+  'https://images.unsplash.com/photo-1512621776951-a5739dfd84f4?w=1200&h=800&fit=crop&q=80', // Healthy food
+  'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=1200&h=800&fit=crop&q=80', // Pizza slice
+  'https://images.unsplash.com/photo-1506354616782-cd1614ce2306?w=1200&h=800&fit=crop&q=80', // Grilled food
+  'https://images.unsplash.com/photo-1504754524776-8f4f696becb7?w=1200&h=800&fit=crop&q=80', // Breakfast plate
+  'https://images.unsplash.com/photo-1540189549336-e69e73727c2f?w=1200&h=800&fit=crop&q=80', // Salad bowl
+  'https://images.unsplash.com/photo-1561043432-fd076846a152?w=1200&h=800&fit=crop&q=80', // Burger and fries
+  'https://images.unsplash.com/photo-1571997478779-2adcbbe9ab2f?w=1200&h=800&fit=crop&q=80', // Pasta dish
+  'https://images.unsplash.com/photo-1574652645529-7b7be2c6d9b8?w=1200&h=800&fit=crop&q=80', // Sushi platter
+  'https://images.unsplash.com/photo-1571091718767-18b5b1457add?w=1200&h=800&fit=crop&q=80', // Burger close-up
+  'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=1200&h=800&fit=crop&q=80', // Food spread
+  'https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=1200&h=800&fit=crop&q=80', // Pizza close-up
+  'https://images.unsplash.com/photo-1551782450-a2132b4ba21d?w=1200&h=800&fit=crop&q=80', // Burger stack
 ];
 
 const DINING_HALLS = [
@@ -122,10 +134,10 @@ async function populateDatabase() {
 
     console.log(`\n📝 Creating posts...\n`);
 
-    // Create posts for each user
+    // Create posts for each user (more posts for a richer feed)
     for (let i = 0; i < createdUsers.length; i++) {
       const user = createdUsers[i];
-      const numPosts = Math.floor(Math.random() * 3) + 2; // 2-4 posts per user
+      const numPosts = Math.floor(Math.random() * 4) + 3; // 3-6 posts per user
 
       for (let j = 0; j < numPosts; j++) {
         try {
@@ -136,11 +148,17 @@ async function populateDatabase() {
           const meal_type = MEAL_TYPES[Math.floor(Math.random() * MEAL_TYPES.length)];
           const menu_items = MENU_ITEMS[(i * numPosts + j) % MENU_ITEMS.length];
           
-          // Add 1-3 photos per post
-          const numPhotos = Math.floor(Math.random() * 3) + 1;
+          // Add 1-4 photos per post (more photos for better visuals)
+          const numPhotos = Math.floor(Math.random() * 4) + 1;
           const photoIndices = [];
+          const usedIndices = new Set();
           for (let k = 0; k < numPhotos; k++) {
-            photoIndices.push(Math.floor(Math.random() * FOOD_IMAGES.length));
+            let randomIndex;
+            do {
+              randomIndex = Math.floor(Math.random() * FOOD_IMAGES.length);
+            } while (usedIndices.has(randomIndex) && usedIndices.size < FOOD_IMAGES.length);
+            usedIndices.add(randomIndex);
+            photoIndices.push(randomIndex);
           }
 
           // Create post
@@ -175,12 +193,12 @@ async function populateDatabase() {
     const postsResult = await pool.query('SELECT id, author_id FROM posts ORDER BY created_at DESC');
     const posts = postsResult.rows;
 
-    // Add likes (each user likes some posts from other users)
+    // Add likes (each user likes multiple posts from other users for engagement)
     for (const user of createdUsers) {
       const postsToLike = posts
         .filter(p => p.author_id !== user.id)
         .sort(() => Math.random() - 0.5)
-        .slice(0, Math.floor(Math.random() * 3) + 1); // Like 1-3 random posts
+        .slice(0, Math.floor(Math.random() * 5) + 3); // Like 3-7 random posts
 
       for (const post of postsToLike) {
         try {
@@ -195,29 +213,44 @@ async function populateDatabase() {
         }
       }
     }
+    
+    console.log(`  ✓ Added likes and comments to posts`);
 
-    // Add comments
-    for (let i = 0; i < Math.min(5, posts.length); i++) {
+    // Add comments (more comments for engagement)
+    const comments = [
+      'Looks delicious! 😋',
+      'I need to try this!',
+      'Great choice!',
+      'Yum! 🤤',
+      'Adding this to my list!',
+      'That looks amazing!',
+      'Can\'t wait to try this!',
+      'So good!',
+      'Love it! ❤️',
+      'Definitely trying this next time!',
+      'Looks perfect!',
+      'Yummy! 🍽️',
+    ];
+    
+    // Add 2-3 comments per post (for first 10 posts)
+    for (let i = 0; i < Math.min(10, posts.length); i++) {
       const post = posts[i];
-      const commenter = createdUsers.find(u => u.id !== post.author_id);
-      if (commenter) {
-        const comments = [
-          'Looks delicious!',
-          'I need to try this!',
-          'Great choice!',
-          'Yum! 🤤',
-          'Adding this to my list!',
-        ];
+      const possibleCommenters = createdUsers.filter(u => u.id !== post.author_id);
+      const numComments = Math.floor(Math.random() * 2) + 2; // 2-3 comments
+      
+      for (let j = 0; j < numComments && j < possibleCommenters.length; j++) {
+        const commenter = possibleCommenters[j];
         const commentText = comments[Math.floor(Math.random() * comments.length)];
         
         try {
           await pool.query(
             `INSERT INTO comments (id, post_id, author_id, text, created_at)
-             VALUES ($1, $2, $3, $4, NOW())`,
+             VALUES ($1, $2, $3, $4, NOW() - INTERVAL '${i * 10 + j} minutes')
+             ON CONFLICT DO NOTHING`,
             [uuidv4(), post.id, commenter.id, commentText]
           );
         } catch (error) {
-          console.error(`  ✗ Error adding comment:`, error.message);
+          // Ignore duplicate comments
         }
       }
     }
