@@ -7,9 +7,11 @@ import {
 import styles from "@/styles";
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, FlatList, Text, TouchableOpacity, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/Feather";
 
 export default function TrendingScreen() {
+  const insets = useSafeAreaInsets();
   const [searchText, setSearchText] = useState("");
   const [loading, setLoading] = useState(true);
   const [dishes, setDishes] = useState<SearchDish[]>([]);
@@ -81,19 +83,42 @@ export default function TrendingScreen() {
     );
   };
 
+  // Calculate header height dynamically
+  const headerHeight = Math.max(insets.top, 15) + 40 + 12 + 12 + 12 + 12 + 40 + 3; // ~180-190px
+  const bottomNavHeight = 60 + Math.max(insets.bottom, 8);
+
   return (
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
+      {/* Fixed Header */}
+      <View style={{ 
+        position: 'absolute', 
+        top: 0, 
+        left: 0, 
+        right: 0,
+        zIndex: 10,
+        backgroundColor: '#fff',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 5,
+      }}>
+        <Header searchText={searchText} setSearchText={setSearchText} />
+      </View>
+      
+      {/* Scrollable Content */}
       <FlatList
+        contentContainerStyle={{ 
+          paddingTop: headerHeight + 100, // Header + trending header
+          paddingBottom: bottomNavHeight,
+        }}
         ListHeaderComponent={
-          <>
-            <Header searchText={searchText} setSearchText={setSearchText} />
-            <View style={styles.trendingHeader}>
-              <Text style={styles.trendingTitle}>🔥 Trending Now</Text>
-              <Text style={styles.trendingSubtitle}>
-                Most mentioned dishes this week
-              </Text>
-            </View>
-          </>
+          <View style={styles.trendingHeader}>
+            <Text style={styles.trendingTitle}>🔥 Trending Now</Text>
+            <Text style={styles.trendingSubtitle}>
+              Most mentioned dishes this week
+            </Text>
+          </View>
         }
         data={dishes}
         renderItem={renderDishItem}
@@ -129,8 +154,20 @@ export default function TrendingScreen() {
           </View>
         }
       />
-      <BottomNav />
+      
+      {/* Fixed Bottom Nav */}
+      <View style={{ 
+        position: 'absolute', 
+        bottom: 0, 
+        left: 0, 
+        right: 0,
+        zIndex: 10,
+        backgroundColor: '#fff',
+        borderTopWidth: 1,
+        borderTopColor: '#f0f0f0',
+      }}>
+        <BottomNav />
+      </View>
     </View>
   );
 }
-

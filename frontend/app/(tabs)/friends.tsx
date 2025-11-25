@@ -9,6 +9,7 @@ import {
   StyleSheet,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import BottomNav from "@/components/BottomNav";
 import Header from "@/components/Header";
 import FriendCard from "@/components/FriendCard";
@@ -327,13 +328,36 @@ export default function FriendsScreen() {
     </>
   );
 
+  const insets = useSafeAreaInsets();
+  // Calculate header height dynamically
+  const headerHeight = Math.max(insets.top, 15) + 40 + 12 + 12 + 12 + 12 + 40 + 3; // ~180-190px
+  const bottomNavHeight = 60 + Math.max(insets.bottom, 8);
+
   if (loading) {
     return (
       <View style={{ flex: 1, backgroundColor: '#fff' }}>
+        {/* Fixed Header */}
+        <View style={{ 
+          position: 'absolute', 
+          top: 0, 
+          left: 0, 
+          right: 0,
+          zIndex: 10,
+          backgroundColor: '#fff',
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
+          elevation: 5,
+        }}>
+          <Header searchText={searchText} setSearchText={setSearchText} />
+        </View>
+        
         <FlatList
-          ListHeaderComponent={
-            <Header searchText={searchText} setSearchText={setSearchText} />
-          }
+          contentContainerStyle={{ 
+            paddingTop: headerHeight,
+            paddingBottom: bottomNavHeight,
+          }}
           data={[]}
           renderItem={() => null}
           ListEmptyComponent={
@@ -343,20 +367,50 @@ export default function FriendsScreen() {
             </View>
           }
         />
-        <BottomNav />
+        
+        {/* Fixed Bottom Nav */}
+        <View style={{ 
+          position: 'absolute', 
+          bottom: 0, 
+          left: 0, 
+          right: 0,
+          zIndex: 10,
+          backgroundColor: '#fff',
+          borderTopWidth: 1,
+          borderTopColor: '#f0f0f0',
+        }}>
+          <BottomNav />
+        </View>
       </View>
     );
   }
 
   return (
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
+      {/* Fixed Header */}
+      <View style={{ 
+        position: 'absolute', 
+        top: 0, 
+        left: 0, 
+        right: 0,
+        zIndex: 10,
+        backgroundColor: '#fff',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 5,
+      }}>
+        <Header searchText={searchText} setSearchText={setSearchText} />
+      </View>
+      
+      {/* Scrollable Content */}
       <FlatList
-        ListHeaderComponent={
-          <>
-            <Header searchText={searchText} setSearchText={setSearchText} />
-            {renderTabBar()}
-          </>
-        }
+        contentContainerStyle={{ 
+          paddingTop: headerHeight + 50, // Header + tab bar
+          paddingBottom: bottomNavHeight,
+        }}
+        ListHeaderComponent={renderTabBar()}
         data={[{ id: "content" }]}
         renderItem={() => (
           <View>
@@ -373,7 +427,20 @@ export default function FriendsScreen() {
           />
         }
       />
-      <BottomNav />
+      
+      {/* Fixed Bottom Nav */}
+      <View style={{ 
+        position: 'absolute', 
+        bottom: 0, 
+        left: 0, 
+        right: 0,
+        zIndex: 10,
+        backgroundColor: '#fff',
+        borderTopWidth: 1,
+        borderTopColor: '#f0f0f0',
+      }}>
+        <BottomNav />
+      </View>
     </View>
   );
 }

@@ -76,14 +76,36 @@ export default function ProfileScreen() {
     setPosts((prev) => prev.map((p) => (String(p.id) === String(postId) ? { ...p, commentCount: newCount } : p)));
   };
 
+  // Calculate header height dynamically
+  const headerHeight = Math.max(insets.top, 15) + 40 + 12 + 12 + 12 + 12 + 40 + 3; // ~180-190px
+  const bottomNavHeight = 60 + Math.max(insets.bottom, 8);
+
   return (
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
+      {/* Fixed Header */}
+      <View style={{ 
+        position: 'absolute', 
+        top: 0, 
+        left: 0, 
+        right: 0,
+        zIndex: 10,
+        backgroundColor: '#fff',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 5,
+      }}>
+        <Header searchText={searchText} setSearchText={setSearchText} />
+      </View>
+      
+      {/* Scrollable Content */}
       <FlatList
         style={{ flex: 1 }}
         contentContainerStyle={{ 
-          paddingBottom: 80, // Space for bottom nav
+          paddingTop: headerHeight,
+          paddingBottom: bottomNavHeight,
         }}
-        ListHeaderComponent={<Header searchText={searchText} setSearchText={setSearchText} />}
         data={posts}
         keyExtractor={(item) => String(item.id)}
         renderItem={({ item }) => (
@@ -113,11 +135,14 @@ export default function ProfileScreen() {
         }}
         showsVerticalScrollIndicator={false}
       />
+      
+      {/* Fixed Bottom Nav */}
       <View style={{ 
         position: 'absolute', 
         bottom: 0, 
         left: 0, 
         right: 0,
+        zIndex: 10,
         backgroundColor: '#fff',
         borderTopWidth: 1,
         borderTopColor: '#f0f0f0',

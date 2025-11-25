@@ -57,20 +57,40 @@ export default function MenusScreen() {
     });
   };
 
+  // Calculate header height dynamically
+  const headerHeight = Math.max(insets.top, 15) + 40 + 12 + 12 + 12 + 12 + 40 + 3; // ~180-190px
+  const bottomNavHeight = 60 + Math.max(insets.bottom, 8);
+
   return (
     <View style={{ flex: 1, backgroundColor: "#fff" }}>
+      {/* Fixed Header */}
+      <View style={{ 
+        position: 'absolute', 
+        top: 0, 
+        left: 0, 
+        right: 0,
+        zIndex: 10,
+        backgroundColor: '#fff',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 5,
+      }}>
+        <Header searchText={searchText} setSearchText={setSearchText} />
+      </View>
+      
+      {/* Scrollable Content */}
       <FlatList
         style={{ flex: 1 }}
         contentContainerStyle={{ 
-          paddingBottom: 80, // Space for bottom nav
+          paddingTop: headerHeight + 60, // Header + section header
+          paddingBottom: bottomNavHeight,
         }}
         ListHeaderComponent={
-          <>
-            <Header searchText={searchText} setSearchText={setSearchText} />
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Dining Facilities</Text>
-            </View>
-          </>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Dining Facilities</Text>
+          </View>
         }
         data={filteredHalls}
         keyExtractor={(item) => item.id.toString()}
@@ -111,11 +131,14 @@ export default function MenusScreen() {
         }
         showsVerticalScrollIndicator={false}
       />
+      
+      {/* Fixed Bottom Nav */}
       <View style={{ 
         position: 'absolute', 
         bottom: 0, 
         left: 0, 
         right: 0,
+        zIndex: 10,
         backgroundColor: '#fff',
         borderTopWidth: 1,
         borderTopColor: '#f0f0f0',
