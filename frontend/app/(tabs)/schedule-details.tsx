@@ -71,8 +71,8 @@ export default function ScheduleDetailsScreen() {
   // Backend already returns dates formatted as "Tuesday, November 11, 2025"
   // So we can use them directly
 
-  // Calculate header height dynamically
-  const headerHeight = Math.max(insets.top, 15) + 40 + 12 + 12 + 12 + 12 + 40 + 3; // ~180-190px
+  // Calculate header height: safe area + headerTop (40) + margins (12) + searchBar (24+12) + filter (16+3) + paddingBottom (12)
+  const headerHeight = Math.max(insets.top, 15) + 40 + 12 + 24 + 12 + 16 + 3 + 12; // ~134px + safe area
   const bottomNavHeight = 60 + Math.max(insets.bottom, 8);
 
   return (

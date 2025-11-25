@@ -6,7 +6,7 @@ import {
 } from "@/services/api";
 import styles from "@/styles";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, FlatList, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, FlatList, Text, TouchableOpacity, View, LayoutChangeEvent } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/Feather";
 
@@ -16,6 +16,7 @@ export default function TrendingScreen() {
   const [loading, setLoading] = useState(true);
   const [dishes, setDishes] = useState<SearchDish[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [headerHeight, setHeaderHeight] = useState(180);
 
   useEffect(() => {
     fetchTrendingDishes();
@@ -83,33 +84,39 @@ export default function TrendingScreen() {
     );
   };
 
-  // Calculate header height dynamically
-  const headerHeight = Math.max(insets.top, 15) + 40 + 12 + 12 + 12 + 12 + 40 + 3; // ~180-190px
   const bottomNavHeight = 60 + Math.max(insets.bottom, 8);
+
+  const handleHeaderLayout = (event: LayoutChangeEvent) => {
+    const { height } = event.nativeEvent.layout;
+    setHeaderHeight(height);
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
       {/* Fixed Header */}
-      <View style={{ 
-        position: 'absolute', 
-        top: 0, 
-        left: 0, 
-        right: 0,
-        zIndex: 10,
-        backgroundColor: '#fff',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 5,
-      }}>
+      <View 
+        onLayout={handleHeaderLayout}
+        style={{ 
+          position: 'absolute', 
+          top: 0, 
+          left: 0, 
+          right: 0,
+          zIndex: 10,
+          backgroundColor: '#fff',
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
+          elevation: 5,
+        }}
+      >
         <Header searchText={searchText} setSearchText={setSearchText} />
       </View>
       
       {/* Scrollable Content */}
       <FlatList
         contentContainerStyle={{ 
-          paddingTop: headerHeight + 100, // Header + trending header
+          paddingTop: headerHeight + 80, // Header + trending header
           paddingBottom: bottomNavHeight,
         }}
         ListHeaderComponent={
