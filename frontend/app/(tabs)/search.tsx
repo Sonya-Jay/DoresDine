@@ -116,7 +116,7 @@ export default function TrendingScreen() {
       {/* Scrollable Content */}
       <FlatList
         contentContainerStyle={{ 
-          paddingTop: headerHeight + 80, // Header + trending header
+          paddingTop: headerHeight + 20, // Header + reduced trending header spacing
           paddingBottom: bottomNavHeight,
         }}
         ListHeaderComponent={

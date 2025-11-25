@@ -571,7 +571,8 @@ const styles = StyleSheet.create({
   // Trending Page Styles
   trendingHeader: {
     paddingHorizontal: 20,
-    paddingVertical: 24,
+    paddingTop: 12,
+    paddingBottom: 16,
     backgroundColor: "#fff",
   },
   trendingTitle: {

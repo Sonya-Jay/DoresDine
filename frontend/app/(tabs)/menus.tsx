@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   View,
   StyleSheet,
+  LayoutChangeEvent,
 } from "react-native";
 import Icon from "react-native-vector-icons/Feather";
 import BottomNav from "@/components/BottomNav";
@@ -57,26 +58,33 @@ export default function MenusScreen() {
     });
   };
 
-  // Calculate header height: safe area + headerTop (40) + margins (12) + searchBar (24+12) + filter (16+3) + paddingBottom (12)
-  const headerHeight = Math.max(insets.top, 15) + 40 + 12 + 24 + 12 + 16 + 3 + 12; // ~134px + safe area
+  const [headerHeight, setHeaderHeight] = useState(180);
   const bottomNavHeight = 60 + Math.max(insets.bottom, 8);
+
+  const handleHeaderLayout = (event: LayoutChangeEvent) => {
+    const { height } = event.nativeEvent.layout;
+    setHeaderHeight(height);
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: "#fff" }}>
       {/* Fixed Header */}
-      <View style={{ 
-        position: 'absolute', 
-        top: 0, 
-        left: 0, 
-        right: 0,
-        zIndex: 10,
-        backgroundColor: '#fff',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 5,
-      }}>
+      <View 
+        onLayout={handleHeaderLayout}
+        style={{ 
+          position: 'absolute', 
+          top: 0, 
+          left: 0, 
+          right: 0,
+          zIndex: 10,
+          backgroundColor: '#fff',
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
+          elevation: 5,
+        }}
+      >
         <Header searchText={searchText} setSearchText={setSearchText} />
       </View>
       
@@ -84,7 +92,7 @@ export default function MenusScreen() {
       <FlatList
         style={{ flex: 1 }}
         contentContainerStyle={{ 
-          paddingTop: headerHeight + 60, // Header + section header
+          paddingTop: headerHeight + 20, // Header + reduced section header spacing
           paddingBottom: bottomNavHeight,
         }}
         ListHeaderComponent={
@@ -152,7 +160,7 @@ export default function MenusScreen() {
 const styles = StyleSheet.create({
   sectionHeader: {
     paddingHorizontal: 20,
-    paddingTop: 16,
+    paddingTop: 8,
     paddingBottom: 12,
   },
   sectionTitle: {
