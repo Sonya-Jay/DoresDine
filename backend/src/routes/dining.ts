@@ -69,4 +69,26 @@ router.get("/menu/:menuId/items", async (req, res) => {
   }
 });
 
+/**
+ * GET /api/dining/nutrition/:detailOid
+ * Get detailed nutrition information for a specific menu item
+ * @param detailOid - The detail ID from the menu item (extracted from menu items)
+ */
+router.get("/nutrition/:detailOid", async (req, res) => {
+  try {
+    const detailOid = parseInt(req.params.detailOid);
+    if (isNaN(detailOid)) {
+      return res.status(400).json({ error: "Invalid detail ID" });
+    }
+    const nutrition = await cbordService.getItemNutrition(detailOid);
+    if (!nutrition) {
+      return res.status(404).json({ error: "Nutrition information not found" });
+    }
+    res.json(nutrition);
+  } catch (error: any) {
+    console.error("Error fetching nutrition:", error);
+    res.status(500).json({ error: error?.message || "Failed to fetch nutrition information" });
+  }
+});
+
 export default router;

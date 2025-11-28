@@ -218,11 +218,13 @@ const PostCard: React.FC<PostCardProps> = ({
 
       {/* Like and comment counts */}
       <View style={styles.socialStats}>
-        {likeCount > 0 && (
-          <Text style={styles.likesText}>
-            {likeCount} {likeCount === 1 ? "like" : "likes"}
-          </Text>
-        )}
+        <View style={styles.likesContainer}>
+          {likeCount > 0 && (
+            <Text style={styles.likesText}>
+              {likeCount} {likeCount === 1 ? "like" : "likes"}
+            </Text>
+          )}
+        </View>
         {commentCount > 0 && (
           <TouchableOpacity onPress={() => setCommentsModalVisible(true)}>
             <Text style={styles.commentsText}>

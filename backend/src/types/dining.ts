@@ -21,7 +21,28 @@ export interface MenuItem {
   description?: string;
   calories?: number;
   allergens?: string[];
-  // Add more nutrition fields as needed
+  detailOid?: number; // Cbord detail ID for fetching nutrition
+  // Nutrition details (optional, fetched separately)
+  nutrition?: {
+    calories: number;
+    caloriesFromFat?: number;
+    totalFat?: number;
+    saturatedFat?: number;
+    transFat?: number;
+    cholesterol?: number;
+    sodium?: number;
+    potassium?: number;
+    totalCarbohydrate?: number;
+    dietaryFiber?: number;
+    sugars?: number;
+    protein?: number;
+    vitaminA?: number;
+    vitaminC?: number;
+    calcium?: number;
+    iron?: number;
+    vitaminD?: number;
+    ingredients?: string;
+  };
 }
 
 export interface MenuCategory {

@@ -3,10 +3,14 @@
 // For Expo, use EXPO_PUBLIC_API_URL in a .env file in the frontend directory
 // Example: EXPO_PUBLIC_API_URL=https://your-api.aws-region.elasticbeanstalk.com
 
+// For local development, use localhost. For production, use AWS URL or set EXPO_PUBLIC_API_URL
+const LOCAL_BACKEND = "http://localhost:3000";
+const AWS_BACKEND = "http://Doresdine-backend-env.eba-j9uthrv7.us-east-2.elasticbeanstalk.com";
+
 export const API_URL = 
   typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_API_URL 
     ? process.env.EXPO_PUBLIC_API_URL 
-    : "http://Doresdine-backend-env.eba-j9uthrv7.us-east-2.elasticbeanstalk.com"; // AWS Backend URL
+    : __DEV__ ? LOCAL_BACKEND : AWS_BACKEND; // Use localhost in dev, AWS in production
 
 // Helper function to get API URL (useful for debugging)
 export const getApiUrl = () => API_URL;

@@ -226,11 +226,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
+  likesContainer: {
+    minHeight: 22,
+    marginBottom: 4,
+  },
   likesText: {
     fontSize: 14,
     fontWeight: "600",
     color: "#000",
-    marginBottom: 4,
   },
   commentsText: {
     fontSize: 14,
