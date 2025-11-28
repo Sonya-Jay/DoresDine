@@ -97,14 +97,13 @@ export default function ScheduleDetailsScreen() {
       {/* Scrollable Content */}
       <FlatList
         contentContainerStyle={{
-          paddingTop: headerHeight + 60, // Header + back button section
+          paddingTop: headerHeight + 40, // Reduced from 60 to 40
           paddingBottom: bottomNavHeight,
-          paddingHorizontal: 20,
         }}
         ListHeaderComponent={
           <View style={styles.header}>
             <TouchableOpacity
-              onPress={() => router.back()}
+              onPress={() => router.push("/(tabs)/menus" as any)}
               style={styles.backButton}
             >
               <Icon name="arrow-left" size={24} color="#000" />
@@ -117,7 +116,7 @@ export default function ScheduleDetailsScreen() {
         data={schedule}
         keyExtractor={(item, index) => `${item.date}-${index}`}
         renderItem={({ item }) => (
-          <View style={styles.daySection}>
+          <View style={[styles.daySection, { paddingHorizontal: 20 }]}>
             <Text style={styles.dayHeader}>{item.date}</Text>
             {item.meals && item.meals.length > 0 ? (
               item.meals.map((meal) => (
@@ -209,13 +208,13 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: 20, // Keep some padding but less than before
+    paddingVertical: 12, // Reduced from 16
     borderBottomWidth: 1,
     borderBottomColor: "#f0f0f0",
   },
   backButton: {
-    marginRight: 12,
+    marginRight: 8, // Reduced from 12 to bring name closer to button
     padding: 4,
   },
   hallTitle: {
