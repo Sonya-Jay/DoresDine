@@ -24,7 +24,8 @@ export interface MenuItem {
   detailOid?: number; // Cbord detail ID for fetching nutrition
   // Nutrition details (optional, fetched separately)
   nutrition?: {
-    calories: number;
+    itemName?: string;
+    calories?: number;
     caloriesFromFat?: number;
     totalFat?: number;
     saturatedFat?: number;
@@ -42,6 +43,7 @@ export interface MenuItem {
     iron?: number;
     vitaminD?: number;
     ingredients?: string;
+    allergens?: string[];
   };
 }
 

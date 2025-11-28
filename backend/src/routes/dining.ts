@@ -73,6 +73,8 @@ router.get("/menu/:menuId/items", async (req, res) => {
  * GET /api/dining/nutrition/:detailOid
  * Get detailed nutrition information for a specific menu item
  * @param detailOid - The detail ID from the menu item (extracted from menu items)
+ * @query unitId - Optional: Cbord unit ID (helps with session setup)
+ * @query menuId - Optional: Menu ID (helps with session setup)
  */
 router.get("/nutrition/:detailOid", async (req, res) => {
   try {
@@ -80,7 +82,12 @@ router.get("/nutrition/:detailOid", async (req, res) => {
     if (isNaN(detailOid)) {
       return res.status(400).json({ error: "Invalid detail ID" });
     }
-    const nutrition = await cbordService.getItemNutrition(detailOid);
+    
+    // Get optional unit and menu IDs from query params
+    const unitId = req.query.unitId ? parseInt(req.query.unitId as string) : undefined;
+    const menuId = req.query.menuId ? parseInt(req.query.menuId as string) : undefined;
+    
+    const nutrition = await cbordService.getItemNutrition(detailOid, unitId, menuId);
     if (!nutrition) {
       return res.status(404).json({ error: "Nutrition information not found" });
     }

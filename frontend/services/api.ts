@@ -576,7 +576,9 @@ export const fetchMenuItems = async (menuId: number, unitId: number) => {
 // Fetch dining halls
 export const fetchDiningHalls = async () => {
   try {
-    const response = await fetch(`${API_URL}${API_ENDPOINTS.DINING_HALLS}`, {
+    const url = `${API_URL}${API_ENDPOINTS.DINING_HALLS}`;
+    console.log('[DEBUG] Fetching dining halls from:', url);
+    const response = await fetch(url, {
       headers: getHeaders(false),
     });
     
@@ -584,7 +586,14 @@ export const fetchDiningHalls = async () => {
       throw new Error(`Failed to fetch dining halls: ${response.statusText}`);
     }
     
-    return await response.json();
+    const data = await response.json();
+    console.log('[DEBUG] Dining halls response:', {
+      total: data.length,
+      open: data.filter((h: any) => h.isOpen === true).length,
+      closed: data.filter((h: any) => h.isOpen === false).length,
+      undefined: data.filter((h: any) => h.isOpen === undefined || h.isOpen === null).length,
+    });
+    return data;
   } catch (error) {
     console.error('Error fetching dining halls:', error);
     throw error;

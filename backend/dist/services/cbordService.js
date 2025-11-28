@@ -6,8 +6,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.DINING_HALLS = void 0;
 // export default new CbordService();
 const axios_1 = __importDefault(require("axios"));
-const node_html_parser_1 = require("node-html-parser");
 const axios_cookiejar_support_1 = require("axios-cookiejar-support");
+const node_html_parser_1 = require("node-html-parser");
 const tough_cookie_1 = require("tough-cookie");
 const CBORD_BASE_URL = "https://netnutrition.cbord.com/nn-prod/vucampusdining";
 // Hardcoded dining halls with their Cbord unit IDs
@@ -68,16 +68,227 @@ class CbordService {
      *
      * @returns Map of cbordUnitId -> isOpen status
      */
+    /**
+     * Get hours of operation for a unit and calculate if it's currently open
+     * @param cbordUnitId - The Cbord unit ID
+     * @returns true if open, false if closed, null if unable to determine
+     */
+    async getUnitStatusFromHours(cbordUnitId) {
+        try {
+            // Ensure we have a session
+            await this.axiosInstance.get("/", {
+                headers: {
+                    Referer: `${CBORD_BASE_URL}/`,
+                    Origin: CBORD_BASE_URL,
+                },
+                timeout: 10000, // 10 second timeout
+            });
+            // Call the hours endpoint
+            const formBody = new URLSearchParams();
+            formBody.append("unitOid", String(cbordUnitId));
+            const response = await this.axiosInstance.post("/Unit/GetHoursOfOperationMarkup", formBody.toString(), {
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+                    Accept: "*/*",
+                    Referer: `${CBORD_BASE_URL}/`,
+                    Origin: CBORD_BASE_URL,
+                    "X-Requested-With": "XMLHttpRequest",
+                },
+                timeout: 10000, // 10 second timeout
+            });
+            if (!response.data || typeof response.data !== 'string') {
+                console.error(`Invalid response for unit ${cbordUnitId}:`, typeof response.data);
+                return null;
+            }
+            // Parse the HTML to extract hours and calculate status
+            const status = this.calculateStatusFromHours(response.data, cbordUnitId);
+            if (status === null) {
+                console.warn(`Could not determine status for unit ${cbordUnitId}`);
+            }
+            return status;
+        }
+        catch (error) {
+            console.error(`Error fetching hours for unit ${cbordUnitId}:`, error.message || error);
+            if (error.code === 'ECONNABORTED') {
+                console.error(`  Timeout fetching hours for unit ${cbordUnitId}`);
+            }
+            else if (error.response) {
+                console.error(`  Response status: ${error.response.status}`);
+            }
+            return null;
+        }
+    }
+    /**
+     * Parse hours HTML and calculate if unit is currently open
+     * @param html - HTML response from GetHoursOfOperationMarkup
+     * @returns true if open, false if closed, null if unable to determine
+     */
+    calculateStatusFromHours(html, unitId) {
+        try {
+            const root = (0, node_html_parser_1.parse)(html);
+            // Get current time in Central Time (Vanderbilt's timezone)
+            // Hours from Cbord API are in Central Time, so we need to compare in the same timezone
+            const now = new Date();
+            // Convert UTC to Central Time using Intl.DateTimeFormat
+            const centralTimeFormatter = new Intl.DateTimeFormat('en-US', {
+                timeZone: 'America/Chicago',
+                hour: 'numeric',
+                minute: 'numeric',
+                hour12: false,
+                weekday: 'long'
+            });
+            const centralParts = centralTimeFormatter.formatToParts(now);
+            const centralHour = parseInt(centralParts.find(p => p.type === 'hour')?.value || '0', 10);
+            const centralMinute = parseInt(centralParts.find(p => p.type === 'minute')?.value || '0', 10);
+            const centralDayName = centralParts.find(p => p.type === 'weekday')?.value || '';
+            // Map day name to day number
+            const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            const currentDay = dayNames.indexOf(centralDayName);
+            const currentTime = centralHour * 60 + centralMinute; // Time in minutes since midnight (Central Time)
+            const currentDayName = centralDayName;
+            // Find the row for today
+            const rows = root.querySelectorAll('tr');
+            // Log all rows for debugging (only for first few units to avoid spam)
+            if (unitId !== undefined && unitId <= 3) {
+                console.log(`[DEBUG Unit ${unitId}] Current: ${currentDayName} ${centralHour}:${String(centralMinute).padStart(2, '0')} CT (${currentTime} min) [UTC: ${now.getUTCHours()}:${String(now.getUTCMinutes()).padStart(2, '0')}]`);
+                rows.forEach((row, idx) => {
+                    const dayCell = row.querySelector('td');
+                    if (dayCell) {
+                        const dayName = dayCell.text.trim();
+                        const isDanger = row.classList.contains('table-danger');
+                        const isSuccess = row.classList.contains('table-success');
+                        const timeCells = row.querySelectorAll('td');
+                        const times = timeCells.length >= 3 ? `${timeCells[1]?.text.trim()} - ${timeCells[2]?.text.trim()}` : 'N/A';
+                        console.log(`[DEBUG Unit ${unitId}] Row ${idx}: ${dayName} | danger:${isDanger} success:${isSuccess} | ${times}`);
+                    }
+                });
+            }
+            // Collect ALL rows for today (there may be multiple time periods: breakfast, lunch, dinner)
+            const todayRows = [];
+            for (const row of rows) {
+                const dayCell = row.querySelector('td');
+                if (!dayCell)
+                    continue;
+                const dayName = dayCell.text.trim();
+                if (dayName !== currentDayName)
+                    continue;
+                const isDanger = row.classList.contains('table-danger');
+                const isSuccess = row.classList.contains('table-success');
+                if (isDanger) {
+                    // Closed period
+                    todayRows.push({ openTime: null, closeTime: null, isDanger: true });
+                }
+                else if (isSuccess) {
+                    // Open period with times
+                    const timeCells = row.querySelectorAll('td');
+                    if (timeCells.length >= 3) {
+                        const openTimeStr = timeCells[1]?.text.trim();
+                        const closeTimeStr = timeCells[2]?.text.trim();
+                        if (openTimeStr && closeTimeStr) {
+                            const openTime = this.parseTimeString(openTimeStr);
+                            const closeTime = this.parseTimeString(closeTimeStr);
+                            if (openTime !== null && closeTime !== null) {
+                                todayRows.push({ openTime, closeTime, isDanger: false });
+                            }
+                        }
+                    }
+                }
+            }
+            // If no rows found for today, return null (unknown)
+            if (todayRows.length === 0) {
+                if (unitId !== undefined && unitId <= 3) {
+                    console.log(`[DEBUG Unit ${unitId}] No rows found for ${currentDayName}`);
+                }
+                return null;
+            }
+            // Check if all periods are closed
+            const allClosed = todayRows.every(r => r.isDanger);
+            if (allClosed) {
+                if (unitId !== undefined && unitId <= 3) {
+                    console.log(`[DEBUG Unit ${unitId}] ${currentDayName} - all periods closed`);
+                }
+                return false;
+            }
+            // Check if current time falls within ANY open period
+            for (const period of todayRows) {
+                if (!period.isDanger && period.openTime !== null && period.closeTime !== null) {
+                    if (currentTime >= period.openTime && currentTime <= period.closeTime) {
+                        if (unitId !== undefined && unitId <= 3) {
+                            console.log(`[DEBUG Unit ${unitId}] ${currentDayName} - OPEN (within ${period.openTime}-${period.closeTime} min)`);
+                        }
+                        return true;
+                    }
+                }
+            }
+            // Has open periods but current time is outside all of them
+            if (unitId !== undefined && unitId <= 3) {
+                const openPeriods = todayRows.filter(r => !r.isDanger).map(r => `${r.openTime}-${r.closeTime}`).join(', ');
+                console.log(`[DEBUG Unit ${unitId}] ${currentDayName} - CLOSED (current: ${currentTime}, open periods: ${openPeriods})`);
+            }
+            return false;
+        }
+        catch (error) {
+            console.error("Error parsing hours HTML:", error);
+            return null;
+        }
+    }
+    /**
+     * Parse time string like "8:00 AM" or "5:00 PM" to minutes since midnight
+     * @param timeStr - Time string (e.g., "8:00 AM", "5:00 PM")
+     * @returns Minutes since midnight, or null if parsing fails
+     */
+    parseTimeString(timeStr) {
+        try {
+            // Match patterns like "8:00 AM", "5:00 PM", "12:30 PM"
+            const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+            if (!match)
+                return null;
+            let hours = parseInt(match[1], 10);
+            const minutes = parseInt(match[2], 10);
+            const period = match[3].toUpperCase();
+            // Convert to 24-hour format
+            if (period === 'PM' && hours !== 12) {
+                hours += 12;
+            }
+            else if (period === 'AM' && hours === 12) {
+                hours = 0;
+            }
+            return hours * 60 + minutes;
+        }
+        catch (error) {
+            console.error(`Error parsing time string "${timeStr}":`, error);
+            return null;
+        }
+    }
+    /**
+     * Get unit status from hours API for all units
+     * Fetches hours in parallel for efficiency
+     */
     async getUnitStatusFromAPI() {
         const unitStatusMap = new Map();
         try {
-            // TODO: Replace this with the actual endpoint you find in the network tab
-            // Example: If you find an endpoint like /Unit/GetUnitsList
-            // The endpoint should return unit status information
-            // Example structure:
-            // const response = await this.axiosInstance.post("/Unit/GetUnitsList", {}, { headers: {...} });
-            // Parse response.data to extract unit status
-            // For now, return empty map (will fall back to schedule checking)
+            console.log(`[Status] Fetching hours for ${exports.DINING_HALLS.length} units...`);
+            // Fetch hours for all units in parallel
+            const statusPromises = exports.DINING_HALLS.map(async (hall) => {
+                try {
+                    const status = await this.getUnitStatusFromHours(hall.cbordUnitId);
+                    if (status !== null) {
+                        unitStatusMap.set(hall.cbordUnitId, status);
+                        console.log(`[Status] ${hall.name}: ${status ? 'OPEN' : 'CLOSED'}`);
+                    }
+                    else {
+                        console.warn(`[Status] ${hall.name}: Could not determine status`);
+                    }
+                }
+                catch (error) {
+                    console.error(`[Status] Error for ${hall.name}:`, error.message || error);
+                }
+            });
+            // Wait for all requests to complete (with timeout)
+            const results = await Promise.allSettled(statusPromises);
+            const successful = results.filter(r => r.status === 'fulfilled').length;
+            const failed = results.filter(r => r.status === 'rejected').length;
+            console.log(`[Status] Completed: ${successful} successful, ${failed} failed, ${unitStatusMap.size} with status`);
             return unitStatusMap;
         }
         catch (error) {
@@ -86,15 +297,40 @@ class CbordService {
         }
     }
     /**
-     * Get all dining halls
-     * NOTE: We don't check open/closed status here because it requires making
-     * API calls for all 21 halls, which is extremely slow (10+ seconds).
-     * Open/closed status can be checked on-demand when viewing a specific hall's schedule.
+     * Get all dining halls with open/closed status
+     * Uses hours of operation API to determine current status
      */
     async getDiningHalls() {
-        // Return all halls without checking status (much faster)
-        // Status can be determined when viewing individual hall schedules
-        return exports.DINING_HALLS.map(hall => ({ ...hall, isOpen: undefined }));
+        const hallsWithStatus = [];
+        try {
+            console.log("[getDiningHalls] Starting to fetch dining halls with status...");
+            // Get status from hours API (fetches in parallel for efficiency)
+            const unitStatusMap = await this.getUnitStatusFromAPI();
+            console.log(`[getDiningHalls] Status map size: ${unitStatusMap.size} out of ${exports.DINING_HALLS.length} halls`);
+            for (const hall of exports.DINING_HALLS) {
+                // Get status from map if available, otherwise leave undefined
+                const isOpen = unitStatusMap.has(hall.cbordUnitId)
+                    ? unitStatusMap.get(hall.cbordUnitId) ?? undefined
+                    : undefined;
+                if (isOpen === undefined) {
+                    console.warn(`[getDiningHalls] No status for ${hall.name} (unitId: ${hall.cbordUnitId})`);
+                }
+                hallsWithStatus.push({
+                    ...hall,
+                    isOpen,
+                });
+            }
+            const openCount = hallsWithStatus.filter(h => h.isOpen === true).length;
+            const closedCount = hallsWithStatus.filter(h => h.isOpen === false).length;
+            const undefinedCount = hallsWithStatus.filter(h => h.isOpen === undefined).length;
+            console.log(`[getDiningHalls] Summary: ${openCount} open, ${closedCount} closed, ${undefinedCount} undefined`);
+        }
+        catch (error) {
+            console.error("Error fetching dining halls:", error);
+            // Fallback: return halls without status
+            return exports.DINING_HALLS.map(hall => ({ ...hall, isOpen: undefined }));
+        }
+        return hallsWithStatus;
     }
     /**
      * Get menu schedule for a specific dining hall
@@ -367,7 +603,7 @@ class CbordService {
      * @param detailOid - The detail ID extracted from menu items HTML
      * @returns Nutrition information or null if not available
      */
-    async getItemNutrition(detailOid) {
+    async getItemNutrition(detailOid, cbordUnitId, menuId) {
         try {
             // Ensure we have a session by visiting the main page
             await this.axiosInstance.get("/", {
@@ -394,6 +630,36 @@ class CbordService {
                 // If this fails, continue anyway - it might not be critical
                 console.log("Session initialization optional call failed (non-critical):", sessionError);
             }
+            // If unit and menu IDs are provided, set up the session properly
+            // This ensures we're in the right context for fetching nutrition
+            if (cbordUnitId && menuId) {
+                try {
+                    // Select the unit
+                    const unitFormBody = new URLSearchParams();
+                    unitFormBody.append("unitOid", String(cbordUnitId));
+                    await this.axiosInstance.post("/Unit/SelectUnitFromUnitsList", unitFormBody.toString(), {
+                        headers: {
+                            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+                        },
+                    });
+                    // Select the menu
+                    const menuFormBody = new URLSearchParams();
+                    menuFormBody.append("menuOid", String(menuId));
+                    await this.axiosInstance.post("/Menu/SelectMenu", menuFormBody.toString(), {
+                        headers: {
+                            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+                            Accept: "application/json, text/javascript, */*; q=0.01",
+                            Referer: `${CBORD_BASE_URL}/`,
+                            Origin: CBORD_BASE_URL,
+                            "X-Requested-With": "XMLHttpRequest",
+                        },
+                    });
+                }
+                catch (setupError) {
+                    console.log("Menu/unit setup failed (non-critical):", setupError);
+                    // Continue anyway - might still work
+                }
+            }
             // Call the nutrition endpoint
             const formBody = new URLSearchParams();
             formBody.append("detailOid", String(detailOid));
@@ -411,17 +677,31 @@ class CbordService {
                 return null;
             }
             // Check if response is HTML (success) or error
-            if (typeof response.data === 'string' && response.data.includes('<!DOCTYPE') || response.data.includes('<html')) {
+            const responseStr = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
+            // Check if it's a JSON response with HTML in a panel
+            if (typeof response.data === 'object' && response.data.panels) {
+                // Find the nutrition panel
+                const nutritionPanel = response.data.panels.find((p) => p.id === 'nutritionPanel' || p.id === 'itemPanel' || p.html);
+                if (nutritionPanel && nutritionPanel.html) {
+                    const nutrition = this.parseNutritionLabel(nutritionPanel.html);
+                    if (nutrition) {
+                        return nutrition;
+                    }
+                }
+            }
+            // Check if it's direct HTML
+            if (responseStr.includes('<!DOCTYPE') || responseStr.includes('<html') || responseStr.includes('<div') || responseStr.includes('cbo_nn_Label')) {
                 // Parse the HTML response
-                const nutrition = this.parseNutritionLabel(response.data);
-                if (!nutrition || !nutrition.calories) {
+                const nutrition = this.parseNutritionLabel(responseStr);
+                // Return nutrition even if calories parsing failed - we still have allergens and other info
+                if (!nutrition) {
                     console.error(`Failed to parse nutrition data for detailOid ${detailOid}`);
                     return null;
                 }
                 return nutrition;
             }
             else {
-                console.error(`Unexpected response format for nutrition detailOid ${detailOid}:`, typeof response.data);
+                console.error(`Unexpected response format for nutrition detailOid ${detailOid}. Response type: ${typeof response.data}, Preview: ${responseStr.substring(0, 200)}`);
                 return null;
             }
         }
@@ -436,16 +716,38 @@ class CbordService {
     parseNutritionLabel(html) {
         try {
             const root = (0, node_html_parser_1.parse)(html);
-            const nutrition = {
-                calories: 0,
-            };
-            // Extract calories (main value) - look for "Calories" followed by number
+            const nutrition = {};
+            // Extract item name if available
+            const itemNameEl = root.querySelector(".cbo_nn_LabelHeader, .cbo_nn_LabelTitle");
+            if (itemNameEl) {
+                nutrition.itemName = itemNameEl.text.trim();
+            }
+            // Extract calories (main value) - try multiple methods
+            // Method 1: Look for "Calories" in table cells
             const caloriesRow = root.querySelector("td:contains('Calories')");
             if (caloriesRow) {
                 const caloriesText = caloriesRow.text;
                 const caloriesMatch = caloriesText.match(/Calories[^\d]*(\d+)/i);
                 if (caloriesMatch) {
                     nutrition.calories = parseInt(caloriesMatch[1], 10);
+                }
+            }
+            // Method 2: Look for calories in the HTML directly
+            if (!nutrition.calories) {
+                const caloriesMatch = html.match(/Calories[^\d]*(\d+)/i);
+                if (caloriesMatch) {
+                    nutrition.calories = parseInt(caloriesMatch[1], 10);
+                }
+            }
+            // Method 3: Look for calories in specific nutrition label structure
+            if (!nutrition.calories) {
+                const caloriesEl = root.querySelector(".cbo_nn_LabelBorderedSubHeader, .cbo_nn_SecondaryNutrient");
+                if (caloriesEl) {
+                    const caloriesText = caloriesEl.text;
+                    const caloriesMatch = caloriesText.match(/(\d+)\s*Cal/i);
+                    if (caloriesMatch) {
+                        nutrition.calories = parseInt(caloriesMatch[1], 10);
+                    }
                 }
             }
             // Extract calories from fat
@@ -522,6 +824,16 @@ class CbordService {
             if (ingredientsElement) {
                 nutrition.ingredients = ingredientsElement.text.trim();
             }
+            // Extract allergens from the nutrition label (if available)
+            const allergensElement = root.querySelector(".cbo_nn_LabelAllergens");
+            if (allergensElement) {
+                const allergensText = allergensElement.text.trim();
+                if (allergensText) {
+                    nutrition.allergens = allergensText.split(/,\s*/).filter(Boolean);
+                }
+            }
+            // Return nutrition even if calories is 0 or undefined - we still have other valuable info
+            // This is important for dietary restrictions filtering
             return nutrition;
         }
         catch (error) {
