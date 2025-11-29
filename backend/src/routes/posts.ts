@@ -132,6 +132,71 @@ router.get("/me", async (req: Request, res: Response): Promise<void> => {
   }
 });
 
+// GET /posts/user/:userId - Fetch all posts by a specific user (public, no auth required)
+router.get("/user/:userId", async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { userId } = req.params;
+    const currentUserId = req.headers["x-user-id"] as string;
+    console.log(`[Posts] Fetching posts for user: ${userId}, current user: ${currentUserId || 'none'}`);
+
+    const query = `
+      SELECT 
+        p.id,
+        p.author_id,
+        p.caption,
+        CAST(p.rating AS FLOAT) as rating,
+        p.menu_items,
+        p.dining_hall_name,
+        p.meal_type,
+        p.created_at,
+        u.username,
+        u.email,
+        COALESCE(
+          JSON_AGG(
+            JSON_BUILD_OBJECT(
+              'id', pp.id,
+              'storage_key', pp.storage_key,
+              'display_order', pp.display_order
+            ) ORDER BY pp.display_order
+          ) FILTER (WHERE pp.id IS NOT NULL), 
+          '[]'::json
+        ) as photos,
+        COALESCE(l.like_count, 0) as like_count,
+        COALESCE(c.comment_count, 0) as comment_count,
+        CASE WHEN ul.user_id IS NOT NULL THEN true ELSE false END as is_liked
+      FROM posts p
+      JOIN users u ON p.author_id = u.id
+      LEFT JOIN post_photos pp ON p.id = pp.post_id
+      LEFT JOIN (
+        SELECT post_id, COUNT(*) as like_count
+        FROM likes
+        GROUP BY post_id
+      ) l ON p.id = l.post_id
+      LEFT JOIN (
+        SELECT post_id, COUNT(*) as comment_count
+        FROM comments
+        GROUP BY post_id
+      ) c ON p.id = c.post_id
+      LEFT JOIN likes ul ON p.id = ul.post_id AND ul.user_id = $2
+      WHERE p.author_id = $1
+      GROUP BY p.id, p.author_id, p.caption, p.rating, p.menu_items, p.dining_hall_name, p.meal_type, p.created_at, u.username, u.email, l.like_count, c.comment_count, ul.user_id
+      ORDER BY p.created_at DESC
+    `;
+
+    const result = await pool.query(query, [userId, currentUserId || null]);
+    // Parse rating from string to number if present
+    const rows = result.rows.map((row: any) => ({
+      ...row,
+      rating: row.rating !== null && row.rating !== undefined ? parseFloat(row.rating) : null,
+    }));
+    console.log(`[Posts] Found ${rows.length} posts for user: ${userId}`);
+    res.json(rows);
+  } catch (error: any) {
+    console.error("Error fetching user's posts:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // POST /posts - Create a new post with optional photos
 router.post("/", async (req: Request, res: Response): Promise<void> => {
   const client = await pool.connect();

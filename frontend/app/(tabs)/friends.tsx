@@ -42,24 +42,41 @@ export default function FriendsScreen() {
 
   const getAuthHeaders = async () => {
     const token = await AsyncStorage.getItem("authToken");
+    const userId = await AsyncStorage.getItem("userId");
     return {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(userId ? { "x-user-id": userId } : {}),
     };
   };
 
   const fetchFriends = async () => {
     try {
       const headers = await getAuthHeaders();
-      const response = await fetch(`${API_URL}${API_ENDPOINTS.FOLLOWS_FOLLOWING}`, {
+      const url = `${API_URL}${API_ENDPOINTS.FOLLOWS_FOLLOWING}`;
+      console.log('[Friends] Fetching friends from:', url);
+      console.log('[Friends] Headers:', { ...headers, Authorization: headers.Authorization ? 'Bearer ***' : undefined });
+      
+      const response = await fetch(url, {
         headers,
       });
 
+      console.log('[Friends] Response status:', response.status);
       if (!response.ok) {
-        throw new Error("Failed to fetch friends");
+        const errorText = await response.text();
+        let errorMessage = "Failed to fetch friends";
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.error || errorMessage;
+        } catch {
+          errorMessage = errorText || errorMessage;
+        }
+        console.error('[Friends] Error response:', errorMessage);
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
+      console.log('[Friends] Fetched', data.length, 'friends');
       setFriends(data);
     } catch (err: any) {
       console.error("Error fetching friends:", err);

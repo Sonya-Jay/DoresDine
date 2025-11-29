@@ -54,6 +54,7 @@ export interface BackendPost {
 // Frontend display format for posts
 export interface Post {
   id: number | string; // Backend ID (UUID string or number) - use for API calls
+  author_id?: string; // User ID of the post author
   username: string;
   dininghall: string;
   date: string;

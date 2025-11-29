@@ -58,6 +58,13 @@ export default function TabLayout() {
           headerShown: false,
         }}
       />
+      <Tabs.Screen
+        name="user-profile"
+        options={{
+          title: 'User Profile',
+          headerShown: false,
+        }}
+      />
     </Tabs>
   );
 }

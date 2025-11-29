@@ -7,10 +7,12 @@ const express_1 = require("express");
 const db_1 = __importDefault(require("../db"));
 const router = (0, express_1.Router)();
 // GET /follows/following - Get list of users the current user is following (friends)
+// Optional query param: ?userId=xxx to get another user's following list
 router.get("/following", async (req, res) => {
     try {
-        const userId = req.headers["x-user-id"];
-        if (!userId) {
+        const currentUserId = req.headers["x-user-id"];
+        const targetUserId = req.query.userId || currentUserId;
+        if (!targetUserId) {
             res.status(401).json({ error: "X-User-Id header is required" });
             return;
         }
@@ -25,14 +27,18 @@ router.get("/following", async (req, res) => {
       FROM follows f
       JOIN users u ON f.following_id = u.id
       WHERE f.follower_id = $1
+        AND f.following_id != $1
       ORDER BY f.created_at DESC
     `;
-        const result = await db_1.default.query(query, [userId]);
+        console.log(`[Follows] Fetching following for user: ${targetUserId}`);
+        const result = await db_1.default.query(query, [targetUserId]);
+        console.log(`[Follows] Found ${result.rows.length} following users`);
         res.json(result.rows);
     }
     catch (error) {
         console.error("Error fetching following:", error);
-        res.status(500).json({ error: "Internal server error" });
+        console.error("Error details:", error.message, error.stack);
+        res.status(500).json({ error: "Internal server error", details: error.message });
     }
 });
 // GET /follows/followers - Get list of users following the current user

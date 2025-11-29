@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Image, Text, TouchableOpacity, View } from "react-native";
+import { useRouter } from "expo-router";
 import Icon from "react-native-vector-icons/Feather";
 import styles from "../styles";
 import { Post } from "../types";
@@ -18,11 +19,24 @@ const PostCard: React.FC<PostCardProps> = ({
   onCommentCountUpdate,
   onCreateSimilarPost,
 }) => {
+  const router = useRouter();
   const [isLiking, setIsLiking] = useState(false);
   const [isLiked, setIsLiked] = useState(post.isLiked);
   const [likeCount, setLikeCount] = useState(Number(post.likeCount) || 0);
   const [commentsModalVisible, setCommentsModalVisible] = useState(false);
   const [commentCount, setCommentCount] = useState(Number(post.commentCount) || 0);
+
+  const handleUsernamePress = () => {
+    if (post.author_id) {
+      console.log('[PostCard] Navigating to user profile:', post.author_id);
+      router.push({
+        pathname: "/(tabs)/user-profile",
+        params: { userId: String(post.author_id) },
+      } as any);
+    } else {
+      console.warn('[PostCard] No author_id found for post:', post.id);
+    }
+  };
 
   // Update local state when post prop changes
   React.useEffect(() => {
@@ -82,7 +96,9 @@ const PostCard: React.FC<PostCardProps> = ({
 
         <View style={styles.userDetails}>
           <View style={styles.userHeader}>
-            <Text style={styles.username}>{post.username}</Text>
+            <TouchableOpacity onPress={handleUsernamePress} activeOpacity={0.7}>
+              <Text style={styles.username}>{post.username}</Text>
+            </TouchableOpacity>
             <Text style={styles.rankedText}> ranked </Text>
             <Text style={styles.restaurant}>{post.dininghall}</Text>
           </View>

@@ -54,6 +54,33 @@ router.get('/username/:username', async (req: Request, res: Response): Promise<v
   }
 });
 
+// GET /users/:id - Get user by ID (public, no auth required)
+router.get('/:id', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    console.log(`[Users] Fetching user by ID: ${id}`);
+
+    // Select only columns that exist in the database
+    const result = await pool.query(
+      'SELECT id, username, email, first_name, last_name, email_verified, created_at FROM users WHERE id = $1 LIMIT 1',
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      console.log(`[Users] User not found: ${id}`);
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    console.log(`[Users] User found: ${id}`);
+    res.status(200).json(result.rows[0]);
+  } catch (error: any) {
+    console.error('Error fetching user:', error);
+    console.error('Error details:', error.message, error.stack);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
 // POST /users - Create a new user (for testing only)
 router.post('/', async (req: Request, res: Response): Promise<void> => {
   try {

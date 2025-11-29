@@ -244,6 +244,73 @@ export const getMe = async () => {
   }
 };
 
+// Get user by ID
+export const getUserById = async (userId: string) => {
+  try {
+    const url = `${API_URL}/users/${userId}`;
+    const res = await fetch(url, {
+      headers: getHeaders(false),
+    });
+    if (!res.ok) {
+      const errorText = await res.text();
+      let errorMessage = res.statusText;
+      try {
+        const err = JSON.parse(errorText);
+        errorMessage = err.error || errorMessage;
+      } catch {
+        errorMessage = errorText || errorMessage;
+      }
+      // Only log non-500 errors (500 errors are expected until backend is deployed)
+      if (res.status !== 500) {
+        console.warn(`[API] Failed to fetch user ${userId}:`, errorMessage);
+      }
+      throw new Error(errorMessage);
+    }
+    const user = await res.json();
+    return user;
+  } catch (err: any) {
+    // Re-throw but don't log 500 errors (expected until backend deployment)
+    if (!err.message || !err.message.includes('Internal server error')) {
+      console.warn(`[API] Error in getUserById for ${userId}:`, err.message);
+    }
+    throw err;
+  }
+};
+
+// Fetch posts by user ID
+export const fetchUserPosts = async (userId: string): Promise<Post[]> => {
+  try {
+    await initAuthFromStorage();
+    
+    const url = `${API_URL}/posts/user/${userId}`;
+    console.log(`[API] Fetching posts for user from: ${url}`);
+    const response = await fetch(url, {
+      headers: getHeaders(false),
+    });
+
+    console.log(`[API] Posts response status: ${response.status}`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorMessage = response.statusText;
+      try {
+        const errorData = JSON.parse(errorText);
+        errorMessage = errorData.error || errorMessage;
+      } catch {
+        errorMessage = errorText || errorMessage;
+      }
+      console.error(`[API] Failed to fetch posts for user ${userId}:`, errorMessage);
+      throw new Error(errorMessage);
+    }
+
+    const backendPosts: BackendPost[] = await response.json();
+    console.log(`[API] Fetched ${backendPosts.length} posts for user ${userId}`);
+    return backendPosts.map(transformPost);
+  } catch (error) {
+    console.error('Error fetching user posts:', error);
+    throw error;
+  }
+};
+
 export const logout = async () => {
   authToken = null;
   currentUser = null;
@@ -297,6 +364,7 @@ const transformPost = (backendPost: BackendPost): Post => {
   // Components will use this ID for API calls
   return {
     id: backendPost.id, // Keep original ID (string UUID or number)
+    author_id: backendPost.author_id, // Include author ID for navigation
     username: backendPost.username,
     dininghall: backendPost.dining_hall_name || 'Unknown',
     date: formattedDate,

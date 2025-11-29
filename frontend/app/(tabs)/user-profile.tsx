@@ -1,11 +1,10 @@
 import BottomNav from "@/components/BottomNav";
-import Header from "@/components/Header";
 import PostCard from "@/components/PostCard";
 import FriendsListModal from "@/components/FriendsListModal";
-import { fetchMyPosts, toggleLikePost, getMe } from "@/services/api";
+import { fetchUserPosts, toggleLikePost, getUserById } from "@/services/api";
 import { API_ENDPOINTS, API_URL, getPhotoUrl } from "@/constants/API";
 import { Post } from "@/types";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -47,7 +46,10 @@ interface Friend {
   follower_count?: number;
 }
 
-export default function ProfileScreen() {
+export default function UserProfileScreen() {
+  const params = useLocalSearchParams();
+  const router = useRouter();
+  const userId = params.userId as string;
   const insets = useSafeAreaInsets();
   const [searchText, setSearchText] = useState("");
   const [posts, setPosts] = useState<Post[]>([]);
@@ -65,40 +67,52 @@ export default function ProfileScreen() {
   const hasLoadedRef = useRef(false);
 
   const loadUserData = async () => {
+    if (!userId) {
+      console.warn('[UserProfile] No userId provided');
+      return;
+    }
     try {
-      const userData = await getMe();
+      console.log('[UserProfile] Loading user data for userId:', userId);
+      const userData = await getUserById(userId);
+      console.log('[UserProfile] User data loaded:', userData);
       setUser(userData);
+      setError(null); // Clear any previous errors
     } catch (err: any) {
-      console.error("Failed to load user data:", err);
+      // Silently handle user data fetch failures - posts can still load
+      // Only log if it's not an internal server error (which is expected until backend is deployed)
+      if (err.message && !err.message.includes('Internal server error')) {
+        console.warn("Failed to load user data (non-critical):", err.message);
+      }
+      // Don't set error - allow profile to show with posts even if user data fails
+      // The user data is optional for viewing posts
+      if (err.message && err.message.includes('not found')) {
+        setError("User not found");
+      }
+      // Otherwise, continue without user data - posts might still load
+      setError(null); // Clear error state for internal server errors
     }
   };
 
   const loadFriends = async () => {
+    if (!userId) return;
     try {
       setLoadingFriends(true);
       const token = await AsyncStorage.getItem("authToken");
-      const userId = await AsyncStorage.getItem("userId");
       const headers: HeadersInit = {
         "Content-Type": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...(userId ? { "x-user-id": userId } : {}),
       };
 
-      console.log('[Profile] Fetching friends from:', `${API_URL}${API_ENDPOINTS.FOLLOWS_FOLLOWING}`);
+      // Get users that this user is following
       const response = await fetch(
-        `${API_URL}${API_ENDPOINTS.FOLLOWS_FOLLOWING}`,
+        `${API_URL}/follows/following?userId=${userId}`,
         { headers }
       );
 
-      console.log('[Profile] Friends response status:', response.status);
       if (response.ok) {
         const data = await response.json();
-        console.log('[Profile] Loaded', data.length, 'friends');
         setFriends(data);
         setFriendsCount(data.length);
-      } else {
-        const errorText = await response.text();
-        console.error('[Profile] Failed to load friends:', response.status, errorText);
       }
     } catch (err: any) {
       console.error("Failed to load friends:", err);
@@ -108,13 +122,19 @@ export default function ProfileScreen() {
   };
 
   const loadPosts = async () => {
+    if (!userId) {
+      console.warn('[UserProfile] No userId provided for posts');
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchMyPosts();
+      console.log('[UserProfile] Loading posts for userId:', userId);
+      const data = await fetchUserPosts(userId);
+      console.log('[UserProfile] Posts loaded:', data.length);
       setPosts(data);
     } catch (err: any) {
-      console.error("Failed to load my posts", err);
+      console.error("Failed to load user posts", err);
       setError(err.message || "Failed to load posts");
     } finally {
       setLoading(false);
@@ -126,24 +146,23 @@ export default function ProfileScreen() {
   };
 
   useEffect(() => {
-    if (!hasLoadedRef.current) {
+    if (userId && !hasLoadedRef.current) {
       loadAllData();
       hasLoadedRef.current = true;
     }
-  }, []);
+  }, [userId]);
 
-  // Refresh data when screen comes into focus (but not on initial load)
+  // Refresh data when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      if (hasLoadedRef.current) {
+      if (hasLoadedRef.current && userId) {
         loadAllData();
       }
-    }, [])
+    }, [userId])
   );
 
   const handleLike = async (postId: number | string) => {
     try {
-      // Optimistic UI update - ensure we're working with numbers
       setPosts((prev) =>
         prev.map((p) => {
           if (String(p.id) === String(postId)) {
@@ -161,8 +180,7 @@ export default function ProfileScreen() {
 
       await toggleLikePost(postId);
     } catch (err) {
-      console.error('Error toggling like on profile:', err);
-      // Re-fetch to correct state
+      console.error("Error toggling like on profile:", err);
       loadPosts();
     }
   };
@@ -171,13 +189,7 @@ export default function ProfileScreen() {
     setPosts((prev) => prev.map((p) => (String(p.id) === String(postId) ? { ...p, commentCount: newCount } : p)));
   };
 
-  const [headerHeight, setHeaderHeight] = useState(180);
   const bottomNavHeight = 60 + Math.max(insets.bottom, 8);
-
-  const displayName =
-    user?.first_name && user?.last_name
-      ? `${user.first_name} ${user.last_name}`
-      : user?.username || "User";
 
   const renderPostThumbnail = ({ item }: { item: Post }) => {
     const firstImage = item.images?.[0];
@@ -210,80 +222,120 @@ export default function ProfileScreen() {
     );
   };
 
-  const renderProfileHeader = () => (
-    <View
-      style={styles.profileHeader}
-      onLayout={(event) => {
-        const { height } = event.nativeEvent.layout;
-        setHeaderHeight(height);
-      }}
-    >
-      <View style={styles.profileTop}>
-        <View style={styles.avatarContainer}>
-          {user?.profile_photo ? (
-            <Image
-              source={{ uri: getPhotoUrl(user.profile_photo) }}
-              style={styles.avatar}
-            />
-          ) : (
-            <View style={styles.avatarPlaceholder}>
-              <Text style={styles.avatarText}>
-                {displayName.charAt(0).toUpperCase()}
-              </Text>
-            </View>
-          )}
-        </View>
+  const renderProfileHeader = () => {
+    // If user data failed to load but we have userId, show basic info
+    const showUser = user || (userId ? { username: 'User', id: userId } : null);
+    const displayName = showUser?.first_name && showUser?.last_name
+      ? `${showUser.first_name} ${showUser.last_name}`
+      : showUser?.username || 'User';
 
-        <View style={styles.statsContainer}>
-          <View style={styles.statItem}>
-            <Text style={styles.statNumber}>{posts.length}</Text>
-            <Text style={styles.statLabel}>Posts</Text>
+    return (
+      <View
+        style={styles.profileHeader}
+        onLayout={(event) => {
+          const { height } = event.nativeEvent.layout;
+        }}
+      >
+        <View style={styles.profileTop}>
+          <View style={styles.avatarContainer}>
+            {showUser?.profile_photo ? (
+              <Image
+                source={{ uri: getPhotoUrl(showUser.profile_photo) }}
+                style={styles.avatar}
+              />
+            ) : (
+              <View style={styles.avatarPlaceholder}>
+                <Text style={styles.avatarText}>
+                  {displayName.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+            )}
           </View>
-          <TouchableOpacity
-            style={styles.statItem}
-            onPress={() => setFriendsModalVisible(true)}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.statNumber}>{friendsCount}</Text>
-            <Text style={styles.statLabel}>Friends</Text>
-          </TouchableOpacity>
+
+          <View style={styles.statsContainer}>
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>{posts.length}</Text>
+              <Text style={styles.statLabel}>Posts</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.statItem}
+              onPress={() => setFriendsModalVisible(true)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.statNumber}>{friendsCount}</Text>
+              <Text style={styles.statLabel}>Friends</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.profileInfo}>
+          <Text style={styles.profileName}>{displayName}</Text>
+          {showUser?.username && (
+            <Text style={styles.profileUsername}>@{showUser.username}</Text>
+          )}
+          {showUser?.bio && <Text style={styles.profileBio}>{showUser.bio}</Text>}
         </View>
       </View>
+    );
+  };
 
-      <View style={styles.profileInfo}>
-        <Text style={styles.profileName}>{displayName}</Text>
-        {user?.username && (
-          <Text style={styles.profileUsername}>@{user.username}</Text>
-        )}
-        {user?.bio && <Text style={styles.profileBio}>{user.bio}</Text>}
+  if (!userId) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <Text>User ID not provided</Text>
       </View>
-    </View>
-  );
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
       {/* Fixed Header */}
-      <View style={{ 
-        position: 'absolute', 
-        top: 0, 
-        left: 0, 
-        right: 0,
-        zIndex: 10,
-        backgroundColor: '#fff',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 5,
-      }}>
-        <Header searchText={searchText} setSearchText={setSearchText} />
+      <View 
+        style={{ 
+          position: 'absolute', 
+          top: 0, 
+          left: 0, 
+          right: 0,
+          zIndex: 10,
+          backgroundColor: '#fff',
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
+          elevation: 5,
+          paddingTop: insets.top,
+        }}
+        onLayout={(event) => {
+          setHeaderComponentHeight(event.nativeEvent.layout.height);
+        }}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 12 }}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={{ 
+              marginRight: 12, 
+              padding: 8,
+              minWidth: 44,
+              minHeight: 44,
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            activeOpacity={0.7}
+          >
+            <Icon name="arrow-left" size={24} color="#000" />
+          </TouchableOpacity>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 18, fontWeight: '600' }}>{user?.username || 'Profile'}</Text>
+          </View>
+        </View>
       </View>
       
       {/* Scrollable Content */}
       <FlatList
         style={{ flex: 1 }}
         contentContainerStyle={{
-          paddingTop: headerComponentHeight + 20,
+          paddingTop: headerComponentHeight,
           paddingBottom: bottomNavHeight,
         }}
         data={posts}
@@ -329,7 +381,7 @@ export default function ProfileScreen() {
               <Text
                 style={{ fontSize: 16, color: "#666", textAlign: "center" }}
               >
-                You haven't posted anything yet.
+                This user hasn't posted anything yet.
               </Text>
             </View>
           )
