@@ -118,26 +118,28 @@ const Header: React.FC<HeaderProps> = ({ searchText, setSearchText, onFilterPres
           style={styles.filterContainer}
           contentContainerStyle={styles.filterContentContainer}
         >
-          {["Trending", "Friend Recs", "Filter By"].map((filter, idx) => (
+          {["Trending", "Friend Recs"].map((filter, idx) => (
             <TouchableOpacity
               key={idx}
               style={styles.filterButton}
-              onPress={
-                filter === "Trending" 
-                  ? handleTrendingPress 
-                  : filter === "Filter By" && onFilterPress
-                  ? onFilterPress
-                  : undefined
-              }
+              onPress={filter === "Trending" ? handleTrendingPress : undefined}
+            >
+              <Text style={styles.filterText}>{filter}</Text>
+            </TouchableOpacity>
+          ))}
+          {onFilterPress && (
+            <TouchableOpacity
+              style={styles.filterButton}
+              onPress={onFilterPress}
             >
               <Text style={styles.filterText}>
-                {filter}
-                {filter === "Filter By" && activeFilterCount && activeFilterCount > 0
+                Filter By
+                {activeFilterCount && activeFilterCount > 0
                   ? ` (${activeFilterCount})`
                   : ""}
               </Text>
             </TouchableOpacity>
-          ))}
+          )}
         </ScrollView>
       </View>
 
