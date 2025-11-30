@@ -19,9 +19,12 @@ interface HeaderProps {
   activeFilterCount?: number;
   onFriendRecsPress?: () => void;
   activeFriendRecs?: boolean;
+  hideSearch?: boolean;
+  searchPlaceholder?: string;
+  disableSearchModal?: boolean;
 }
 
-const Header: React.FC<HeaderProps> = ({ searchText, setSearchText, onFilterPress, activeFilterCount, onFriendRecsPress, activeFriendRecs }) => {
+const Header: React.FC<HeaderProps> = ({ searchText, setSearchText, onFilterPress, activeFilterCount, onFriendRecsPress, activeFriendRecs, hideSearch, searchPlaceholder, disableSearchModal }) => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [searchModalVisible, setSearchModalVisible] = useState(false);
@@ -53,7 +56,7 @@ const Header: React.FC<HeaderProps> = ({ searchText, setSearchText, onFilterPres
 
   const handleSearchChange = (text: string) => {
     setSearchText(text);
-    if (text.trim().length >= 2) {
+    if (!disableSearchModal && text.trim().length >= 2) {
       setSearchModalVisible(true);
     } else {
       setSearchModalVisible(false);
@@ -93,26 +96,28 @@ const Header: React.FC<HeaderProps> = ({ searchText, setSearchText, onFilterPres
           </View>
         </View>
 
-        <View style={styles.searchBar}>
-          <TextInput
-            placeholder="Search a menu, member, etc."
-            value={searchText}
-            onChangeText={handleSearchChange}
-            style={styles.searchInput}
-            placeholderTextColor="#999"
-          />
-          {searchText ? (
-            <TouchableOpacity 
-              testID="clear-search-button"
-              onPress={() => { 
-                setSearchText("");
-                setSearchModalVisible(false);
-              }}
-            >
-              <Icon name="x" size={20} color="#999" />
-            </TouchableOpacity>
-          ) : null}
-        </View>
+        {!hideSearch && (
+          <View style={styles.searchBar}>
+            <TextInput
+              placeholder={searchPlaceholder || "Search a menu, member, etc."}
+              value={searchText}
+              onChangeText={handleSearchChange}
+              style={styles.searchInput}
+              placeholderTextColor="#999"
+            />
+            {searchText ? (
+              <TouchableOpacity 
+                testID="clear-search-button"
+                onPress={() => { 
+                  setSearchText("");
+                  setSearchModalVisible(false);
+                }}
+              >
+                <Icon name="x" size={20} color="#999" />
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        )}
 
         <ScrollView
           horizontal

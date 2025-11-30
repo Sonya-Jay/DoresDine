@@ -178,6 +178,7 @@ export default function FeedScreen() {
           setSearchText={setSearchText}
           onFriendRecsPress={() => setShowFriendRecs(!showFriendRecs)}
           activeFriendRecs={showFriendRecs}
+          hideSearch={true}
         />
       </View>
 

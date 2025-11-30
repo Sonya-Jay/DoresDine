@@ -53,9 +53,16 @@ export default function MenusScreen() {
     fetchHalls();
   }, []);
 
-  const filteredHalls = halls.filter((hall) =>
-    hall.name.toLowerCase().includes(searchText.toLowerCase())
-  );
+  const filteredHalls = halls.filter((hall) => {
+    if (!searchText.trim()) return true;
+    
+    // Split hall name into words (by spaces and common punctuation)
+    const hallWords = hall.name.toLowerCase().split(/[\s,.-]+/);
+    const searchLower = searchText.toLowerCase().trim();
+    
+    // Check if any word starts with the search term
+    return hallWords.some(word => word.startsWith(searchLower));
+  });
 
   const handleHallPress = (hall: DiningHall) => {
     router.push({
@@ -107,6 +114,8 @@ export default function MenusScreen() {
           setSearchText={setSearchText}
           onFilterPress={() => setFilterModalVisible(true)}
           activeFilterCount={activeFilterCount}
+          searchPlaceholder="Search a menu"
+          disableSearchModal={true}
         />
       </View>
       
@@ -153,11 +162,7 @@ export default function MenusScreen() {
             <Text style={{ padding: 16, color: "red", textAlign: "center" }}>
               {error}
             </Text>
-          ) : (
-            <Text style={{ padding: 16, textAlign: "center", color: "#999" }}>
-              No dining halls found.
-            </Text>
-          )
+          ) : null
         }
         showsVerticalScrollIndicator={false}
       />
