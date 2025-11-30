@@ -5,7 +5,15 @@ import { fetchPosts, getOrCreateUser, toggleLikePost } from "@/services/api";
 import { Post } from "@/types";
 import { useFocusEffect } from "@react-navigation/native";
 import React, { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, FlatList, RefreshControl, Text, TouchableOpacity, View, LayoutChangeEvent } from "react-native";
+import {
+  ActivityIndicator,
+  FlatList,
+  LayoutChangeEvent,
+  RefreshControl,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function FeedScreen() {
@@ -74,7 +82,7 @@ export default function FeedScreen() {
             ? {
                 ...post,
                 isLiked: !post.isLiked,
-                likeCount: post.isLiked 
+                likeCount: post.isLiked
                   ? Math.max(0, (Number(post.likeCount) || 0) - 1)
                   : (Number(post.likeCount) || 0) + 1,
               }
@@ -87,7 +95,10 @@ export default function FeedScreen() {
     }
   };
 
-  const handleCommentCountUpdate = (postId: number | string, newCount: number) => {
+  const handleCommentCountUpdate = (
+    postId: number | string,
+    newCount: number
+  ) => {
     setPosts((prevPosts) =>
       prevPosts.map((post) =>
         post.id === postId ? { ...post, commentCount: newCount } : post
@@ -102,27 +113,34 @@ export default function FeedScreen() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
         <ActivityIndicator size="large" />
-        <Text style={{ marginTop: 10, color: '#666' }}>Loading posts...</Text>
+        <Text style={{ marginTop: 10, color: "#666" }}>Loading posts...</Text>
       </View>
     );
   }
 
   if (error) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-        <Text style={{ color: 'red', marginBottom: 10 }}>{error}</Text>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          padding: 20,
+        }}
+      >
+        <Text style={{ color: "red", marginBottom: 10 }}>{error}</Text>
         <TouchableOpacity
           onPress={loadPosts}
           style={{
-            backgroundColor: '#007AFF',
+            backgroundColor: "#007AFF",
             paddingHorizontal: 20,
             paddingVertical: 10,
             borderRadius: 8,
           }}
         >
-          <Text style={{ color: 'white' }}>Retry</Text>
+          <Text style={{ color: "white" }}>Retry</Text>
         </TouchableOpacity>
       </View>
     );
@@ -136,18 +154,18 @@ export default function FeedScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#fff' }}>
+    <View style={{ flex: 1, backgroundColor: "#fff" }}>
       {/* Fixed Header */}
-      <View 
+      <View
         onLayout={handleHeaderLayout}
-        style={{ 
-          position: 'absolute', 
-          top: 0, 
-          left: 0, 
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
           right: 0,
           zIndex: 10,
-          backgroundColor: '#fff',
-          shadowColor: '#000',
+          backgroundColor: "#fff",
+          shadowColor: "#000",
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.1,
           shadowRadius: 4,
@@ -156,11 +174,11 @@ export default function FeedScreen() {
       >
         <Header searchText={searchText} setSearchText={setSearchText} />
       </View>
-      
+
       {/* Scrollable Content */}
       <FlatList
         style={{ flex: 1 }}
-        contentContainerStyle={{ 
+        contentContainerStyle={{
           paddingTop: headerHeight,
           paddingBottom: bottomNavHeight,
         }}
@@ -175,9 +193,9 @@ export default function FeedScreen() {
           />
         )}
         ListEmptyComponent={
-          <View style={{ padding: 20, alignItems: 'center', minHeight: 200 }}>
-            <Text style={{ color: '#666', fontSize: 16 }}>No posts yet</Text>
-            <Text style={{ color: '#999', fontSize: 14, marginTop: 5 }}>
+          <View style={{ padding: 20, alignItems: "center", minHeight: 200 }}>
+            <Text style={{ color: "#666", fontSize: 16 }}>No posts yet</Text>
+            <Text style={{ color: "#999", fontSize: 14, marginTop: 5 }}>
               Be the first to share a dining experience!
             </Text>
           </View>
@@ -187,18 +205,20 @@ export default function FeedScreen() {
         }
         showsVerticalScrollIndicator={false}
       />
-      
+
       {/* Fixed Bottom Nav */}
-      <View style={{ 
-        position: 'absolute', 
-        bottom: 0, 
-        left: 0, 
-        right: 0,
-        zIndex: 10,
-        backgroundColor: '#fff',
-        borderTopWidth: 1,
-        borderTopColor: '#f0f0f0',
-      }}>
+      <View
+        style={{
+          position: "absolute",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: 10,
+          backgroundColor: "#fff",
+          borderTopWidth: 1,
+          borderTopColor: "#f0f0f0",
+        }}
+      >
         <BottomNav />
       </View>
     </View>
