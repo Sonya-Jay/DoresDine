@@ -146,25 +146,35 @@ async function searchDiningHalls(query: string): Promise<any[]> {
 
 async function searchDishes(query: string): Promise<any[]> {
   try {
-    // Search for unique menu items from posts
+    // Search for menu items from both posts and photo dish names
     const result = await pool.query(
-      `SELECT DISTINCT 
-         menu_item,
+      `SELECT 
+         dish_name,
          COUNT(*) as frequency
        FROM (
-         SELECT unnest(menu_items) as menu_item FROM posts WHERE menu_items IS NOT NULL
-       ) AS menu_items_flat
-       WHERE LOWER(menu_item) LIKE $1
-       GROUP BY menu_item
+         -- Get dishes from menu_items array
+         SELECT unnest(menu_items) as dish_name 
+         FROM posts 
+         WHERE menu_items IS NOT NULL
+         
+         UNION ALL
+         
+         -- Get dishes from photo dish_names
+         SELECT dish_name 
+         FROM post_photos 
+         WHERE dish_name IS NOT NULL AND dish_name != ''
+       ) AS all_dishes
+       WHERE LOWER(dish_name) LIKE $1
+       GROUP BY dish_name
        ORDER BY frequency DESC
        LIMIT 20`,
       [`%${query}%`]
     );
 
-    // Transform to just return the dish names with frequency
+    // Transform to return the dish names with frequency
     return result.rows.map((row: any) => ({
-      name: row.menu_item,
-      frequency: row.frequency,
+      name: row.dish_name,
+      frequency: parseInt(row.frequency),
     }));
   } catch (error) {
     console.error('Error in searchDishes:', error);
@@ -174,24 +184,34 @@ async function searchDishes(query: string): Promise<any[]> {
 
 async function getTrendingDishes(limit: number): Promise<any[]> {
   try {
-    // Get top dishes by frequency across all posts
+    // Get top dishes by frequency from both menu_items and photo dish_names
     const result = await pool.query(
-      `SELECT DISTINCT 
-         menu_item,
+      `SELECT 
+         dish_name,
          COUNT(*) as frequency
        FROM (
-         SELECT unnest(menu_items) as menu_item FROM posts WHERE menu_items IS NOT NULL
-       ) AS menu_items_flat
-       GROUP BY menu_item
+         -- Get dishes from menu_items array
+         SELECT unnest(menu_items) as dish_name 
+         FROM posts 
+         WHERE menu_items IS NOT NULL
+         
+         UNION ALL
+         
+         -- Get dishes from photo dish_names
+         SELECT dish_name 
+         FROM post_photos 
+         WHERE dish_name IS NOT NULL AND dish_name != ''
+       ) AS all_dishes
+       GROUP BY dish_name
        ORDER BY frequency DESC
        LIMIT $1`,
       [limit]
     );
 
-    // Transform to just return the dish names with frequency
+    // Transform to return the dish names with frequency
     return result.rows.map((row: any) => ({
-      name: row.menu_item,
-      frequency: row.frequency,
+      name: row.dish_name,
+      frequency: parseInt(row.frequency),
     }));
   } catch (error) {
     console.error('Error in getTrendingDishes:', error);
