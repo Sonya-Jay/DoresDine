@@ -1,6 +1,7 @@
 export interface ImageData {
   uri: string;
   rating: number;
+  dishName?: string;
 }
 
 export interface DiningHall {
@@ -54,6 +55,7 @@ export interface BackendPost {
     id: string | number;
     storage_key: string;
     display_order: number;
+    dish_name?: string;
   }[];
 }
 

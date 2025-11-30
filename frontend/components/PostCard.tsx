@@ -1,9 +1,17 @@
-import React, { useState } from "react";
-import { Image, Text, TouchableOpacity, View } from "react-native";
 import { useRouter } from "expo-router";
+import React, { useState } from "react";
+import {
+  Dimensions,
+  Image,
+  Modal,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import Icon from "react-native-vector-icons/Feather";
 import styles from "../styles";
-import { Post } from "../types";
+import { ImageData, Post } from "../types";
 import CommentsModal from "./CommentsModal";
 
 interface PostCardProps {
@@ -24,17 +32,20 @@ const PostCard: React.FC<PostCardProps> = ({
   const [isLiked, setIsLiked] = useState(post.isLiked);
   const [likeCount, setLikeCount] = useState(Number(post.likeCount) || 0);
   const [commentsModalVisible, setCommentsModalVisible] = useState(false);
-  const [commentCount, setCommentCount] = useState(Number(post.commentCount) || 0);
+  const [commentCount, setCommentCount] = useState(
+    Number(post.commentCount) || 0
+  );
+  const [expandedImage, setExpandedImage] = useState<ImageData | null>(null);
 
   const handleUsernamePress = () => {
     if (post.author_id) {
-      console.log('[PostCard] Navigating to user profile:', post.author_id);
+      console.log("[PostCard] Navigating to user profile:", post.author_id);
       router.push({
         pathname: "/(tabs)/user-profile",
         params: { userId: String(post.author_id) },
       } as any);
     } else {
-      console.warn('[PostCard] No author_id found for post:', post.id);
+      console.warn("[PostCard] No author_id found for post:", post.id);
     }
   };
 
@@ -119,19 +130,24 @@ const PostCard: React.FC<PostCardProps> = ({
       <View style={styles.imagesContainer}>
         {post.images && post.images.length > 0 ? (
           post.images.map((img, idx) => (
-            <View
+            <TouchableOpacity
               key={idx}
               style={[
                 styles.imageWrapper,
                 post.images.length === 1 && styles.singleImageWrapper,
               ]}
+              onPress={() => setExpandedImage(img)}
+              activeOpacity={0.9}
             >
               <Image
                 source={{ uri: img.uri }}
                 style={styles.foodImage}
                 resizeMode="cover"
                 onError={(error) => {
-                  console.warn('Image load error (will show placeholder):', img.uri);
+                  console.warn(
+                    "Image load error (will show placeholder):",
+                    img.uri
+                  );
                   // Image will fail to load, but we'll keep the container for layout
                 }}
               />
@@ -150,7 +166,7 @@ const PostCard: React.FC<PostCardProps> = ({
               >
                 <Text style={styles.ratingText}>{img.rating}</Text>
               </View>
-            </View>
+            </TouchableOpacity>
           ))
         ) : post.menuItems.length > 0 ? (
           <View style={styles.menuItemsContainer}>
@@ -197,9 +213,9 @@ const PostCard: React.FC<PostCardProps> = ({
 
       <View style={styles.actions}>
         <View style={styles.actionsLeft}>
-          <TouchableOpacity 
+          <TouchableOpacity
             testID="like-button"
-            onPress={handleLike} 
+            onPress={handleLike}
             disabled={isLiking}
           >
             {isLiked ? (
@@ -220,7 +236,7 @@ const PostCard: React.FC<PostCardProps> = ({
           </TouchableOpacity>
         </View>
         <View style={styles.actionsRight}>
-          <TouchableOpacity 
+          <TouchableOpacity
             testID="create-similar-button"
             onPress={handleCreateSimilarPost}
           >
@@ -258,8 +274,121 @@ const PostCard: React.FC<PostCardProps> = ({
         onClose={() => setCommentsModalVisible(false)}
         onCommentAdded={handleCommentAdded}
       />
+
+      {/* Image Expansion Modal */}
+      <Modal
+        visible={expandedImage !== null}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setExpandedImage(null)}
+      >
+        <View style={imageModalStyles.modalContainer}>
+          <TouchableOpacity
+            style={imageModalStyles.closeButton}
+            onPress={() => setExpandedImage(null)}
+          >
+            <Icon name="x" size={30} color="#fff" />
+          </TouchableOpacity>
+
+          {expandedImage && (
+            <View style={imageModalStyles.contentContainer}>
+              <Image
+                source={{ uri: expandedImage.uri }}
+                style={imageModalStyles.expandedImage}
+                resizeMode="contain"
+              />
+
+              <View style={imageModalStyles.infoContainer}>
+                {expandedImage.dishName && (
+                  <Text style={imageModalStyles.dishName}>
+                    {expandedImage.dishName}
+                  </Text>
+                )}
+                <View
+                  style={[
+                    imageModalStyles.ratingBadge,
+                    {
+                      borderColor:
+                        expandedImage.rating >= 7
+                          ? "#4CAF50"
+                          : expandedImage.rating >= 5
+                          ? "#FFA726"
+                          : "#f44336",
+                    },
+                  ]}
+                >
+                  <Text style={imageModalStyles.ratingText}>
+                    {expandedImage.rating}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          )}
+        </View>
+      </Modal>
     </View>
   );
 };
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+
+const imageModalStyles = StyleSheet.create({
+  modalContainer: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.95)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  closeButton: {
+    position: "absolute",
+    top: 50,
+    right: 20,
+    zIndex: 10,
+    padding: 10,
+  },
+  contentContainer: {
+    width: "100%",
+    height: "100%",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  expandedImage: {
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT * 0.7,
+  },
+  infoContainer: {
+    position: "absolute",
+    bottom: 100,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    paddingHorizontal: 20,
+  },
+  dishName: {
+    fontSize: 24,
+    fontWeight: "600",
+    color: "#fff",
+    textAlign: "center",
+    marginBottom: 15,
+    textShadowColor: "rgba(0, 0, 0, 0.75)",
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
+  ratingBadge: {
+    backgroundColor: "#fff",
+    borderRadius: 30,
+    borderWidth: 3,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    minWidth: 70,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  ratingText: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#000",
+  },
+});
 
 export default PostCard;
