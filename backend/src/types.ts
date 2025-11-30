@@ -39,6 +39,7 @@ export interface PostPhoto {
   post_id: string;
   storage_key: string;
   display_order: number;
+  dish_name?: string;
   created_at: Date;
 }
 
@@ -55,6 +56,7 @@ export interface CreatePostRequest {
   photos?: Array<{
     storage_key: string;
     display_order: number;
+    dish_name?: string;
   }>;
 }
 

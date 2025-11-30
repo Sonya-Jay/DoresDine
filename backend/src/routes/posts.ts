@@ -26,7 +26,8 @@ router.get("/", async (req: Request, res: Response): Promise<void> => {
             JSON_BUILD_OBJECT(
               'id', pp.id,
               'storage_key', pp.storage_key,
-              'display_order', pp.display_order
+              'display_order', pp.display_order,
+              'dish_name', pp.dish_name
             ) ORDER BY pp.display_order
           ) FILTER (WHERE pp.id IS NOT NULL), 
           '[]'::json
@@ -92,9 +93,11 @@ router.get("/me", async (req: Request, res: Response): Promise<void> => {
             JSON_BUILD_OBJECT(
               'id', pp.id,
               'storage_key', pp.storage_key,
-              'display_order', pp.display_order
+              'display_order', pp.display_order,
+              'dish_name', pp.dish_name,
+              'dish_name', pp.dish_name
             ) ORDER BY pp.display_order
-          ) FILTER (WHERE pp.id IS NOT NULL), 
+          ) FILTER (WHERE pp.id IS NOT NULL),
           '[]'::json
         ) as photos,
         COALESCE(l.like_count, 0) as like_count,
@@ -156,7 +159,8 @@ router.get("/user/:userId", async (req: Request, res: Response): Promise<void> =
             JSON_BUILD_OBJECT(
               'id', pp.id,
               'storage_key', pp.storage_key,
-              'display_order', pp.display_order
+              'display_order', pp.display_order,
+              'dish_name', pp.dish_name
             ) ORDER BY pp.display_order
           ) FILTER (WHERE pp.id IS NOT NULL), 
           '[]'::json
@@ -354,10 +358,10 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
     if (photos && photos.length > 0) {
       for (const photo of photos) {
         const photoResult = await client.query<PostPhoto>(
-          `INSERT INTO post_photos (post_id, storage_key, display_order)
-           VALUES ($1, $2, $3)
+          `INSERT INTO post_photos (post_id, storage_key, display_order, dish_name)
+           VALUES ($1, $2, $3, $4)
            RETURNING *`,
-          [post.id, photo.storage_key.trim(), photo.display_order || 0]
+          [post.id, photo.storage_key.trim(), photo.display_order || 0, photo.dish_name || null]
         );
         photoRecords.push(photoResult.rows[0]);
       }
