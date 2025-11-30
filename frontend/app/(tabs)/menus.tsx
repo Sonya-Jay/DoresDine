@@ -12,6 +12,7 @@ import {
 import Icon from "react-native-vector-icons/Feather";
 import BottomNav from "@/components/BottomNav";
 import Header from "@/components/Header";
+import FilterModal, { FilterOptions } from "@/components/FilterModal";
 import { fetchDiningHalls } from "@/services/api";
 import { DiningHall } from "@/types";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -28,6 +29,11 @@ export default function MenusScreen() {
   const [halls, setHalls] = useState<DiningHall[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [activeFilters, setActiveFilters] = useState<FilterOptions>({
+    allergens: [],
+    mealTypes: [],
+  });
   const router = useRouter();
 
   useEffect(() => {
@@ -54,9 +60,20 @@ export default function MenusScreen() {
   const handleHallPress = (hall: DiningHall) => {
     router.push({
       pathname: "/(tabs)/schedule-details" as any,
-      params: { hallId: hall.id.toString(), hallName: hall.name },
+      params: { 
+        hallId: hall.id.toString(), 
+        hallName: hall.name,
+        filterAllergens: JSON.stringify(activeFilters.allergens),
+        filterMealTypes: JSON.stringify(activeFilters.mealTypes),
+      },
     });
   };
+
+  const handleApplyFilters = (filters: FilterOptions) => {
+    setActiveFilters(filters);
+  };
+
+  const activeFilterCount = activeFilters.allergens.length + activeFilters.mealTypes.length;
 
   const [headerHeight, setHeaderHeight] = useState(180);
   const bottomNavHeight = 60 + Math.max(insets.bottom, 8);
@@ -85,7 +102,12 @@ export default function MenusScreen() {
           elevation: 5,
         }}
       >
-        <Header searchText={searchText} setSearchText={setSearchText} />
+        <Header 
+          searchText={searchText} 
+          setSearchText={setSearchText}
+          onFilterPress={() => setFilterModalVisible(true)}
+          activeFilterCount={activeFilterCount}
+        />
       </View>
       
       {/* Scrollable Content */}
@@ -153,6 +175,14 @@ export default function MenusScreen() {
       }}>
         <BottomNav />
       </View>
+
+      {/* Filter Modal */}
+      <FilterModal
+        visible={filterModalVisible}
+        onClose={() => setFilterModalVisible(false)}
+        onApply={handleApplyFilters}
+        initialFilters={activeFilters}
+      />
     </View>
   );
 }

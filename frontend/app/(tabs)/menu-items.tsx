@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/Feather";
 import BottomNav from "@/components/BottomNav";
 import Header from "@/components/Header";
+import FilterModal, { FilterOptions } from "@/components/FilterModal";
 import { fetchMenuItems } from "@/services/api";
 import { MenuItem } from "@/types";
 
@@ -22,6 +23,8 @@ export default function MenuItemsScreen() {
     mealName: string;
     hallName: string;
     date: string;
+    filterAllergens?: string;
+    filterMealTypes?: string;
   }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -29,6 +32,29 @@ export default function MenuItemsScreen() {
   const [items, setItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [activeFilters, setActiveFilters] = useState<FilterOptions>({
+    allergens: [],
+    mealTypes: [],
+  });
+
+  // Parse filter params
+  const filterAllergens = params.filterAllergens ? JSON.parse(params.filterAllergens) : [];
+  const filterMealTypes = params.filterMealTypes ? JSON.parse(params.filterMealTypes) : [];
+
+  // Initialize active filters from URL params
+  useEffect(() => {
+    setActiveFilters({
+      allergens: filterAllergens,
+      mealTypes: filterMealTypes,
+    });
+  }, [params.filterAllergens, params.filterMealTypes]);
+
+  // Debug logging
+  useEffect(() => {
+    console.log('Filter Allergens:', filterAllergens);
+    console.log('Filter Meal Types:', filterMealTypes);
+  }, [filterAllergens, filterMealTypes]);
 
   useEffect(() => {
     const fetchItems = async () => {
@@ -52,9 +78,51 @@ export default function MenuItemsScreen() {
     fetchItems();
   }, [params.menuId, params.unitId]);
 
-  const filteredItems = items.filter((item) =>
-    item.name.toLowerCase().includes(searchText.toLowerCase())
-  );
+  const filteredItems = items.filter((item) => {
+    // Search filter
+    const matchesSearch = item.name.toLowerCase().includes(searchText.toLowerCase());
+    
+    // Allergen filter - exclude items that contain any of the filtered allergens
+    const hasExcludedAllergen = activeFilters.allergens.length > 0 && item.allergens && 
+      item.allergens.some((allergen: string) => {
+        const allergenLower = allergen.toLowerCase();
+        return activeFilters.allergens.some((filtered: string) => {
+          const filteredLower = filtered.toLowerCase();
+          // Check both ways: allergen contains filter OR filter contains allergen
+          // This handles "peanut" matching "nuts" and "nuts" matching "peanut"
+          return allergenLower.includes(filteredLower) || 
+                 filteredLower.includes(allergenLower) ||
+                 // Also handle common allergen variations
+                 (filteredLower === 'nuts' && (allergenLower.includes('nut') || allergenLower.includes('peanut'))) ||
+                 (filteredLower === 'dairy' && (allergenLower.includes('milk') || allergenLower.includes('cheese'))) ||
+                 (filteredLower === 'gluten' && allergenLower.includes('wheat'));
+        });
+      });
+    
+    // Meal type filter - if meal types are selected, check if current meal matches
+    // Note: The mealName from params represents the current meal period
+    const matchesMealType = activeFilters.mealTypes.length === 0 || 
+      activeFilters.mealTypes.some((type: string) => {
+        const mealNameLower = params.mealName?.toLowerCase() || "";
+        const typeLower = type.toLowerCase();
+        
+        // Handle "daily-offerings" specially
+        if (typeLower === "daily-offerings" || typeLower === "daily offerings") {
+          return mealNameLower.includes("daily") || mealNameLower.includes("all day");
+        }
+        
+        return mealNameLower.includes(typeLower);
+      });
+    
+    return matchesSearch && !hasExcludedAllergen && matchesMealType;
+  });
+
+  const hasActiveFilters = activeFilters.allergens.length > 0 || activeFilters.mealTypes.length > 0;
+  const activeFilterCount = activeFilters.allergens.length + activeFilters.mealTypes.length;
+
+  const handleApplyFilters = (filters: FilterOptions) => {
+    setActiveFilters(filters);
+  };
 
   // Calculate header height: safe area + headerTop (40) + margins (12) + searchBar (24+12) + filter (16+3) + paddingBottom (12)
   const headerHeight = Math.max(insets.top, 15) + 40 + 12 + 24 + 12 + 16 + 3 + 12; // ~134px + safe area
@@ -76,7 +144,12 @@ export default function MenuItemsScreen() {
         shadowRadius: 4,
         elevation: 5,
       }}>
-        <Header searchText={searchText} setSearchText={setSearchText} />
+        <Header 
+          searchText={searchText} 
+          setSearchText={setSearchText}
+          onFilterPress={() => setFilterModalVisible(true)}
+          activeFilterCount={activeFilterCount}
+        />
       </View>
       
       {/* Scrollable Content */}
@@ -176,6 +249,14 @@ export default function MenuItemsScreen() {
       }}>
         <BottomNav />
       </View>
+
+      {/* Filter Modal */}
+      <FilterModal
+        visible={filterModalVisible}
+        onClose={() => setFilterModalVisible(false)}
+        onApply={handleApplyFilters}
+        initialFilters={activeFilters}
+      />
     </View>
   );
 }

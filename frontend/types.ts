@@ -25,7 +25,13 @@ export type MenuItem = {
   description?: string;
   calories?: number;
   allergens?: string[];
+  mealType?: string;
 };
+
+export interface FilterOptions {
+  allergens: string[];
+  mealTypes: string[];
+}
 
 // Backend response format for posts
 // Note: Backend uses UUIDs (strings) for IDs, but may return them as strings or numbers

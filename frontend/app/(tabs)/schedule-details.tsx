@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/Feather";
 import BottomNav from "@/components/BottomNav";
 import Header from "@/components/Header";
+import FilterModal, { FilterOptions } from "@/components/FilterModal";
 import { API_URL, API_ENDPOINTS } from "@/constants/API";
 import { fetchDiningHalls } from "@/services/api";
 import { DayMenu, DiningHall } from "@/types";
@@ -22,7 +23,12 @@ interface MenuScheduleResponse {
 }
 
 export default function ScheduleDetailsScreen() {
-  const params = useLocalSearchParams<{ hallId: string; hallName: string }>();
+  const params = useLocalSearchParams<{ 
+    hallId: string; 
+    hallName: string;
+    filterAllergens?: string;
+    filterMealTypes?: string;
+  }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [searchText, setSearchText] = useState("");
@@ -30,6 +36,27 @@ export default function ScheduleDetailsScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [cbordUnitId, setCbordUnitId] = useState<number | null>(null);
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [activeFilters, setActiveFilters] = useState<FilterOptions>({
+    allergens: [],
+    mealTypes: [],
+  });
+
+  // Initialize active filters from URL params
+  useEffect(() => {
+    const filterAllergens = params.filterAllergens ? JSON.parse(params.filterAllergens) : [];
+    const filterMealTypes = params.filterMealTypes ? JSON.parse(params.filterMealTypes) : [];
+    setActiveFilters({
+      allergens: filterAllergens,
+      mealTypes: filterMealTypes,
+    });
+  }, [params.filterAllergens, params.filterMealTypes]);
+
+  const handleApplyFilters = (filters: FilterOptions) => {
+    setActiveFilters(filters);
+  };
+
+  const activeFilterCount = activeFilters.allergens.length + activeFilters.mealTypes.length;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -56,6 +83,7 @@ export default function ScheduleDetailsScreen() {
         }
 
         const data: MenuScheduleResponse = await response.json();
+        console.log("Schedule data for", params.hallName, ":", JSON.stringify(data.schedule, null, 2));
         setSchedule(data.schedule || []);
       } catch (err: any) {
         setError(err.message || "Failed to load menu schedule");
@@ -91,7 +119,12 @@ export default function ScheduleDetailsScreen() {
         shadowRadius: 4,
         elevation: 5,
       }}>
-        <Header searchText={searchText} setSearchText={setSearchText} />
+        <Header 
+          searchText={searchText} 
+          setSearchText={setSearchText}
+          onFilterPress={() => setFilterModalVisible(true)}
+          activeFilterCount={activeFilterCount}
+        />
       </View>
       
       {/* Scrollable Content */}
@@ -115,40 +148,66 @@ export default function ScheduleDetailsScreen() {
         }
         data={schedule}
         keyExtractor={(item, index) => `${item.date}-${index}`}
-        renderItem={({ item }) => (
-          <View style={[styles.daySection, { paddingHorizontal: 20 }]}>
-            <Text style={styles.dayHeader}>{item.date}</Text>
-            {item.meals && item.meals.length > 0 ? (
-              item.meals.map((meal) => (
-                <TouchableOpacity
-                  key={meal.id}
-                  style={styles.mealButton}
-                  onPress={() => {
-                    // Navigate to menu items page
-                    if (!cbordUnitId) {
-                      console.error("cbordUnitId not available");
-                      return;
-                    }
-                    router.push({
-                      pathname: "/(tabs)/menu-items" as any,
-                      params: {
-                        menuId: meal.id.toString(),
-                        unitId: cbordUnitId.toString(),
-                        mealName: meal.name,
-                        hallName: params.hallName || "",
-                        date: item.date,
-                      },
-                    });
-                  }}
-                >
-                  <Text style={styles.mealText}>{meal.name}</Text>
-                </TouchableOpacity>
-              ))
-            ) : (
-              <Text style={styles.noMealsText}>No meals available</Text>
-            )}
-          </View>
-        )}
+        renderItem={({ item }) => {
+          // Filter meals based on active meal type filters
+          const filteredMeals = item.meals && item.meals.length > 0
+            ? item.meals.filter((meal) => {
+                // If no meal type filters are active, show all meals
+                if (activeFilters.mealTypes.length === 0) return true;
+                
+                // Check if meal name matches any of the selected meal types
+                const mealNameLower = meal.name.toLowerCase();
+                const matches = activeFilters.mealTypes.some((type: string) => {
+                  const typeLower = type.toLowerCase();
+                  // Match exact meal type or partial match
+                  const isMatch = mealNameLower.includes(typeLower) || typeLower.includes(mealNameLower);
+                  console.log(`Comparing meal "${meal.name}" with filter "${type}": ${isMatch}`);
+                  return isMatch;
+                });
+                return matches;
+              })
+            : [];
+
+          console.log(`Date: ${item.date}, Total meals: ${item.meals?.length || 0}, Filtered meals: ${filteredMeals.length}`, 
+                      `Active filters:`, activeFilters.mealTypes);
+
+          return (
+            <View style={[styles.daySection, { paddingHorizontal: 20 }]}>
+              <Text style={styles.dayHeader}>{item.date}</Text>
+              {filteredMeals.length > 0 ? (
+                filteredMeals.map((meal) => (
+                  <TouchableOpacity
+                    key={meal.id}
+                    style={styles.mealButton}
+                    onPress={() => {
+                      // Navigate to menu items page
+                      if (!cbordUnitId) {
+                        console.error("cbordUnitId not available");
+                        return;
+                      }
+                      router.push({
+                        pathname: "/(tabs)/menu-items" as any,
+                        params: {
+                          menuId: meal.id.toString(),
+                          unitId: cbordUnitId.toString(),
+                          mealName: meal.name,
+                          hallName: params.hallName || "",
+                          date: item.date,
+                          filterAllergens: JSON.stringify(activeFilters.allergens),
+                          filterMealTypes: JSON.stringify(activeFilters.mealTypes),
+                        },
+                      });
+                    }}
+                  >
+                    <Text style={styles.mealText}>{meal.name}</Text>
+                  </TouchableOpacity>
+                ))
+              ) : (
+                <Text style={styles.noMealsText}>No meals available</Text>
+              )}
+            </View>
+          );
+        }}
         ListEmptyComponent={
           loading ? (
             <ActivityIndicator size="large" style={{ marginTop: 20 }} />
@@ -200,6 +259,14 @@ export default function ScheduleDetailsScreen() {
       }}>
         <BottomNav />
       </View>
+
+      {/* Filter Modal */}
+      <FilterModal
+        visible={filterModalVisible}
+        onClose={() => setFilterModalVisible(false)}
+        onApply={handleApplyFilters}
+        initialFilters={activeFilters}
+      />
     </View>
   );
 }

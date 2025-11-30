@@ -15,9 +15,11 @@ import SearchResultsModal from "./SearchResultsModal";
 interface HeaderProps {
   searchText: string;
   setSearchText: (s: string) => void;
+  onFilterPress?: () => void;
+  activeFilterCount?: number;
 }
 
-const Header: React.FC<HeaderProps> = ({ searchText, setSearchText }) => {
+const Header: React.FC<HeaderProps> = ({ searchText, setSearchText, onFilterPress, activeFilterCount }) => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [searchModalVisible, setSearchModalVisible] = useState(false);
@@ -120,9 +122,20 @@ const Header: React.FC<HeaderProps> = ({ searchText, setSearchText }) => {
             <TouchableOpacity
               key={idx}
               style={styles.filterButton}
-              onPress={filter === "Trending" ? handleTrendingPress : undefined}
+              onPress={
+                filter === "Trending" 
+                  ? handleTrendingPress 
+                  : filter === "Filter By" && onFilterPress
+                  ? onFilterPress
+                  : undefined
+              }
             >
-              <Text style={styles.filterText}>{filter}</Text>
+              <Text style={styles.filterText}>
+                {filter}
+                {filter === "Filter By" && activeFilterCount && activeFilterCount > 0
+                  ? ` (${activeFilterCount})`
+                  : ""}
+              </Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
