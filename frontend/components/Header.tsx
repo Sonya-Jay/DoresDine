@@ -17,9 +17,11 @@ interface HeaderProps {
   setSearchText: (s: string) => void;
   onFilterPress?: () => void;
   activeFilterCount?: number;
+  onFriendRecsPress?: () => void;
+  activeFriendRecs?: boolean;
 }
 
-const Header: React.FC<HeaderProps> = ({ searchText, setSearchText, onFilterPress, activeFilterCount }) => {
+const Header: React.FC<HeaderProps> = ({ searchText, setSearchText, onFilterPress, activeFilterCount, onFriendRecsPress, activeFriendRecs }) => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [searchModalVisible, setSearchModalVisible] = useState(false);
@@ -118,15 +120,30 @@ const Header: React.FC<HeaderProps> = ({ searchText, setSearchText, onFilterPres
           style={styles.filterContainer}
           contentContainerStyle={styles.filterContentContainer}
         >
-          {["Trending", "Friend Recs"].map((filter, idx) => (
-            <TouchableOpacity
-              key={idx}
-              style={styles.filterButton}
-              onPress={filter === "Trending" ? handleTrendingPress : undefined}
-            >
-              <Text style={styles.filterText}>{filter}</Text>
-            </TouchableOpacity>
-          ))}
+          {["Trending", "Friend Recs"].map((filter, idx) => {
+            const isActive = filter === "Friend Recs" && activeFriendRecs;
+            return (
+              <TouchableOpacity
+                key={idx}
+                style={[
+                  styles.filterButton,
+                  isActive && { backgroundColor: "#007AFF" }
+                ]}
+                onPress={
+                  filter === "Trending" 
+                    ? handleTrendingPress 
+                    : filter === "Friend Recs" && onFriendRecsPress
+                    ? onFriendRecsPress
+                    : undefined
+                }
+              >
+                <Text style={[
+                  styles.filterText,
+                  isActive && { color: "#fff" }
+                ]}>{filter}</Text>
+              </TouchableOpacity>
+            );
+          })}
           {onFilterPress && (
             <TouchableOpacity
               style={styles.filterButton}

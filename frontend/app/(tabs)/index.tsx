@@ -1,7 +1,7 @@
 import BottomNav from "@/components/BottomNav";
 import Header from "@/components/Header";
 import PostCard from "@/components/PostCard";
-import { fetchPosts, getOrCreateUser, toggleLikePost } from "@/services/api";
+import { fetchPosts, fetchFriendPosts, getOrCreateUser, toggleLikePost } from "@/services/api";
 import { Post } from "@/types";
 import { useFocusEffect } from "@react-navigation/native";
 import React, { useEffect, useRef, useState } from "react";
@@ -25,6 +25,7 @@ export default function FeedScreen() {
   const [error, setError] = useState<string | null>(null);
   const hasLoadedRef = useRef(false);
   const [headerHeight, setHeaderHeight] = useState(180);
+  const [showFriendRecs, setShowFriendRecs] = useState(false);
 
   // Initialize user on mount
   useEffect(() => {
@@ -41,7 +42,7 @@ export default function FeedScreen() {
   const loadPosts = async () => {
     try {
       setError(null);
-      const fetchedPosts = await fetchPosts();
+      const fetchedPosts = showFriendRecs ? await fetchFriendPosts() : await fetchPosts();
       setPosts(fetchedPosts);
       hasLoadedRef.current = true;
     } catch (err: any) {
@@ -55,7 +56,7 @@ export default function FeedScreen() {
 
   useEffect(() => {
     loadPosts();
-  }, []);
+  }, [showFriendRecs]);
 
   // Refresh posts when screen comes into focus (e.g., after creating a post)
   useFocusEffect(
@@ -172,7 +173,12 @@ export default function FeedScreen() {
           elevation: 5,
         }}
       >
-        <Header searchText={searchText} setSearchText={setSearchText} />
+        <Header 
+          searchText={searchText} 
+          setSearchText={setSearchText}
+          onFriendRecsPress={() => setShowFriendRecs(!showFriendRecs)}
+          activeFriendRecs={showFriendRecs}
+        />
       </View>
 
       {/* Scrollable Content */}

@@ -101,7 +101,8 @@ router.get("/activity", async (req: Request, res: Response): Promise<void> => {
             JSON_BUILD_OBJECT(
               'id', pp.id,
               'storage_key', pp.storage_key,
-              'display_order', pp.display_order
+              'display_order', pp.display_order,
+              'dish_name', pp.dish_name
             ) ORDER BY pp.display_order
           ) FILTER (WHERE pp.id IS NOT NULL),
           '[]'::json
@@ -124,13 +125,14 @@ router.get("/activity", async (req: Request, res: Response): Promise<void> => {
         GROUP BY post_id
       ) c ON p.id = c.post_id
       LEFT JOIN likes ul ON p.id = ul.post_id AND ul.user_id = $1
-      WHERE f.follower_id = $1
+      WHERE f.follower_id = $1 AND p.rating >= 6.7
       GROUP BY p.id, p.author_id, p.caption, p.rating, p.menu_items, p.dining_hall_name, p.meal_type, p.created_at, u.username, u.email, u.first_name, u.last_name, l.like_count, c.comment_count, ul.user_id
       ORDER BY p.created_at DESC
       LIMIT 50
     `;
 
     const result = await pool.query(query, [userId]);
+    console.log(`[Follows] Found ${result.rows.length} friend posts with rating >= 6.7 for user: ${userId}`);
     res.json(result.rows);
   } catch (error: any) {
     console.error("Error fetching friend activity:", error);
