@@ -195,11 +195,7 @@ const PostCard: React.FC<PostCardProps> = ({
               </View>
             </View>
           </View>
-        ) : (
-          <View style={styles.noContentContainer}>
-            <Text style={styles.noContentText}>No photos or menu items</Text>
-          </View>
-        )}
+        ) : null}
       </View>
 
       {post.notes ? (
