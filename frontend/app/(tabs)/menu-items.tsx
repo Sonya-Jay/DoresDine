@@ -1,20 +1,20 @@
+import BottomNav from "@/components/BottomNav";
+import FilterModal, { FilterOptions } from "@/components/FilterModal";
+import Header from "@/components/Header";
+import { fetchMenuItems } from "@/services/api";
+import { MenuItem } from "@/types";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  StyleSheet,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/Feather";
-import BottomNav from "@/components/BottomNav";
-import Header from "@/components/Header";
-import FilterModal, { FilterOptions } from "@/components/FilterModal";
-import { fetchMenuItems } from "@/services/api";
-import { MenuItem } from "@/types";
 
 export default function MenuItemsScreen() {
   const params = useLocalSearchParams<{
@@ -39,8 +39,12 @@ export default function MenuItemsScreen() {
   });
 
   // Parse filter params
-  const filterAllergens = params.filterAllergens ? JSON.parse(params.filterAllergens) : [];
-  const filterMealTypes = params.filterMealTypes ? JSON.parse(params.filterMealTypes) : [];
+  const filterAllergens = params.filterAllergens
+    ? JSON.parse(params.filterAllergens)
+    : [];
+  const filterMealTypes = params.filterMealTypes
+    ? JSON.parse(params.filterMealTypes)
+    : [];
 
   // Initialize active filters from URL params
   useEffect(() => {
@@ -52,8 +56,8 @@ export default function MenuItemsScreen() {
 
   // Debug logging
   useEffect(() => {
-    console.log('Filter Allergens:', filterAllergens);
-    console.log('Filter Meal Types:', filterMealTypes);
+    console.log("Filter Allergens:", filterAllergens);
+    console.log("Filter Meal Types:", filterMealTypes);
   }, [filterAllergens, filterMealTypes]);
 
   useEffect(() => {
@@ -80,78 +84,99 @@ export default function MenuItemsScreen() {
 
   const filteredItems = items.filter((item) => {
     // Search filter
-    const matchesSearch = item.name.toLowerCase().includes(searchText.toLowerCase());
-    
+    const matchesSearch = item.name
+      .toLowerCase()
+      .includes(searchText.toLowerCase());
+
     // Allergen filter - exclude items that contain any of the filtered allergens
-    const hasExcludedAllergen = activeFilters.allergens.length > 0 && item.allergens && 
+    const hasExcludedAllergen =
+      activeFilters.allergens.length > 0 &&
+      item.allergens &&
       item.allergens.some((allergen: string) => {
         const allergenLower = allergen.toLowerCase();
         return activeFilters.allergens.some((filtered: string) => {
           const filteredLower = filtered.toLowerCase();
           // Check both ways: allergen contains filter OR filter contains allergen
           // This handles "peanut" matching "nuts" and "nuts" matching "peanut"
-          return allergenLower.includes(filteredLower) || 
-                 filteredLower.includes(allergenLower) ||
-                 // Also handle common allergen variations
-                 (filteredLower === 'nuts' && (allergenLower.includes('nut') || allergenLower.includes('peanut'))) ||
-                 (filteredLower === 'dairy' && (allergenLower.includes('milk') || allergenLower.includes('cheese'))) ||
-                 (filteredLower === 'gluten' && allergenLower.includes('wheat'));
+          return (
+            allergenLower.includes(filteredLower) ||
+            filteredLower.includes(allergenLower) ||
+            // Also handle common allergen variations
+            (filteredLower === "nuts" &&
+              (allergenLower.includes("nut") ||
+                allergenLower.includes("peanut"))) ||
+            (filteredLower === "dairy" &&
+              (allergenLower.includes("milk") ||
+                allergenLower.includes("cheese"))) ||
+            (filteredLower === "gluten" && allergenLower.includes("wheat"))
+          );
         });
       });
-    
+
     // Meal type filter - if meal types are selected, check if current meal matches
     // Note: The mealName from params represents the current meal period
-    const matchesMealType = activeFilters.mealTypes.length === 0 || 
+    const matchesMealType =
+      activeFilters.mealTypes.length === 0 ||
       activeFilters.mealTypes.some((type: string) => {
         const mealNameLower = params.mealName?.toLowerCase() || "";
         const typeLower = type.toLowerCase();
-        
+
         // Handle "daily-offerings" specially
-        if (typeLower === "daily-offerings" || typeLower === "daily offerings") {
-          return mealNameLower.includes("daily") || mealNameLower.includes("all day");
+        if (
+          typeLower === "daily-offerings" ||
+          typeLower === "daily offerings"
+        ) {
+          return (
+            mealNameLower.includes("daily") || mealNameLower.includes("all day")
+          );
         }
-        
+
         return mealNameLower.includes(typeLower);
       });
-    
+
     return matchesSearch && !hasExcludedAllergen && matchesMealType;
   });
 
-  const hasActiveFilters = activeFilters.allergens.length > 0 || activeFilters.mealTypes.length > 0;
-  const activeFilterCount = activeFilters.allergens.length + activeFilters.mealTypes.length;
+  const hasActiveFilters =
+    activeFilters.allergens.length > 0 || activeFilters.mealTypes.length > 0;
+  const activeFilterCount =
+    activeFilters.allergens.length + activeFilters.mealTypes.length;
 
   const handleApplyFilters = (filters: FilterOptions) => {
     setActiveFilters(filters);
   };
 
   // Calculate header height: safe area + headerTop (40) + margins (12) + searchBar (24+12) + filter (16+3) + paddingBottom (12)
-  const headerHeight = Math.max(insets.top, 15) + 40 + 12 + 24 + 12 + 16 + 3 + 12; // ~134px + safe area
+  const headerHeight =
+    Math.max(insets.top, 15) + 40 + 12 + 24 + 12 + 16 + 3 + 12; // ~134px + safe area
   const bottomNavHeight = 60 + Math.max(insets.bottom, 8);
 
   return (
     <View style={{ flex: 1, backgroundColor: "#fff" }}>
       {/* Fixed Header */}
-      <View style={{ 
-        position: 'absolute', 
-        top: 0, 
-        left: 0, 
-        right: 0,
-        zIndex: 10,
-        backgroundColor: '#fff',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 5,
-      }}>
-        <Header 
-          searchText={searchText} 
+      <View
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 10,
+          backgroundColor: "#fff",
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
+          elevation: 5,
+        }}
+      >
+        <Header
+          searchText={searchText}
           setSearchText={setSearchText}
           onFilterPress={() => setFilterModalVisible(true)}
           activeFilterCount={activeFilterCount}
         />
       </View>
-      
+
       {/* Scrollable Content */}
       <FlatList
         contentContainerStyle={{
@@ -194,9 +219,7 @@ export default function MenuItemsScreen() {
               </View>
             )}
             {item.calories && (
-              <Text style={styles.caloriesText}>
-                {item.calories} calories
-              </Text>
+              <Text style={styles.caloriesText}>{item.calories} calories</Text>
             )}
           </View>
         )}
@@ -210,10 +233,7 @@ export default function MenuItemsScreen() {
                 onPress={() => {
                   if (params.menuId && params.unitId) {
                     setLoading(true);
-                    fetchMenuItems(
-                      Number(params.menuId),
-                      Number(params.unitId)
-                    )
+                    fetchMenuItems(Number(params.menuId), Number(params.unitId))
                       .then((data) => {
                         setItems(data || []);
                         setLoading(false);
@@ -235,18 +255,20 @@ export default function MenuItemsScreen() {
         }
         scrollEnabled={true}
       />
-      
+
       {/* Fixed Bottom Nav */}
-      <View style={{ 
-        position: 'absolute', 
-        bottom: 0, 
-        left: 0, 
-        right: 0,
-        zIndex: 10,
-        backgroundColor: '#fff',
-        borderTopWidth: 1,
-        borderTopColor: '#f0f0f0',
-      }}>
+      <View
+        style={{
+          position: "absolute",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: 10,
+          backgroundColor: "#fff",
+          borderTopWidth: 1,
+          borderTopColor: "#f0f0f0",
+        }}
+      >
         <BottomNav />
       </View>
 
@@ -348,4 +370,3 @@ const styles = StyleSheet.create({
     color: "#999",
   },
 });
-

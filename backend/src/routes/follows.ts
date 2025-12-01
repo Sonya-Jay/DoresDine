@@ -9,7 +9,7 @@ router.get("/following", async (req: Request, res: Response): Promise<void> => {
   try {
     const currentUserId = req.headers["x-user-id"] as string;
     const targetUserId = (req.query.userId as string) || currentUserId;
-    
+
     if (!targetUserId) {
       res.status(401).json({ error: "X-User-Id header is required" });
       return;
@@ -37,7 +37,9 @@ router.get("/following", async (req: Request, res: Response): Promise<void> => {
   } catch (error: any) {
     console.error("Error fetching following:", error);
     console.error("Error details:", error.message, error.stack);
-    res.status(500).json({ error: "Internal server error", details: error.message });
+    res
+      .status(500)
+      .json({ error: "Internal server error", details: error.message });
   }
 });
 
@@ -76,7 +78,7 @@ router.get("/followers", async (req: Request, res: Response): Promise<void> => {
 router.get("/activity", async (req: Request, res: Response): Promise<void> => {
   try {
     // Get userId from JWT token (attached by middleware) or fallback to header
-    const userId = (req as any).userId || req.headers["x-user-id"] as string;
+    const userId = (req as any).userId || (req.headers["x-user-id"] as string);
     if (!userId) {
       res.status(401).json({ error: "Authentication required" });
       return;
@@ -132,7 +134,9 @@ router.get("/activity", async (req: Request, res: Response): Promise<void> => {
     `;
 
     const result = await pool.query(query, [userId]);
-    console.log(`[Follows] Found ${result.rows.length} friend posts with rating >= 6.7 for user: ${userId}`);
+    console.log(
+      `[Follows] Found ${result.rows.length} friend posts with rating >= 6.7 for user: ${userId}`
+    );
     res.json(result.rows);
   } catch (error: any) {
     console.error("Error fetching friend activity:", error);
@@ -141,15 +145,17 @@ router.get("/activity", async (req: Request, res: Response): Promise<void> => {
 });
 
 // GET /follows/suggestions - Get suggested users to follow (users not currently followed)
-router.get("/suggestions", async (req: Request, res: Response): Promise<void> => {
-  try {
-    const userId = req.headers["x-user-id"] as string;
-    if (!userId) {
-      res.status(401).json({ error: "X-User-Id header is required" });
-      return;
-    }
+router.get(
+  "/suggestions",
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = req.headers["x-user-id"] as string;
+      if (!userId) {
+        res.status(401).json({ error: "X-User-Id header is required" });
+        return;
+      }
 
-    const query = `
+      const query = `
       SELECT
         u.id,
         u.username,
@@ -172,39 +178,43 @@ router.get("/suggestions", async (req: Request, res: Response): Promise<void> =>
       LIMIT 20
     `;
 
-    const result = await pool.query(query, [userId]);
-    res.json(result.rows);
-  } catch (error: any) {
-    console.error("Error fetching suggestions:", error);
-    res.status(500).json({ error: "Internal server error" });
+      const result = await pool.query(query, [userId]);
+      res.json(result.rows);
+    } catch (error: any) {
+      console.error("Error fetching suggestions:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
   }
-});
+);
 
 // GET /follows/check/:userId - Check if current user is following a specific user
-router.get("/check/:userId", async (req: Request, res: Response): Promise<void> => {
-  try {
-    const userId = req.headers["x-user-id"] as string;
-    if (!userId) {
-      res.status(401).json({ error: "X-User-Id header is required" });
-      return;
-    }
+router.get(
+  "/check/:userId",
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = req.headers["x-user-id"] as string;
+      if (!userId) {
+        res.status(401).json({ error: "X-User-Id header is required" });
+        return;
+      }
 
-    const targetUserId = req.params.userId;
+      const targetUserId = req.params.userId;
 
-    const query = `
+      const query = `
       SELECT EXISTS(
         SELECT 1 FROM follows
         WHERE follower_id = $1 AND following_id = $2
       ) as is_following
     `;
 
-    const result = await pool.query(query, [userId, targetUserId]);
-    res.json({ is_following: result.rows[0].is_following });
-  } catch (error: any) {
-    console.error("Error checking follow status:", error);
-    res.status(500).json({ error: "Internal server error" });
+      const result = await pool.query(query, [userId, targetUserId]);
+      res.json({ is_following: result.rows[0].is_following });
+    } catch (error: any) {
+      console.error("Error checking follow status:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
   }
-});
+);
 
 // POST /follows/:userId - Follow a user
 router.post("/:userId", async (req: Request, res: Response): Promise<void> => {
@@ -226,10 +236,9 @@ router.post("/:userId", async (req: Request, res: Response): Promise<void> => {
     }
 
     // Validate target user exists
-    const userCheck = await client.query(
-      "SELECT id FROM users WHERE id = $1",
-      [targetUserId]
-    );
+    const userCheck = await client.query("SELECT id FROM users WHERE id = $1", [
+      targetUserId,
+    ]);
     if (userCheck.rows.length === 0) {
       res.status(404).json({ error: "User not found" });
       return;
@@ -262,36 +271,39 @@ router.post("/:userId", async (req: Request, res: Response): Promise<void> => {
 });
 
 // DELETE /follows/:userId - Unfollow a user
-router.delete("/:userId", async (req: Request, res: Response): Promise<void> => {
-  const client = await pool.connect();
+router.delete(
+  "/:userId",
+  async (req: Request, res: Response): Promise<void> => {
+    const client = await pool.connect();
 
-  try {
-    const userId = req.headers["x-user-id"] as string;
-    if (!userId) {
-      res.status(401).json({ error: "X-User-Id header is required" });
-      return;
+    try {
+      const userId = req.headers["x-user-id"] as string;
+      if (!userId) {
+        res.status(401).json({ error: "X-User-Id header is required" });
+        return;
+      }
+
+      const targetUserId = req.params.userId;
+
+      // Delete follow relationship
+      const result = await client.query(
+        "DELETE FROM follows WHERE follower_id = $1 AND following_id = $2 RETURNING id",
+        [userId, targetUserId]
+      );
+
+      if (result.rows.length === 0) {
+        res.status(404).json({ error: "Not following this user" });
+        return;
+      }
+
+      res.json({ message: "Successfully unfollowed user" });
+    } catch (error: any) {
+      console.error("Error unfollowing user:", error);
+      res.status(500).json({ error: "Internal server error" });
+    } finally {
+      client.release();
     }
-
-    const targetUserId = req.params.userId;
-
-    // Delete follow relationship
-    const result = await client.query(
-      "DELETE FROM follows WHERE follower_id = $1 AND following_id = $2 RETURNING id",
-      [userId, targetUserId]
-    );
-
-    if (result.rows.length === 0) {
-      res.status(404).json({ error: "Not following this user" });
-      return;
-    }
-
-    res.json({ message: "Successfully unfollowed user" });
-  } catch (error: any) {
-    console.error("Error unfollowing user:", error);
-    res.status(500).json({ error: "Internal server error" });
-  } finally {
-    client.release();
   }
-});
+);
 
 export default router;

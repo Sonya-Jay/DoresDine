@@ -5,7 +5,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/Feather";
@@ -24,7 +24,17 @@ interface HeaderProps {
   disableSearchModal?: boolean;
 }
 
-const Header: React.FC<HeaderProps> = ({ searchText, setSearchText, onFilterPress, activeFilterCount, onFriendRecsPress, activeFriendRecs, hideSearch, searchPlaceholder, disableSearchModal }) => {
+const Header: React.FC<HeaderProps> = ({
+  searchText,
+  setSearchText,
+  onFilterPress,
+  activeFilterCount,
+  onFriendRecsPress,
+  activeFriendRecs,
+  hideSearch,
+  searchPlaceholder,
+  disableSearchModal,
+}) => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [searchModalVisible, setSearchModalVisible] = useState(false);
@@ -106,9 +116,9 @@ const Header: React.FC<HeaderProps> = ({ searchText, setSearchText, onFilterPres
               placeholderTextColor="#999"
             />
             {searchText ? (
-              <TouchableOpacity 
+              <TouchableOpacity
                 testID="clear-search-button"
-                onPress={() => { 
+                onPress={() => {
                   setSearchText("");
                   setSearchModalVisible(false);
                 }}
@@ -132,20 +142,21 @@ const Header: React.FC<HeaderProps> = ({ searchText, setSearchText, onFilterPres
                 key={idx}
                 style={[
                   styles.filterButton,
-                  isActive && { backgroundColor: "#007AFF" }
+                  isActive && { backgroundColor: "#007AFF" },
                 ]}
                 onPress={
-                  filter === "Trending" 
-                    ? handleTrendingPress 
+                  filter === "Trending"
+                    ? handleTrendingPress
                     : filter === "Friend Recs" && onFriendRecsPress
                     ? onFriendRecsPress
                     : undefined
                 }
               >
-                <Text style={[
-                  styles.filterText,
-                  isActive && { color: "#fff" }
-                ]}>{filter}</Text>
+                <Text
+                  style={[styles.filterText, isActive && { color: "#fff" }]}
+                >
+                  {filter}
+                </Text>
               </TouchableOpacity>
             );
           })}

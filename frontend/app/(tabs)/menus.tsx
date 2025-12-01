@@ -1,20 +1,19 @@
+import BottomNav from "@/components/BottomNav";
+import FilterModal, { FilterOptions } from "@/components/FilterModal";
+import Header from "@/components/Header";
+import { fetchDiningHalls } from "@/services/api";
+import { DiningHall } from "@/types";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  LayoutChangeEvent,
+  StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  StyleSheet,
-  LayoutChangeEvent,
 } from "react-native";
-import Icon from "react-native-vector-icons/Feather";
-import BottomNav from "@/components/BottomNav";
-import Header from "@/components/Header";
-import FilterModal, { FilterOptions } from "@/components/FilterModal";
-import { fetchDiningHalls } from "@/services/api";
-import { DiningHall } from "@/types";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // Helper function to determine if a dining hall is open
@@ -55,20 +54,20 @@ export default function MenusScreen() {
 
   const filteredHalls = halls.filter((hall) => {
     if (!searchText.trim()) return true;
-    
+
     // Split hall name into words (by spaces and common punctuation)
     const hallWords = hall.name.toLowerCase().split(/[\s,.-]+/);
     const searchLower = searchText.toLowerCase().trim();
-    
+
     // Check if any word starts with the search term
-    return hallWords.some(word => word.startsWith(searchLower));
+    return hallWords.some((word) => word.startsWith(searchLower));
   });
 
   const handleHallPress = (hall: DiningHall) => {
     router.push({
       pathname: "/(tabs)/schedule-details" as any,
-      params: { 
-        hallId: hall.id.toString(), 
+      params: {
+        hallId: hall.id.toString(),
         hallName: hall.name,
         filterAllergens: JSON.stringify(activeFilters.allergens),
         filterMealTypes: JSON.stringify(activeFilters.mealTypes),
@@ -80,7 +79,8 @@ export default function MenusScreen() {
     setActiveFilters(filters);
   };
 
-  const activeFilterCount = activeFilters.allergens.length + activeFilters.mealTypes.length;
+  const activeFilterCount =
+    activeFilters.allergens.length + activeFilters.mealTypes.length;
 
   const [headerHeight, setHeaderHeight] = useState(180);
   const bottomNavHeight = 60 + Math.max(insets.bottom, 8);
@@ -93,24 +93,24 @@ export default function MenusScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: "#fff" }}>
       {/* Fixed Header */}
-      <View 
+      <View
         onLayout={handleHeaderLayout}
-        style={{ 
-          position: 'absolute', 
-          top: 0, 
-          left: 0, 
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
           right: 0,
           zIndex: 10,
-          backgroundColor: '#fff',
-          shadowColor: '#000',
+          backgroundColor: "#fff",
+          shadowColor: "#000",
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.1,
           shadowRadius: 4,
           elevation: 5,
         }}
       >
-        <Header 
-          searchText={searchText} 
+        <Header
+          searchText={searchText}
           setSearchText={setSearchText}
           onFilterPress={() => setFilterModalVisible(true)}
           activeFilterCount={activeFilterCount}
@@ -118,11 +118,11 @@ export default function MenusScreen() {
           disableSearchModal={true}
         />
       </View>
-      
+
       {/* Scrollable Content */}
       <FlatList
         style={{ flex: 1 }}
-        contentContainerStyle={{ 
+        contentContainerStyle={{
           paddingTop: headerHeight + 20, // Header + reduced section header spacing
           paddingBottom: bottomNavHeight,
         }}
@@ -166,18 +166,20 @@ export default function MenusScreen() {
         }
         showsVerticalScrollIndicator={false}
       />
-      
+
       {/* Fixed Bottom Nav */}
-      <View style={{ 
-        position: 'absolute', 
-        bottom: 0, 
-        left: 0, 
-        right: 0,
-        zIndex: 10,
-        backgroundColor: '#fff',
-        borderTopWidth: 1,
-        borderTopColor: '#f0f0f0',
-      }}>
+      <View
+        style={{
+          position: "absolute",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: 10,
+          backgroundColor: "#fff",
+          borderTopWidth: 1,
+          borderTopColor: "#f0f0f0",
+        }}
+      >
         <BottomNav />
       </View>
 
@@ -243,4 +245,3 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 });
-

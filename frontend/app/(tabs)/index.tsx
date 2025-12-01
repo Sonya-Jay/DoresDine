@@ -1,9 +1,15 @@
 import BottomNav from "@/components/BottomNav";
 import Header from "@/components/Header";
 import PostCard from "@/components/PostCard";
-import { fetchPosts, fetchFriendPosts, getOrCreateUser, toggleLikePost } from "@/services/api";
+import {
+  fetchFriendPosts,
+  fetchPosts,
+  getOrCreateUser,
+  toggleLikePost,
+} from "@/services/api";
 import { Post } from "@/types";
 import { useFocusEffect } from "@react-navigation/native";
+import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -17,6 +23,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function FeedScreen() {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const [searchText, setSearchText] = useState("");
   const [posts, setPosts] = useState<Post[]>([]);
@@ -42,7 +49,9 @@ export default function FeedScreen() {
   const loadPosts = async () => {
     try {
       setError(null);
-      const fetchedPosts = showFriendRecs ? await fetchFriendPosts() : await fetchPosts();
+      const fetchedPosts = showFriendRecs
+        ? await fetchFriendPosts()
+        : await fetchPosts();
       setPosts(fetchedPosts);
       hasLoadedRef.current = true;
     } catch (err: any) {
@@ -108,8 +117,11 @@ export default function FeedScreen() {
   };
 
   const handleCreateSimilarPost = (diningHall: string, mealType: string) => {
-    // TODO: Navigate to create post with pre-filled data
     console.log("Create similar post:", diningHall, mealType);
+    router.push({
+      pathname: "/(tabs)/create-post",
+      params: { diningHall, mealType },
+    } as any);
   };
 
   if (loading) {
@@ -173,8 +185,8 @@ export default function FeedScreen() {
           elevation: 5,
         }}
       >
-        <Header 
-          searchText={searchText} 
+        <Header
+          searchText={searchText}
           setSearchText={setSearchText}
           onFriendRecsPress={() => setShowFriendRecs(!showFriendRecs)}
           activeFriendRecs={showFriendRecs}

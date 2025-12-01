@@ -448,19 +448,19 @@ export const fetchPosts = async (): Promise<Post[]> => {
 export const fetchFriendPosts = async (): Promise<Post[]> => {
   try {
     await initAuthFromStorage();
-    
+
     const response = await fetch(`${API_URL}/follows/activity`, {
       headers: getHeaders(false),
     });
-    
+
     if (!response.ok) {
       throw new Error(`Failed to fetch friend posts: ${response.statusText}`);
     }
-    
+
     const backendPosts: BackendPost[] = await response.json();
     return backendPosts.map(transformPost);
   } catch (error) {
-    console.error('Error fetching friend posts:', error);
+    console.error("Error fetching friend posts:", error);
     throw error;
   }
 };

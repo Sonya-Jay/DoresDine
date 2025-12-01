@@ -1,16 +1,16 @@
-import { Request, Response, Router } from 'express';
-import pool from '../db';
-import cbordService from '../services/cbordService';
+import { Request, Response, Router } from "express";
+import pool from "../db";
+import cbordService from "../services/cbordService";
 
 const router = Router();
 
 // GET /search - Search for dining halls, users, and dishes
-router.get('/', async (req: Request, res: Response): Promise<void> => {
+router.get("/", async (req: Request, res: Response): Promise<void> => {
   try {
-    const query = (req.query.q as string || '').trim().toLowerCase();
+    const query = ((req.query.q as string) || "").trim().toLowerCase();
 
     if (!query || query.length < 2) {
-      res.status(400).json({ error: 'Query must be at least 2 characters' });
+      res.status(400).json({ error: "Query must be at least 2 characters" });
       return;
     }
 
@@ -25,54 +25,57 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
       query,
     });
   } catch (error) {
-    console.error('Error searching:', error);
-    res.status(500).json({ error: 'Failed to search' });
+    console.error("Error searching:", error);
+    res.status(500).json({ error: "Failed to search" });
   }
 });
 
 // GET /search/users - Search for users
-router.get('/users', async (req: Request, res: Response): Promise<void> => {
+router.get("/users", async (req: Request, res: Response): Promise<void> => {
   try {
-    const query = (req.query.q as string || '').trim().toLowerCase();
+    const query = ((req.query.q as string) || "").trim().toLowerCase();
 
     if (!query || query.length < 2) {
-      res.status(400).json({ error: 'Query must be at least 2 characters' });
+      res.status(400).json({ error: "Query must be at least 2 characters" });
       return;
     }
 
     const users = await searchUsers(query);
     res.json({ users, query });
   } catch (error) {
-    console.error('Error searching users:', error);
-    res.status(500).json({ error: 'Failed to search users' });
+    console.error("Error searching users:", error);
+    res.status(500).json({ error: "Failed to search users" });
   }
 });
 
 // GET /search/dining-halls - Search for dining halls
-router.get('/dining-halls', async (req: Request, res: Response): Promise<void> => {
-  try {
-    const query = (req.query.q as string || '').trim().toLowerCase();
+router.get(
+  "/dining-halls",
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const query = ((req.query.q as string) || "").trim().toLowerCase();
 
-    if (!query || query.length < 2) {
-      res.status(400).json({ error: 'Query must be at least 2 characters' });
-      return;
+      if (!query || query.length < 2) {
+        res.status(400).json({ error: "Query must be at least 2 characters" });
+        return;
+      }
+
+      const diningHalls = await searchDiningHalls(query);
+      res.json({ diningHalls, query });
+    } catch (error) {
+      console.error("Error searching dining halls:", error);
+      res.status(500).json({ error: "Failed to search dining halls" });
     }
-
-    const diningHalls = await searchDiningHalls(query);
-    res.json({ diningHalls, query });
-  } catch (error) {
-    console.error('Error searching dining halls:', error);
-    res.status(500).json({ error: 'Failed to search dining halls' });
   }
-});
+);
 
 // GET /search/dishes - Search for dishes
-router.get('/dishes', async (req: Request, res: Response): Promise<void> => {
+router.get("/dishes", async (req: Request, res: Response): Promise<void> => {
   try {
-    const query = (req.query.q as string || '').trim().toLowerCase();
+    const query = ((req.query.q as string) || "").trim().toLowerCase();
 
     if (!query || query.length < 2) {
-      res.status(400).json({ error: 'Query must be at least 2 characters' });
+      res.status(400).json({ error: "Query must be at least 2 characters" });
       return;
     }
 
@@ -80,23 +83,26 @@ router.get('/dishes', async (req: Request, res: Response): Promise<void> => {
     const dishes = await searchDishes(query);
     res.json({ dishes, query });
   } catch (error) {
-    console.error('Error searching dishes:', error);
-    res.status(500).json({ error: 'Failed to search dishes' });
+    console.error("Error searching dishes:", error);
+    res.status(500).json({ error: "Failed to search dishes" });
   }
 });
 
 // GET /search/trending-dishes - Get top trending dishes
-router.get('/trending-dishes', async (req: Request, res: Response): Promise<void> => {
-  try {
-    const limit = Math.min(Number(req.query.limit) || 20, 100); // Max 100
+router.get(
+  "/trending-dishes",
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const limit = Math.min(Number(req.query.limit) || 20, 100); // Max 100
 
-    const dishes = await getTrendingDishes(limit);
-    res.json({ dishes });
-  } catch (error) {
-    console.error('Error fetching trending dishes:', error);
-    res.status(500).json({ error: 'Failed to fetch trending dishes' });
+      const dishes = await getTrendingDishes(limit);
+      res.json({ dishes });
+    } catch (error) {
+      console.error("Error fetching trending dishes:", error);
+      res.status(500).json({ error: "Failed to fetch trending dishes" });
+    }
   }
-});
+);
 
 // Helper functions
 async function searchUsers(query: string): Promise<any[]> {
@@ -113,7 +119,7 @@ async function searchUsers(query: string): Promise<any[]> {
     );
     return result.rows;
   } catch (error) {
-    console.error('Error in searchUsers:', error);
+    console.error("Error in searchUsers:", error);
     return [];
   }
 }
@@ -135,11 +141,11 @@ async function searchDiningHalls(query: string): Promise<any[]> {
 
     // If not found in DB, get all halls and filter by name
     const allHalls = await cbordService.getDiningHalls();
-    return allHalls.filter(
-      (hall: any) => hall.name.toLowerCase().includes(query)
-    ).slice(0, 10);
+    return allHalls
+      .filter((hall: any) => hall.name.toLowerCase().includes(query))
+      .slice(0, 10);
   } catch (error) {
-    console.error('Error in searchDiningHalls:', error);
+    console.error("Error in searchDiningHalls:", error);
     return [];
   }
 }
@@ -177,7 +183,7 @@ async function searchDishes(query: string): Promise<any[]> {
       frequency: parseInt(row.frequency),
     }));
   } catch (error) {
-    console.error('Error in searchDishes:', error);
+    console.error("Error in searchDishes:", error);
     return [];
   }
 }
@@ -214,7 +220,7 @@ async function getTrendingDishes(limit: number): Promise<any[]> {
       frequency: parseInt(row.frequency),
     }));
   } catch (error) {
-    console.error('Error in getTrendingDishes:', error);
+    console.error("Error in getTrendingDishes:", error);
     return [];
   }
 }

@@ -1,21 +1,21 @@
+import BottomNav from "@/components/BottomNav";
+import FilterModal, { FilterOptions } from "@/components/FilterModal";
+import Header from "@/components/Header";
+import { API_ENDPOINTS, API_URL } from "@/constants/API";
+import { fetchDiningHalls } from "@/services/api";
+import { DayMenu, DiningHall } from "@/types";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  StyleSheet,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/Feather";
-import BottomNav from "@/components/BottomNav";
-import Header from "@/components/Header";
-import FilterModal, { FilterOptions } from "@/components/FilterModal";
-import { API_URL, API_ENDPOINTS } from "@/constants/API";
-import { fetchDiningHalls } from "@/services/api";
-import { DayMenu, DiningHall } from "@/types";
 
 interface MenuScheduleResponse {
   hall: string;
@@ -23,8 +23,8 @@ interface MenuScheduleResponse {
 }
 
 export default function ScheduleDetailsScreen() {
-  const params = useLocalSearchParams<{ 
-    hallId: string; 
+  const params = useLocalSearchParams<{
+    hallId: string;
     hallName: string;
     filterAllergens?: string;
     filterMealTypes?: string;
@@ -44,8 +44,12 @@ export default function ScheduleDetailsScreen() {
 
   // Initialize active filters from URL params
   useEffect(() => {
-    const filterAllergens = params.filterAllergens ? JSON.parse(params.filterAllergens) : [];
-    const filterMealTypes = params.filterMealTypes ? JSON.parse(params.filterMealTypes) : [];
+    const filterAllergens = params.filterAllergens
+      ? JSON.parse(params.filterAllergens)
+      : [];
+    const filterMealTypes = params.filterMealTypes
+      ? JSON.parse(params.filterMealTypes)
+      : [];
     setActiveFilters({
       allergens: filterAllergens,
       mealTypes: filterMealTypes,
@@ -56,7 +60,8 @@ export default function ScheduleDetailsScreen() {
     setActiveFilters(filters);
   };
 
-  const activeFilterCount = activeFilters.allergens.length + activeFilters.mealTypes.length;
+  const activeFilterCount =
+    activeFilters.allergens.length + activeFilters.mealTypes.length;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -65,10 +70,12 @@ export default function ScheduleDetailsScreen() {
       try {
         setLoading(true);
         setError(null);
-        
+
         // First, get the dining hall to get its cbordUnitId
         const halls = await fetchDiningHalls();
-        const hall = halls.find((h: DiningHall) => h.id === Number(params.hallId));
+        const hall = halls.find(
+          (h: DiningHall) => h.id === Number(params.hallId)
+        );
         if (hall) {
           setCbordUnitId(hall.cbordUnitId);
         }
@@ -83,7 +90,12 @@ export default function ScheduleDetailsScreen() {
         }
 
         const data: MenuScheduleResponse = await response.json();
-        console.log("Schedule data for", params.hallName, ":", JSON.stringify(data.schedule, null, 2));
+        console.log(
+          "Schedule data for",
+          params.hallName,
+          ":",
+          JSON.stringify(data.schedule, null, 2)
+        );
         setSchedule(data.schedule || []);
       } catch (err: any) {
         setError(err.message || "Failed to load menu schedule");
@@ -100,33 +112,36 @@ export default function ScheduleDetailsScreen() {
   // So we can use them directly
 
   // Calculate header height: safe area + headerTop (40) + margins (12) + searchBar (24+12) + filter (16+3) + paddingBottom (12)
-  const headerHeight = Math.max(insets.top, 15) + 40 + 12 + 24 + 12 + 16 + 3 + 12; // ~134px + safe area
+  const headerHeight =
+    Math.max(insets.top, 15) + 40 + 12 + 24 + 12 + 16 + 3 + 12; // ~134px + safe area
   const bottomNavHeight = 60 + Math.max(insets.bottom, 8);
 
   return (
     <View style={{ flex: 1, backgroundColor: "#fff" }}>
       {/* Fixed Header */}
-      <View style={{ 
-        position: 'absolute', 
-        top: 0, 
-        left: 0, 
-        right: 0,
-        zIndex: 10,
-        backgroundColor: '#fff',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 5,
-      }}>
-        <Header 
-          searchText={searchText} 
+      <View
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 10,
+          backgroundColor: "#fff",
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
+          elevation: 5,
+        }}
+      >
+        <Header
+          searchText={searchText}
           setSearchText={setSearchText}
           onFilterPress={() => setFilterModalVisible(true)}
           activeFilterCount={activeFilterCount}
         />
       </View>
-      
+
       {/* Scrollable Content */}
       <FlatList
         contentContainerStyle={{
@@ -150,26 +165,38 @@ export default function ScheduleDetailsScreen() {
         keyExtractor={(item, index) => `${item.date}-${index}`}
         renderItem={({ item }) => {
           // Filter meals based on active meal type filters
-          const filteredMeals = item.meals && item.meals.length > 0
-            ? item.meals.filter((meal) => {
-                // If no meal type filters are active, show all meals
-                if (activeFilters.mealTypes.length === 0) return true;
-                
-                // Check if meal name matches any of the selected meal types
-                const mealNameLower = meal.name.toLowerCase();
-                const matches = activeFilters.mealTypes.some((type: string) => {
-                  const typeLower = type.toLowerCase();
-                  // Match exact meal type or partial match
-                  const isMatch = mealNameLower.includes(typeLower) || typeLower.includes(mealNameLower);
-                  console.log(`Comparing meal "${meal.name}" with filter "${type}": ${isMatch}`);
-                  return isMatch;
-                });
-                return matches;
-              })
-            : [];
+          const filteredMeals =
+            item.meals && item.meals.length > 0
+              ? item.meals.filter((meal) => {
+                  // If no meal type filters are active, show all meals
+                  if (activeFilters.mealTypes.length === 0) return true;
 
-          console.log(`Date: ${item.date}, Total meals: ${item.meals?.length || 0}, Filtered meals: ${filteredMeals.length}`, 
-                      `Active filters:`, activeFilters.mealTypes);
+                  // Check if meal name matches any of the selected meal types
+                  const mealNameLower = meal.name.toLowerCase();
+                  const matches = activeFilters.mealTypes.some(
+                    (type: string) => {
+                      const typeLower = type.toLowerCase();
+                      // Match exact meal type or partial match
+                      const isMatch =
+                        mealNameLower.includes(typeLower) ||
+                        typeLower.includes(mealNameLower);
+                      console.log(
+                        `Comparing meal "${meal.name}" with filter "${type}": ${isMatch}`
+                      );
+                      return isMatch;
+                    }
+                  );
+                  return matches;
+                })
+              : [];
+
+          console.log(
+            `Date: ${item.date}, Total meals: ${
+              item.meals?.length || 0
+            }, Filtered meals: ${filteredMeals.length}`,
+            `Active filters:`,
+            activeFilters.mealTypes
+          );
 
           return (
             <View style={[styles.daySection, { paddingHorizontal: 20 }]}>
@@ -193,8 +220,12 @@ export default function ScheduleDetailsScreen() {
                           mealName: meal.name,
                           hallName: params.hallName || "",
                           date: item.date,
-                          filterAllergens: JSON.stringify(activeFilters.allergens),
-                          filterMealTypes: JSON.stringify(activeFilters.mealTypes),
+                          filterAllergens: JSON.stringify(
+                            activeFilters.allergens
+                          ),
+                          filterMealTypes: JSON.stringify(
+                            activeFilters.mealTypes
+                          ),
                         },
                       });
                     }}
@@ -245,18 +276,20 @@ export default function ScheduleDetailsScreen() {
         }
         scrollEnabled={true}
       />
-      
+
       {/* Fixed Bottom Nav */}
-      <View style={{ 
-        position: 'absolute', 
-        bottom: 0, 
-        left: 0, 
-        right: 0,
-        zIndex: 10,
-        backgroundColor: '#fff',
-        borderTopWidth: 1,
-        borderTopColor: '#f0f0f0',
-      }}>
+      <View
+        style={{
+          position: "absolute",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: 10,
+          backgroundColor: "#fff",
+          borderTopWidth: 1,
+          borderTopColor: "#f0f0f0",
+        }}
+      >
         <BottomNav />
       </View>
 
@@ -339,4 +372,3 @@ const styles = StyleSheet.create({
     color: "#999",
   },
 });
-

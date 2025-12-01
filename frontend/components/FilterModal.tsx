@@ -129,7 +129,12 @@ const FilterModal: React.FC<FilterModalProps> = ({
                       {option.label}
                     </Text>
                     {selectedAllergens.includes(option.id) && (
-                      <Icon name="check" size={16} color="#fff" style={styles.checkIcon} />
+                      <Icon
+                        name="check"
+                        size={16}
+                        color="#fff"
+                        style={styles.checkIcon}
+                      />
                     )}
                   </TouchableOpacity>
                 ))}
@@ -163,7 +168,12 @@ const FilterModal: React.FC<FilterModalProps> = ({
                       {option.label}
                     </Text>
                     {selectedMealTypes.includes(option.id) && (
-                      <Icon name="check" size={16} color="#fff" style={styles.checkIcon} />
+                      <Icon
+                        name="check"
+                        size={16}
+                        color="#fff"
+                        style={styles.checkIcon}
+                      />
                     )}
                   </TouchableOpacity>
                 ))}

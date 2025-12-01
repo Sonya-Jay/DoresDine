@@ -57,7 +57,10 @@ router.get("/", async (req: Request, res: Response): Promise<void> => {
     // Parse rating from string to number if present
     const rows = result.rows.map((row: any) => ({
       ...row,
-      rating: row.rating !== null && row.rating !== undefined ? parseFloat(row.rating) : null,
+      rating:
+        row.rating !== null && row.rating !== undefined
+          ? parseFloat(row.rating)
+          : null,
     }));
     res.json(rows);
   } catch (error: any) {
@@ -70,7 +73,7 @@ router.get("/", async (req: Request, res: Response): Promise<void> => {
 router.get("/me", async (req: Request, res: Response): Promise<void> => {
   try {
     // Get userId from JWT token (attached by middleware) or fallback to header
-    const userId = (req as any).userId || req.headers["x-user-id"] as string;
+    const userId = (req as any).userId || (req.headers["x-user-id"] as string);
     if (!userId) {
       res.status(401).json({ error: "Authentication required" });
       return;
@@ -126,7 +129,10 @@ router.get("/me", async (req: Request, res: Response): Promise<void> => {
     // Parse rating from string to number if present
     const rows = result.rows.map((row: any) => ({
       ...row,
-      rating: row.rating !== null && row.rating !== undefined ? parseFloat(row.rating) : null,
+      rating:
+        row.rating !== null && row.rating !== undefined
+          ? parseFloat(row.rating)
+          : null,
     }));
     res.json(rows);
   } catch (error: any) {
@@ -136,13 +142,19 @@ router.get("/me", async (req: Request, res: Response): Promise<void> => {
 });
 
 // GET /posts/user/:userId - Fetch all posts by a specific user (public, no auth required)
-router.get("/user/:userId", async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { userId } = req.params;
-    const currentUserId = req.headers["x-user-id"] as string;
-    console.log(`[Posts] Fetching posts for user: ${userId}, current user: ${currentUserId || 'none'}`);
+router.get(
+  "/user/:userId",
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { userId } = req.params;
+      const currentUserId = req.headers["x-user-id"] as string;
+      console.log(
+        `[Posts] Fetching posts for user: ${userId}, current user: ${
+          currentUserId || "none"
+        }`
+      );
 
-    const query = `
+      const query = `
       SELECT 
         p.id,
         p.author_id,
@@ -187,19 +199,23 @@ router.get("/user/:userId", async (req: Request, res: Response): Promise<void> =
       ORDER BY p.created_at DESC
     `;
 
-    const result = await pool.query(query, [userId, currentUserId || null]);
-    // Parse rating from string to number if present
-    const rows = result.rows.map((row: any) => ({
-      ...row,
-      rating: row.rating !== null && row.rating !== undefined ? parseFloat(row.rating) : null,
-    }));
-    console.log(`[Posts] Found ${rows.length} posts for user: ${userId}`);
-    res.json(rows);
-  } catch (error: any) {
-    console.error("Error fetching user's posts:", error);
-    res.status(500).json({ error: "Internal server error" });
+      const result = await pool.query(query, [userId, currentUserId || null]);
+      // Parse rating from string to number if present
+      const rows = result.rows.map((row: any) => ({
+        ...row,
+        rating:
+          row.rating !== null && row.rating !== undefined
+            ? parseFloat(row.rating)
+            : null,
+      }));
+      console.log(`[Posts] Found ${rows.length} posts for user: ${userId}`);
+      res.json(rows);
+    } catch (error: any) {
+      console.error("Error fetching user's posts:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
   }
-});
+);
 
 // POST /posts - Create a new post with optional photos
 router.post("/", async (req: Request, res: Response): Promise<void> => {
@@ -333,10 +349,11 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
 
     // Insert post
     // Round rating to 1 decimal place if provided
-    const roundedRating = rating !== undefined && rating !== null 
-      ? Math.round(rating * 10) / 10 
-      : null;
-    
+    const roundedRating =
+      rating !== undefined && rating !== null
+        ? Math.round(rating * 10) / 10
+        : null;
+
     const postResult = await client.query<Post>(
       `INSERT INTO posts (author_id, caption, rating, menu_items, dining_hall_name, meal_type)
        VALUES ($1, $2, $3, $4, $5, $6)
@@ -361,7 +378,12 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
           `INSERT INTO post_photos (post_id, storage_key, display_order, dish_name)
            VALUES ($1, $2, $3, $4)
            RETURNING *`,
-          [post.id, photo.storage_key.trim(), photo.display_order || 0, photo.dish_name || null]
+          [
+            post.id,
+            photo.storage_key.trim(),
+            photo.display_order || 0,
+            photo.dish_name || null,
+          ]
         );
         photoRecords.push(photoResult.rows[0]);
       }
@@ -372,7 +394,10 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
 
     // Return post with photos
     // Parse rating from NUMERIC to number (DB returns as string)
-    const parsedRating = post.rating !== null && post.rating !== undefined ? parseFloat(String(post.rating)) : null;
+    const parsedRating =
+      post.rating !== null && post.rating !== undefined
+        ? parseFloat(String(post.rating))
+        : null;
     const response: PostWithPhotos = {
       ...post,
       rating: parsedRating,
