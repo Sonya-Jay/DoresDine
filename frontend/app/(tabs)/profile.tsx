@@ -15,16 +15,10 @@ import {
   TouchableOpacity,
   Image,
   StyleSheet,
-  Dimensions,
-  Modal,
-  ScrollView,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Icon from "react-native-vector-icons/Feather";
-
-const { width } = Dimensions.get("window");
-const POST_SIZE = (width - 4) / 3; // 3 columns with 2px gaps
 
 interface User {
   id: string;
@@ -59,8 +53,6 @@ export default function ProfileScreen() {
   const [friendsCount, setFriendsCount] = useState(0);
   const [friendsModalVisible, setFriendsModalVisible] = useState(false);
   const [loadingFriends, setLoadingFriends] = useState(false);
-  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
-  const [postModalVisible, setPostModalVisible] = useState(false);
   const [headerComponentHeight, setHeaderComponentHeight] = useState(180);
   const hasLoadedRef = useRef(false);
 
@@ -179,37 +171,6 @@ export default function ProfileScreen() {
       ? `${user.first_name} ${user.last_name}`
       : user?.username || "User";
 
-  const renderPostThumbnail = ({ item }: { item: Post }) => {
-    const firstImage = item.images?.[0];
-    return (
-      <TouchableOpacity
-        style={styles.postThumbnail}
-        onPress={() => {
-          setSelectedPost(item);
-          setPostModalVisible(true);
-        }}
-        activeOpacity={0.9}
-      >
-        {firstImage ? (
-          <Image
-            source={{ uri: firstImage.uri }}
-            style={styles.postImage}
-            resizeMode="cover"
-          />
-        ) : (
-          <View style={styles.postPlaceholder}>
-            <Icon name="image" size={24} color="#ccc" />
-          </View>
-        )}
-        {item.images && item.images.length > 1 && (
-          <View style={styles.multiImageIndicator}>
-            <Icon name="layers" size={16} color="#fff" />
-          </View>
-        )}
-      </TouchableOpacity>
-    );
-  };
-
   const renderProfileHeader = () => (
     <View
       style={styles.profileHeader}
@@ -288,8 +249,13 @@ export default function ProfileScreen() {
         }}
         data={posts}
         keyExtractor={(item) => String(item.id)}
-        numColumns={3}
-        renderItem={renderPostThumbnail}
+        renderItem={({ item }) => (
+          <PostCard
+            post={item}
+            onLike={handleLike}
+            onCommentCountUpdate={handleCommentCountUpdate}
+          />
+        )}
         ListHeaderComponent={renderProfileHeader}
         ListEmptyComponent={
           loading ? (
@@ -351,40 +317,6 @@ export default function ProfileScreen() {
         loading={loadingFriends}
       />
 
-      {/* Post Detail Modal */}
-      <Modal
-        visible={postModalVisible}
-        animationType="slide"
-        transparent={false}
-        onRequestClose={() => setPostModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={[styles.modalHeader, { paddingTop: Math.max(insets.top, 15) + 12 }]}>
-            <Text style={styles.modalTitle}>Post</Text>
-            <TouchableOpacity
-              onPress={() => setPostModalVisible(false)}
-              style={styles.modalCloseButton}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              activeOpacity={0.7}
-            >
-              <Icon name="x" size={24} color="#000" />
-            </TouchableOpacity>
-          </View>
-          {selectedPost && (
-            <ScrollView 
-              style={styles.modalContent}
-              contentContainerStyle={styles.modalContentContainer}
-            >
-              <PostCard
-                post={selectedPost}
-                onLike={handleLike}
-                onCommentCountUpdate={handleCommentCountUpdate}
-              />
-            </ScrollView>
-          )}
-        </View>
-      </Modal>
-      
       {/* Fixed Bottom Nav */}
       <View style={{ 
         position: 'absolute', 
@@ -475,65 +407,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#000",
     lineHeight: 20,
-  },
-  postThumbnail: {
-    width: POST_SIZE,
-    height: POST_SIZE,
-    margin: 0.5,
-    backgroundColor: "#f0f0f0",
-    position: "relative",
-  },
-  postImage: {
-    width: "100%",
-    height: "100%",
-  },
-  postPlaceholder: {
-    width: "100%",
-    height: "100%",
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#f5f5f5",
-  },
-  multiImageIndicator: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    borderRadius: 12,
-    padding: 4,
-  },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  modalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-    backgroundColor: "#fff",
-    zIndex: 10,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: "#000",
-  },
-  modalCloseButton: {
-    padding: 8,
-    minWidth: 40,
-    minHeight: 40,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalContent: {
-    flex: 1,
-  },
-  modalContentContainer: {
-    paddingBottom: 20,
   },
 });
 
