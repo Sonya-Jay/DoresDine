@@ -238,9 +238,6 @@ const PostCard: React.FC<PostCardProps> = ({
           >
             <Icon name="plus" size={24} color="#000" />
           </TouchableOpacity>
-          <TouchableOpacity style={{ marginLeft: 20 }}>
-            <Icon name="bookmark" size={24} color="#000" />
-          </TouchableOpacity>
         </View>
       </View>
 
