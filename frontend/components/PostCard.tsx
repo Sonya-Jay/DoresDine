@@ -270,23 +270,12 @@ const PostCard: React.FC<PostCardProps> = ({
             </View>
           </View>
         </View>
-
-        {/* Three-dot menu for own posts */}
-        {isOwnPost && (
-          <TouchableOpacity
-            style={localStyles.optionsButton}
-            onPress={() => setShowOptionsMenu(true)}
-          >
-            <Icon name="more-vertical" size={24} color="#666" />
-          </TouchableOpacity>
-        )}
       </View>
 
       {/* Average Rating Bubble - Top Right */}
       <View style={[
         localStyles.ratingBubble,
         {
-          right: isOwnPost ? 50 : 12, // Adjust position based on whether three-dot menu is visible
           borderColor:
             averageRating >= 7
               ? "#4CAF50"
@@ -446,6 +435,14 @@ const PostCard: React.FC<PostCardProps> = ({
           >
             <Icon name="plus" size={24} color="#000" />
           </TouchableOpacity>
+          {isOwnPost && (
+            <TouchableOpacity
+              style={{ marginLeft: 20 }}
+              onPress={() => setShowOptionsMenu(true)}
+            >
+              <Icon name="more-vertical" size={24} color="#666" />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
