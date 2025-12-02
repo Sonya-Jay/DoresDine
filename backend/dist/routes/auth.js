@@ -5,56 +5,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const express_1 = require("express");
-const nodemailer_1 = __importDefault(require("nodemailer"));
 const uuid_1 = require("uuid");
 const db_1 = __importDefault(require("../db"));
 const auth_1 = require("../middleware/auth");
+const azureAuth_1 = require("../services/azureAuth");
+const emailService_1 = require("../services/emailService");
 const router = (0, express_1.Router)();
 function generateVerificationCode() {
     return Math.floor(100000 + Math.random() * 900000).toString();
-}
-async function sendVerificationEmail(email, code) {
-    // If SMTP env provided, try to send; otherwise log to console for dev
-    const host = process.env.SMTP_HOST;
-    if (!host) {
-        console.log(`📧 Verification code for ${email}: ${code}`);
-        console.log(`   (SMTP not configured - code logged to console)`);
-        return false; // Email not sent
-    }
-    try {
-        const transporter = nodemailer_1.default.createTransport({
-            host: process.env.SMTP_HOST,
-            port: Number(process.env.SMTP_PORT || 587),
-            secure: process.env.SMTP_SECURE === "true", // true for 465
-            auth: {
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASS,
-            },
-        });
-        await transporter.sendMail({
-            from: process.env.SMTP_FROM || `no-reply@doresdine.local`,
-            to: email,
-            subject: "DoresDine email verification code",
-            text: `Your verification code is: ${code}`,
-            html: `
-        <div style="font-family: Arial, sans-serif; padding: 20px;">
-          <h2>DoresDine Email Verification</h2>
-          <p>Your verification code is:</p>
-          <h1 style="color: #007AFF; font-size: 32px; letter-spacing: 4px;">${code}</h1>
-          <p>This code will expire in 15 minutes.</p>
-          <p>If you didn't request this code, you can safely ignore this email.</p>
-        </div>
-      `,
-        });
-        console.log(`✅ Verification email sent to ${email}`);
-        return true; // Email sent successfully
-    }
-    catch (error) {
-        console.error(`❌ Failed to send email to ${email}:`, error.message);
-        // Log code to console as fallback
-        console.log(`📧 Verification code for ${email}: ${code}`);
-        return false; // Email not sent
-    }
 }
 // POST /auth/register
 router.post("/register", async (req, res) => {
@@ -82,7 +40,7 @@ router.post("/register", async (req, res) => {
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING id, email, first_name, last_name, email_verified`, [(0, uuid_1.v4)(), username, first_name.trim(), last_name.trim(), email.trim().toLowerCase(), password_hash, verification_code, expires]);
         // Send verification email (or log)
-        const emailSent = await sendVerificationEmail(email.trim().toLowerCase(), verification_code);
+        const emailSent = await (0, emailService_1.sendVerificationEmail)(email.trim().toLowerCase(), verification_code);
         const user = result.rows[0];
         // If SMTP is not configured, return the code in development mode
         // This allows testing without email setup
@@ -90,10 +48,10 @@ router.post("/register", async (req, res) => {
             message: "User created, verify your email",
             user: { id: user.id, email: user.email, first_name: user.first_name, last_name: user.last_name }
         };
-        // Only return code if SMTP is not configured (development mode)
-        if (!process.env.SMTP_HOST) {
+        // Only return code if email service is not configured (development mode)
+        if (!process.env.AWS_ACCESS_KEY_ID && !process.env.SMTP_HOST) {
             response.verification_code = verification_code;
-            response.message = "User created. Check console for verification code (SMTP not configured)";
+            response.message = "User created. Check console for verification code (email service not configured)";
         }
         return res.status(201).json(response);
     }
@@ -117,12 +75,12 @@ router.post("/resend", async (req, res) => {
         const result = await db_1.default.query(`UPDATE users SET verification_code = $1, verification_code_expires = $2 WHERE email = $3 RETURNING id, email`, [code, expires, email.trim().toLowerCase()]);
         if (result.rows.length === 0)
             return res.status(404).json({ error: "User not found" });
-        const emailSent = await sendVerificationEmail(email.trim().toLowerCase(), code);
+        const emailSent = await (0, emailService_1.sendVerificationEmail)(email.trim().toLowerCase(), code);
         const response = { message: "Verification code sent" };
-        // If SMTP is not configured, return the code in development mode
-        if (!process.env.SMTP_HOST) {
+        // If email service is not configured, return the code in development mode
+        if (!process.env.AWS_ACCESS_KEY_ID && !process.env.SMTP_HOST) {
             response.verification_code = code;
-            response.message = "Verification code sent. Check console for code (SMTP not configured)";
+            response.message = "Verification code sent. Check console for code (email service not configured)";
         }
         return res.json(response);
     }
@@ -131,7 +89,7 @@ router.post("/resend", async (req, res) => {
         return res.status(500).json({ error: "Internal server error" });
     }
 });
-// POST /auth/verify
+// POST /auth/verify - Verify code and login (works for both registration and login)
 router.post("/verify", async (req, res) => {
     try {
         const { email, code } = req.body;
@@ -149,9 +107,9 @@ router.post("/verify", async (req, res) => {
         if (!/^\d{6}$/.test(code.trim())) {
             return res.status(400).json({ error: "Verification code must be 6 digits" });
         }
-        const result = await db_1.default.query(`SELECT id, verification_code, verification_code_expires FROM users WHERE email = $1 LIMIT 1`, [email.trim().toLowerCase()]);
+        const result = await db_1.default.query(`SELECT id, verification_code, verification_code_expires, email_verified FROM users WHERE email = $1 LIMIT 1`, [email.trim().toLowerCase()]);
         if (result.rows.length === 0) {
-            return res.status(404).json({ error: "User not found" });
+            return res.status(404).json({ error: "User not found. Please request a verification code first." });
         }
         const user = result.rows[0];
         if (!user.verification_code || !user.verification_code_expires) {
@@ -164,17 +122,20 @@ router.post("/verify", async (req, res) => {
         if (code.trim() !== user.verification_code) {
             return res.status(400).json({ error: "Invalid verification code. Please check and try again." });
         }
-        // mark verified and clear code
+        // Mark verified, clear code, and return token
         await db_1.default.query(`UPDATE users SET email_verified = true, verification_code = NULL, verification_code_expires = NULL WHERE id = $1`, [user.id]);
         const token = (0, auth_1.signToken)(user.id);
-        return res.json({ message: "Email verified", token });
+        return res.json({
+            message: user.email_verified ? "Login successful" : "Email verified and logged in",
+            token
+        });
     }
     catch (err) {
         console.error(err);
         return res.status(500).json({ error: "Internal server error" });
     }
 });
-// POST /auth/login
+// POST /auth/login - Login with email and password
 router.post("/login", async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -223,6 +184,31 @@ router.post("/login", async (req, res) => {
     catch (err) {
         console.error("Error in login:", err);
         return res.status(500).json({ error: "Internal server error" });
+    }
+});
+// POST /auth/microsoft - Authenticate with Microsoft Azure AD
+router.post("/microsoft", async (req, res) => {
+    try {
+        const { token } = req.body;
+        if (!token || typeof token !== "string") {
+            return res.status(400).json({ error: "Microsoft token is required" });
+        }
+        const result = await (0, azureAuth_1.authenticateWithMicrosoft)(token);
+        return res.json({
+            token: result.token,
+            user: result.user,
+        });
+    }
+    catch (err) {
+        console.error("Error in Microsoft authentication:", err);
+        // Provide specific error messages
+        if (err.message?.includes("Vanderbilt")) {
+            return res.status(403).json({ error: err.message });
+        }
+        if (err.message?.includes("expired") || err.message?.includes("invalid")) {
+            return res.status(401).json({ error: "Invalid or expired Microsoft token" });
+        }
+        return res.status(500).json({ error: "Authentication failed" });
     }
 });
 exports.default = router;

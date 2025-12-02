@@ -9,11 +9,13 @@ export default function RegisterScreen() {
   const [lastName, setLastName] = useState('');
   const [emailPrefix, setEmailPrefix] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [firstNameError, setFirstNameError] = useState('');
   const [lastNameError, setLastNameError] = useState('');
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const [confirmPasswordError, setConfirmPasswordError] = useState('');
 
   const handleEmailChange = (text: string) => {
     // Remove @vanderbilt.edu if user tries to type it
@@ -80,6 +82,15 @@ export default function RegisterScreen() {
       isValid = false;
     }
 
+    // Validate confirm password
+    if (!confirmPassword.trim()) {
+      setConfirmPasswordError('Please confirm your password');
+      isValid = false;
+    } else if (password !== confirmPassword) {
+      setConfirmPasswordError('Passwords do not match');
+      isValid = false;
+    }
+
     return isValid;
   };
 
@@ -89,6 +100,7 @@ export default function RegisterScreen() {
     setLastNameError('');
     setEmailError('');
     setPasswordError('');
+    setConfirmPasswordError('');
 
     // Validate inputs
     if (!validateInputs()) {
@@ -102,7 +114,8 @@ export default function RegisterScreen() {
         first_name: firstName.trim(), 
         last_name: lastName.trim(), 
         email: fullEmail.toLowerCase(), 
-        password 
+        password,
+        confirm_password: confirmPassword
       });
       
       // If SMTP is not configured, show the verification code and pass it to verify screen
@@ -222,12 +235,28 @@ export default function RegisterScreen() {
           onChangeText={(text) => {
             setPassword(text);
             setPasswordError('');
+            setConfirmPasswordError(''); // Clear confirm error when password changes
           }} 
           style={[styles.input, passwordError ? styles.inputError : null]} 
           secureTextEntry
           editable={!loading}
         />
         {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
+      </View>
+
+      <View style={styles.inputContainer}>
+        <TextInput 
+          placeholder="Confirm password" 
+          value={confirmPassword} 
+          onChangeText={(text) => {
+            setConfirmPassword(text);
+            setConfirmPasswordError('');
+          }} 
+          style={[styles.input, confirmPasswordError ? styles.inputError : null]} 
+          secureTextEntry
+          editable={!loading}
+        />
+        {confirmPasswordError ? <Text style={styles.errorText}>{confirmPasswordError}</Text> : null}
       </View>
       
       <TouchableOpacity 

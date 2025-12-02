@@ -1,7 +1,7 @@
 import * as api from '@/services/api';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -106,68 +106,101 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Welcome back</Text>
-      <View style={styles.inputContainer}>
-        <TextInput 
-          placeholder="Email (@vanderbilt.edu)" 
-          value={email} 
-          onChangeText={(text) => {
-            setEmail(text);
-            setEmailError(''); // Clear error when user types
-          }} 
-          style={[styles.input, emailError ? styles.inputError : null]} 
-          keyboardType="email-address" 
-          autoCapitalize="none"
-          editable={!loading}
-        />
-        {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
-      </View>
-      <View style={styles.inputContainer}>
-        <TextInput 
-          placeholder="Password" 
-          value={password} 
-          onChangeText={(text) => {
-            setPassword(text);
-            setPasswordError(''); // Clear error when user types
-          }} 
-          style={[styles.input, passwordError ? styles.inputError : null]} 
-          secureTextEntry
-          editable={!loading}
-        />
-        {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
-      </View>
-      <TouchableOpacity 
-        style={[styles.button, loading && styles.buttonDisabled]} 
-        onPress={handleLogin} 
-        disabled={loading}
-      >
-        <Text style={styles.buttonText}>{loading ? 'Logging in...' : 'Log in'}</Text>
-      </TouchableOpacity>
+      <View style={styles.content}>
+        <Text style={styles.title}>DoresDine</Text>
+        <Text style={styles.subtitle}>Welcome back</Text>
+        
+        <View style={styles.inputContainer}>
+          <TextInput
+            placeholder="Email (@vanderbilt.edu)"
+            value={email}
+            onChangeText={(text) => {
+              setEmail(text);
+              setEmailError('');
+            }}
+            style={[styles.input, emailError ? styles.inputError : null]}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            editable={!loading}
+          />
+          {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
+        </View>
 
-      <View style={{ flexDirection: 'row', marginTop: 16 }}>
-        <Text>Don't have an account? </Text>
-        <TouchableOpacity onPress={() => router.push('/register')}>
-          <Text style={{ color: '#007AFF' }}>Create one</Text>
+        <View style={styles.inputContainer}>
+          <TextInput
+            placeholder="Password"
+            value={password}
+            onChangeText={(text) => {
+              setPassword(text);
+              setPasswordError('');
+            }}
+            style={[styles.input, passwordError ? styles.inputError : null]}
+            secureTextEntry
+            editable={!loading}
+          />
+          {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
+        </View>
+
+        <TouchableOpacity
+          style={[styles.button, loading && styles.buttonDisabled]}
+          onPress={handleLogin}
+          disabled={loading}
+          activeOpacity={0.8}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.buttonText}>Log in</Text>
+          )}
         </TouchableOpacity>
+
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>Don't have an account? </Text>
+          <TouchableOpacity onPress={() => router.push('/register')}>
+            <Text style={styles.footerLink}>Sign up</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20, backgroundColor: '#fff' },
-  title: { fontSize: 24, fontWeight: '600', marginBottom: 20 },
-  inputContainer: {
-    width: '100%',
-    marginBottom: 12,
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
   },
-  input: { 
-    width: '100%', 
-    borderWidth: 1, 
-    borderColor: '#ddd', 
-    padding: 12, 
+  content: {
+    width: '100%',
+    maxWidth: 400,
+  },
+  title: {
+    fontSize: 48,
+    fontWeight: 'bold',
+    color: '#D4A574',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 18,
+    color: '#666',
+    marginBottom: 32,
+    textAlign: 'center',
+  },
+  inputContainer: {
+    marginBottom: 16,
+  },
+  input: {
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    padding: 16,
     borderRadius: 8,
     fontSize: 16,
+    backgroundColor: '#fff',
   },
   inputError: {
     borderColor: '#ff3b30',
@@ -179,17 +212,35 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginLeft: 4,
   },
-  button: { 
-    width: '100%', 
-    backgroundColor: '#007AFF', 
-    padding: 14, 
-    borderRadius: 8, 
+  button: {
+    width: '100%',
+    backgroundColor: '#D4A574',
+    padding: 16,
+    borderRadius: 8,
     alignItems: 'center',
     marginTop: 8,
+    marginBottom: 24,
   },
   buttonDisabled: {
-    backgroundColor: '#ccc',
     opacity: 0.6,
   },
-  buttonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  footerText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  footerLink: {
+    fontSize: 14,
+    color: '#D4A574',
+    fontWeight: '600',
+  },
 });

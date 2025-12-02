@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express from "express";
+import cors from "cors";
 import pool from "./db";
 import { attachUserFromToken } from "./middleware/auth";
 import authRouter from "./routes/auth";
@@ -12,6 +13,42 @@ import usersRouter from "./routes/users";
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
+
+// CORS configuration - allow requests from frontend
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps, Postman, curl)
+    if (!origin) return callback(null, true);
+    
+    // Allow localhost on any port
+    if (/^http:\/\/localhost:\d+$/.test(origin) || /^http:\/\/127\.0\.0\.1:\d+$/.test(origin)) {
+      return callback(null, true);
+    }
+    
+    // Allow local network IPs (for mobile devices on same network)
+    if (/^http:\/\/192\.168\.\d+\.\d+:\d+$/.test(origin) || /^http:\/\/10\.\d+\.\d+\.\d+:\d+$/.test(origin)) {
+      return callback(null, true);
+    }
+    
+    // Allow specific origins
+    const allowedOrigins = [
+      'http://localhost:8081',
+      'http://localhost:19006',
+      'http://localhost:3000',
+    ];
+    
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    // Default: allow the request (for development)
+    callback(null, true);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-user-id'],
+  exposedHeaders: ['Content-Type', 'Authorization'],
+}));
 
 // Middleware
 // Apply JSON parsing conditionally - skip for upload routes (multer needs raw body)

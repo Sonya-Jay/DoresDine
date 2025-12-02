@@ -1,9 +1,10 @@
 import bcrypt from "bcrypt";
 import { Request, Response, Router } from "express";
-import nodemailer from "nodemailer";
 import { v4 as uuidv4 } from "uuid";
 import pool from "../db";
 import { signToken } from "../middleware/auth";
+import { authenticateWithMicrosoft } from "../services/azureAuth";
+import { sendVerificationEmail } from "../services/emailService";
 
 const router = Router();
 
@@ -11,64 +12,23 @@ function generateVerificationCode() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-async function sendVerificationEmail(email: string, code: string): Promise<boolean> {
-  // If SMTP env provided, try to send; otherwise log to console for dev
-  const host = process.env.SMTP_HOST;
-  if (!host) {
-    console.log(`📧 Verification code for ${email}: ${code}`);
-    console.log(`   (SMTP not configured - code logged to console)`);
-    return false; // Email not sent
-  }
-
-  try {
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT || 587),
-      secure: process.env.SMTP_SECURE === "true", // true for 465
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
-
-    await transporter.sendMail({
-      from: process.env.SMTP_FROM || `no-reply@doresdine.local`,
-      to: email,
-      subject: "DoresDine email verification code",
-      text: `Your verification code is: ${code}`,
-      html: `
-        <div style="font-family: Arial, sans-serif; padding: 20px;">
-          <h2>DoresDine Email Verification</h2>
-          <p>Your verification code is:</p>
-          <h1 style="color: #007AFF; font-size: 32px; letter-spacing: 4px;">${code}</h1>
-          <p>This code will expire in 15 minutes.</p>
-          <p>If you didn't request this code, you can safely ignore this email.</p>
-        </div>
-      `,
-    });
-    
-    console.log(`✅ Verification email sent to ${email}`);
-    return true; // Email sent successfully
-  } catch (error: any) {
-    console.error(`❌ Failed to send email to ${email}:`, error.message);
-    // Log code to console as fallback
-    console.log(`📧 Verification code for ${email}: ${code}`);
-    return false; // Email not sent
-  }
-}
-
 // POST /auth/register
 router.post("/register", async (req: Request, res: Response) => {
   try {
-    const { first_name, last_name, email, password } = req.body as {
+    const { first_name, last_name, email, password, confirm_password } = req.body as {
       first_name: string;
       last_name: string;
       email: string;
       password: string;
+      confirm_password: string;
     };
 
-    if (!first_name || !last_name || !email || !password) {
+    if (!first_name || !last_name || !email || !password || !confirm_password) {
       return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    if (password !== confirm_password) {
+      return res.status(400).json({ error: "Passwords do not match" });
     }
 
     // Validate email is vanderbilt.edu
@@ -80,7 +40,7 @@ router.post("/register", async (req: Request, res: Response) => {
     if (typeof password !== "string" || password.length < 6) {
       return res
         .status(400)
-        .json({ error: "password must be a string of at least 6 characters" });
+        .json({ error: "Password must be a string of at least 6 characters" });
     }
 
     const password_hash = await bcrypt.hash(password, 10);
@@ -110,10 +70,10 @@ router.post("/register", async (req: Request, res: Response) => {
       user: { id: user.id, email: user.email, first_name: user.first_name, last_name: user.last_name }
     };
     
-    // Only return code if SMTP is not configured (development mode)
-    if (!process.env.SMTP_HOST) {
+    // Only return code if email service is not configured (development mode)
+    if (!process.env.AWS_ACCESS_KEY_ID && !process.env.SMTP_HOST) {
       response.verification_code = verification_code;
-      response.message = "User created. Check console for verification code (SMTP not configured)";
+      response.message = "User created. Check console for verification code (email service not configured)";
     }
     
     return res.status(201).json(response);
@@ -146,10 +106,10 @@ router.post("/resend", async (req: Request, res: Response) => {
     
     const response: any = { message: "Verification code sent" };
     
-    // If SMTP is not configured, return the code in development mode
-    if (!process.env.SMTP_HOST) {
+    // If email service is not configured, return the code in development mode
+    if (!process.env.AWS_ACCESS_KEY_ID && !process.env.SMTP_HOST) {
       response.verification_code = code;
-      response.message = "Verification code sent. Check console for code (SMTP not configured)";
+      response.message = "Verification code sent. Check console for code (email service not configured)";
     }
     
     return res.json(response);
@@ -159,7 +119,7 @@ router.post("/resend", async (req: Request, res: Response) => {
   }
 });
 
-// POST /auth/verify
+// POST /auth/verify - Verify code and login (works for both registration and login)
 router.post("/verify", async (req: Request, res: Response) => {
   try {
     const { email, code } = req.body as { email: string; code: string };
@@ -181,11 +141,11 @@ router.post("/verify", async (req: Request, res: Response) => {
     }
 
     const result = await pool.query(
-      `SELECT id, verification_code, verification_code_expires FROM users WHERE email = $1 LIMIT 1`,
+      `SELECT id, verification_code, verification_code_expires, email_verified FROM users WHERE email = $1 LIMIT 1`,
       [email.trim().toLowerCase()]
     );
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: "User not found" });
+      return res.status(404).json({ error: "User not found. Please request a verification code first." });
     }
 
     const user = result.rows[0];
@@ -202,18 +162,24 @@ router.post("/verify", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Invalid verification code. Please check and try again." });
     }
 
-    // mark verified and clear code
-    await pool.query(`UPDATE users SET email_verified = true, verification_code = NULL, verification_code_expires = NULL WHERE id = $1`, [user.id]);
+    // Mark verified, clear code, and return token
+    await pool.query(
+      `UPDATE users SET email_verified = true, verification_code = NULL, verification_code_expires = NULL WHERE id = $1`,
+      [user.id]
+    );
 
     const token = signToken(user.id);
-    return res.json({ message: "Email verified", token });
+    return res.json({ 
+      message: user.email_verified ? "Login successful" : "Email verified and logged in",
+      token 
+    });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
 
-// POST /auth/login
+// POST /auth/login - Login with email and password
 router.post("/login", async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body as { email: string; password: string };
@@ -273,6 +239,35 @@ router.post("/login", async (req: Request, res: Response) => {
   } catch (err) {
     console.error("Error in login:", err);
     return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// POST /auth/microsoft - Authenticate with Microsoft Azure AD
+router.post("/microsoft", async (req: Request, res: Response) => {
+  try {
+    const { token } = req.body as { token: string };
+
+    if (!token || typeof token !== "string") {
+      return res.status(400).json({ error: "Microsoft token is required" });
+    }
+
+    const result = await authenticateWithMicrosoft(token);
+    return res.json({
+      token: result.token,
+      user: result.user,
+    });
+  } catch (err: any) {
+    console.error("Error in Microsoft authentication:", err);
+    
+    // Provide specific error messages
+    if (err.message?.includes("Vanderbilt")) {
+      return res.status(403).json({ error: err.message });
+    }
+    if (err.message?.includes("expired") || err.message?.includes("invalid")) {
+      return res.status(401).json({ error: "Invalid or expired Microsoft token" });
+    }
+    
+    return res.status(500).json({ error: "Authentication failed" });
   }
 });
 
