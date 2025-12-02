@@ -226,6 +226,13 @@ This will open the Expo Developer Tools in your browser. You can then:
 - Press `a` to open Android emulator
 - Scan the QR code with Expo Go app on your physical device
 
+#### Test User Credentials
+
+For testing purposes, use the following credentials to log in:
+
+- **Email**: `julia.e.laforet@vanderbilt.edu`
+- **Password**: `test123`
+
 ### Production Build
 
 #### Backend
