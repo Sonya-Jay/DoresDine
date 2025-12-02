@@ -1,4 +1,5 @@
 import { getCurrentUser, getMe, logout, updateProfile } from '@/services/api';
+import { getPhotoUrl } from '@/constants/API';
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from 'expo-router';
 import React, { useState } from "react";
@@ -190,8 +191,8 @@ export default function SettingsProfileScreen() {
             <View style={{ alignItems: "center", marginBottom: 16 }}>
               {user?.profile_photo ? (
                 <Image
-                  source={{ uri: user.profile_photo }}
-                  style={styles.profilePhoto}
+                  source={{ uri: getPhotoUrl(user.profile_photo) }}
+                  style={styles.avatar}
                 />
               ) : (
                 <View style={[styles.profilePhoto, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#eee' }]}> 
