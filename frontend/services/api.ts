@@ -450,6 +450,7 @@ const transformPost = (backendPost: BackendPost): Post => {
     dininghall: backendPost.dining_hall_name || "Unknown",
     date: formattedDate,
     created_at: backendPost.created_at, // Keep timestamp for sorting
+    mealType: backendPost.meal_type || undefined, // Include meal type for filtering
     visits: 1, // TODO: Get from backend if available
     images,
     notes: backendPost.caption || "",
@@ -476,6 +477,20 @@ export const fetchPosts = async (): Promise<Post[]> => {
     return backendPosts.map(transformPost);
   } catch (error) {
     console.error("Error fetching posts:", error);
+    throw error;
+  }
+};
+
+// Fetch posts by dining hall name
+export const fetchPostsByDiningHall = async (diningHallName: string): Promise<Post[]> => {
+  try {
+    const allPosts = await fetchPosts();
+    // Filter posts by dining hall name (case-insensitive)
+    return allPosts.filter(
+      (post) => post.dininghall.toLowerCase() === diningHallName.toLowerCase()
+    );
+  } catch (error) {
+    console.error("Error fetching posts by dining hall:", error);
     throw error;
   }
 };

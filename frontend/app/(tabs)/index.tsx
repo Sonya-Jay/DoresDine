@@ -33,7 +33,7 @@ export default function FeedScreen() {
   const hasLoadedRef = useRef(false);
   const [headerHeight, setHeaderHeight] = useState(180);
   const [showFriendRecs, setShowFriendRecs] = useState(false);
-  const [sortBy, setSortBy] = useState<"newest" | "rating-high" | "rating-low" | "likes">("newest");
+  const [sortBy, setSortBy] = useState<"newest" | "rating-high" | "rating-low" | "likes-high" | "likes-low">("newest");
 
   // Initialize user on mount
   useEffect(() => {
@@ -148,11 +148,17 @@ export default function FeedScreen() {
           const ratingB = b.rating || 0;
           return ratingA - ratingB; // Low to high
         });
-      case "likes":
+      case "likes-high":
         return postsCopy.sort((a, b) => {
           const likesA = Number(a.likeCount) || 0;
           const likesB = Number(b.likeCount) || 0;
           return likesB - likesA; // Most likes first (descending)
+        });
+      case "likes-low":
+        return postsCopy.sort((a, b) => {
+          const likesA = Number(a.likeCount) || 0;
+          const likesB = Number(b.likeCount) || 0;
+          return likesA - likesB; // Least likes first (ascending)
         });
       default:
         return postsCopy;

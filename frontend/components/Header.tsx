@@ -25,8 +25,8 @@ interface HeaderProps {
   disableSearchModal?: boolean;
   dishSearchMode?: boolean; // New prop for dish search mode
   showSortButton?: boolean; // Show sort button (for feed page)
-  sortBy?: "newest" | "rating-high" | "rating-low" | "likes"; // Current sort option
-  onSortChange?: (sort: "newest" | "rating-high" | "rating-low" | "likes") => void; // Callback when sort changes
+  sortBy?: "newest" | "rating-high" | "rating-low" | "likes-high" | "likes-low"; // Current sort option
+  onSortChange?: (sort: "newest" | "rating-high" | "rating-low" | "likes-high" | "likes-low") => void; // Callback when sort changes
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -67,7 +67,10 @@ const Header: React.FC<HeaderProps> = ({
   };
 
   const handleTrendingPress = () => {
-    router.push("/(tabs)/search" as any);
+    router.push({
+      pathname: "/(tabs)/search" as any,
+      params: { showTrending: "true" },
+    });
   };
 
   const handleLogoPress = () => {
@@ -247,13 +250,14 @@ const Header: React.FC<HeaderProps> = ({
                 { value: "newest", label: "Newest" },
                 { value: "rating-high", label: "Rating: High to Low" },
                 { value: "rating-low", label: "Rating: Low to High" },
-                { value: "likes", label: "Most Likes" },
+                { value: "likes-high", label: "Likes: High to Low" },
+                { value: "likes-low", label: "Likes: Low to High" },
               ].map((option) => (
                 <TouchableOpacity
                   key={option.value}
                   onPress={() => {
                     if (onSortChange) {
-                      onSortChange(option.value as "newest" | "rating-high" | "rating-low" | "likes");
+                      onSortChange(option.value as "newest" | "rating-high" | "rating-low" | "likes-high" | "likes-low");
                     }
                     setShowSortModal(false);
                   }}

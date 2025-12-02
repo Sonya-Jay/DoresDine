@@ -72,6 +72,13 @@ export default function TabLayout() {
           headerShown: false,
         }}
       />
+      <Tabs.Screen
+        name="dining-hall-profile"
+        options={{
+          title: 'Dining Hall Profile',
+          headerShown: false,
+        }}
+      />
     </Tabs>
   );
 }

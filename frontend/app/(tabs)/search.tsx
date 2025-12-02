@@ -1,8 +1,8 @@
 import BottomNav from "@/components/BottomNav";
 import Header from "@/components/Header";
-import { searchDishAvailability, DishAvailability } from "@/services/api";
-import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import { searchDishAvailability, DishAvailability, getTrendingDishes, SearchDish } from "@/services/api";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/Feather";
 
 export default function DishSearchScreen() {
+  const params = useLocalSearchParams();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [searchText, setSearchText] = useState("");
@@ -25,6 +26,29 @@ export default function DishSearchScreen() {
   const [results, setResults] = useState<DishAvailability | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [headerHeight, setHeaderHeight] = useState(180);
+  const [trendingDishes, setTrendingDishes] = useState<SearchDish[]>([]);
+  const [showTrending, setShowTrending] = useState(false);
+
+  useEffect(() => {
+    if (params.showTrending === "true") {
+      setShowTrending(true);
+      loadTrendingDishes();
+    }
+  }, [params.showTrending]);
+
+  const loadTrendingDishes = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const dishes = await getTrendingDishes(20);
+      setTrendingDishes(dishes);
+    } catch (err: any) {
+      console.error("Error loading trending dishes:", err);
+      setError(err.message || "Failed to load trending dishes");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSearch = async () => {
     if (!searchText.trim() || searchText.trim().length < 1) {
@@ -35,6 +59,7 @@ export default function DishSearchScreen() {
     setLoading(true);
     setError(null);
     setResults(null);
+    setShowTrending(false); // Hide trending when searching
 
     try {
       const data = await searchDishAvailability(searchText.trim());
@@ -241,8 +266,43 @@ export default function DishSearchScreen() {
             </View>
           )}
 
+          {/* Trending Dishes */}
+          {showTrending && trendingDishes.length > 0 && (
+            <View style={styles.trendingContainer}>
+              <View style={styles.sectionHeader}>
+                <Icon name="trending-up" size={18} color="#D4A574" />
+                <Text style={styles.sectionTitle}>Trending Dishes</Text>
+              </View>
+              {trendingDishes.map((dish, index) => (
+                <TouchableOpacity
+                  key={`trending-${index}`}
+                  style={styles.resultItem}
+                  onPress={() => {
+                    setSearchText(dish.name);
+                    setShowTrending(false);
+                    handleSearch();
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.resultIcon}>
+                    <Icon name="star" size={20} color="#fff" />
+                  </View>
+                  <View style={styles.resultInfo}>
+                    <Text style={styles.resultName}>{dish.name}</Text>
+                    {dish.frequency !== undefined && (
+                      <Text style={styles.resultSubtitle}>
+                        {dish.frequency} {dish.frequency === 1 ? "post" : "posts"}
+                      </Text>
+                    )}
+                  </View>
+                  <Icon name="chevron-right" size={16} color="#999" />
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
           {/* Initial State */}
-          {!results && !loading && !error && (
+          {!results && !showTrending && !loading && !error && (
             <View style={styles.initialStateContainer}>
               <Icon name="search" size={64} color="#ddd" />
               <Text style={styles.initialStateText}>
@@ -436,5 +496,8 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 16,
     lineHeight: 24,
+  },
+  trendingContainer: {
+    marginTop: 8,
   },
 });

@@ -65,28 +65,62 @@ export default function ScheduleDetailsScreen() {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!params.hallId) return;
+      if (!params.hallId) {
+        console.warn('[ScheduleDetails] No hallId provided');
+        return;
+      }
 
       try {
         setLoading(true);
         setError(null);
 
+        console.log('[ScheduleDetails] Starting fetch for hallId:', params.hallId);
+        console.log('[ScheduleDetails] API_URL:', API_URL);
+
         // First, get the dining hall to get its cbordUnitId
         const halls = await fetchDiningHalls();
+        console.log('[ScheduleDetails] Fetched', halls.length, 'dining halls');
         const hall = halls.find(
           (h: DiningHall) => h.id === Number(params.hallId)
         );
         if (hall) {
           setCbordUnitId(hall.cbordUnitId);
+          console.log('[ScheduleDetails] Found hall:', hall.name, 'cbordUnitId:', hall.cbordUnitId);
+        } else {
+          console.warn('[ScheduleDetails] Hall not found for id:', params.hallId);
         }
 
         // Then fetch the schedule
-        const response = await fetch(
-          `${API_URL}${API_ENDPOINTS.MENU_SCHEDULE(Number(params.hallId))}`
-        );
+        const scheduleUrl = `${API_URL}${API_ENDPOINTS.MENU_SCHEDULE(Number(params.hallId))}`;
+        console.log('[ScheduleDetails] Fetching schedule from:', scheduleUrl);
+        
+        const response = await fetch(scheduleUrl);
 
         if (!response.ok) {
-          throw new Error(`Failed to fetch schedule: ${response.statusText}`);
+          // Try to get error details from response body
+          let errorMessage = `Failed to fetch schedule (${response.status})`;
+          try {
+            const errorText = await response.text();
+            console.log('[ScheduleDetails] Error response text:', errorText);
+            if (errorText) {
+              try {
+                const errorData = JSON.parse(errorText);
+                errorMessage = errorData.error || errorData.message || errorMessage;
+              } catch {
+                errorMessage = errorText || errorMessage;
+              }
+            }
+          } catch (e) {
+            // If we can't read the error, use status text or status code
+            errorMessage = response.statusText || `HTTP ${response.status}`;
+          }
+          console.error('[ScheduleDetails] Schedule fetch failed:', {
+            status: response.status,
+            statusText: response.statusText,
+            url: scheduleUrl,
+            errorMessage,
+          });
+          throw new Error(errorMessage);
         }
 
         const data: MenuScheduleResponse = await response.json();
@@ -149,16 +183,32 @@ export default function ScheduleDetailsScreen() {
           paddingBottom: bottomNavHeight,
         }}
         ListHeaderComponent={
-          <View style={styles.header}>
+          <View>
+            <View style={styles.header}>
+              <TouchableOpacity
+                onPress={() => router.push("/(tabs)/menus" as any)}
+                style={styles.backButton}
+              >
+                <Icon name="arrow-left" size={24} color="#000" />
+              </TouchableOpacity>
+              <Text style={styles.hallTitle}>
+                {params.hallName || "Dining Hall"}
+              </Text>
+            </View>
             <TouchableOpacity
-              onPress={() => router.push("/(tabs)/menus" as any)}
-              style={styles.backButton}
+              onPress={() => {
+                router.push({
+                  pathname: "/(tabs)/dining-hall-profile" as any,
+                  params: {
+                    diningHallName: params.hallName || "",
+                  },
+                });
+              }}
+              style={styles.profileButton}
             >
-              <Icon name="arrow-left" size={24} color="#000" />
+              <Icon name="user" size={18} color="#007AFF" style={{ marginRight: 8 }} />
+              <Text style={styles.profileButtonText}>View Dining Hall Profile</Text>
             </TouchableOpacity>
-            <Text style={styles.hallTitle}>
-              {params.hallName || "Dining Hall"}
-            </Text>
           </View>
         }
         data={schedule}
@@ -370,5 +420,22 @@ const styles = StyleSheet.create({
     padding: 20,
     textAlign: "center",
     color: "#999",
+  },
+  profileButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#f0f0f0",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    marginHorizontal: 20,
+    marginTop: 12,
+    marginBottom: 8,
+    borderRadius: 8,
+  },
+  profileButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#007AFF",
   },
 });

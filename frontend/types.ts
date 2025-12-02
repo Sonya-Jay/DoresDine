@@ -67,6 +67,7 @@ export interface Post {
   dininghall: string;
   date: string;
   created_at?: string; // Timestamp for sorting by newest
+  mealType?: string; // Meal type (Breakfast, Lunch, Dinner, etc.)
   visits: number;
   images: ImageData[];
   notes: string;
