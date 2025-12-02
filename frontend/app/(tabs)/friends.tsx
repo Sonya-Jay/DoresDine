@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   FlatList,
   Text,
@@ -8,8 +8,10 @@ import {
   TouchableOpacity,
   StyleSheet,
   LayoutChangeEvent,
+  ScrollView,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
+import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import BottomNav from "@/components/BottomNav";
 import Header from "@/components/Header";
@@ -18,6 +20,8 @@ import PostCard from "@/components/PostCard";
 import { API_ENDPOINTS, API_URL, getPhotoUrl } from "@/constants/API";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Post } from "@/types";
+import { searchUsers, SearchUser } from "@/services/api";
+import Icon from "react-native-vector-icons/Feather";
 
 interface Friend {
   id: string;
@@ -31,6 +35,7 @@ interface Friend {
 }
 
 export default function FriendsScreen() {
+  const router = useRouter();
   const [searchText, setSearchText] = useState("");
   const [activeTab, setActiveTab] = useState<"friends" | "activity">("activity");
   const [friends, setFriends] = useState<Friend[]>([]);
@@ -39,6 +44,9 @@ export default function FriendsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [searchResults, setSearchResults] = useState<SearchUser[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const getAuthHeaders = async () => {
     const token = await AsyncStorage.getItem("authToken");
@@ -176,6 +184,49 @@ export default function FriendsScreen() {
       }
     }, [loading])
   );
+
+  // Search users when searchText changes
+  useEffect(() => {
+    // Clear previous timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    // If search text is empty, clear results
+    if (searchText.trim().length < 1) {
+      setSearchResults([]);
+      return;
+    }
+
+    // Debounce search by 300ms
+    searchTimeoutRef.current = setTimeout(async () => {
+      try {
+        setSearchLoading(true);
+        const results = await searchUsers(searchText.trim());
+        setSearchResults(results);
+      } catch (err: any) {
+        console.error("Error searching users:", err);
+        setSearchResults([]);
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 300);
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchText]);
+
+  const handleSearchUserPress = (user: SearchUser) => {
+    setSearchText("");
+    setSearchResults([]);
+    router.push({
+      pathname: "/(tabs)/user-profile",
+      params: { userId: user.id },
+    } as any);
+  };
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -377,12 +428,60 @@ export default function FriendsScreen() {
             elevation: 5,
           }}
         >
-          <Header searchText={searchText} setSearchText={setSearchText} />
+          <Header 
+            searchText={searchText} 
+            setSearchText={setSearchText} 
+            disableSearchModal={true}
+          />
         </View>
+
+        {/* Search Results Dropdown */}
+        {searchText.trim().length >= 1 && (
+          <View style={[styles.searchDropdown, { top: headerHeight }]}>
+            {searchLoading ? (
+              <View style={styles.searchDropdownLoading}>
+                <ActivityIndicator size="small" color="#D4A574" />
+                <Text style={styles.searchDropdownLoadingText}>Searching...</Text>
+              </View>
+            ) : searchResults.length > 0 ? (
+              <ScrollView 
+                style={styles.searchDropdownScroll}
+                keyboardShouldPersistTaps="handled"
+              >
+                {searchResults.map((user) => (
+                  <TouchableOpacity
+                    key={user.id}
+                    style={styles.searchResultItem}
+                    onPress={() => handleSearchUserPress(user)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.searchResultAvatar}>
+                      <Icon name="user" size={20} color="#fff" />
+                    </View>
+                    <View style={styles.searchResultInfo}>
+                      <Text style={styles.searchResultName}>
+                        {user.first_name && user.last_name
+                          ? `${user.first_name} ${user.last_name}`
+                          : user.username}
+                      </Text>
+                      <Text style={styles.searchResultUsername}>
+                        @{user.username}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            ) : (
+              <View style={styles.searchDropdownEmpty}>
+                <Text style={styles.searchDropdownEmptyText}>No users found</Text>
+              </View>
+            )}
+          </View>
+        )}
         
         <FlatList
           contentContainerStyle={{ 
-            paddingTop: headerHeight + 20, // Header + reduced tab bar spacing
+            paddingTop: headerHeight + 20, // Header + spacing
             paddingBottom: bottomNavHeight,
           }}
           data={[]}
@@ -430,12 +529,60 @@ export default function FriendsScreen() {
           shadowRadius: 4,
           elevation: 5,
         }}
-      >
-        <Header searchText={searchText} setSearchText={setSearchText} />
-      </View>
-      
-      {/* Scrollable Content */}
-      <FlatList
+        >
+          <Header 
+            searchText={searchText} 
+            setSearchText={setSearchText} 
+            disableSearchModal={true}
+          />
+        </View>
+
+        {/* Search Results Dropdown */}
+        {searchText.trim().length >= 1 && (
+          <View style={[styles.searchDropdown, { top: headerHeight }]}>
+            {searchLoading ? (
+              <View style={styles.searchDropdownLoading}>
+                <ActivityIndicator size="small" color="#D4A574" />
+                <Text style={styles.searchDropdownLoadingText}>Searching...</Text>
+              </View>
+            ) : searchResults.length > 0 ? (
+              <ScrollView 
+                style={styles.searchDropdownScroll}
+                keyboardShouldPersistTaps="handled"
+              >
+                {searchResults.map((user) => (
+                  <TouchableOpacity
+                    key={user.id}
+                    style={styles.searchResultItem}
+                    onPress={() => handleSearchUserPress(user)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.searchResultAvatar}>
+                      <Icon name="user" size={20} color="#fff" />
+                    </View>
+                    <View style={styles.searchResultInfo}>
+                      <Text style={styles.searchResultName}>
+                        {user.first_name && user.last_name
+                          ? `${user.first_name} ${user.last_name}`
+                          : user.username}
+                      </Text>
+                      <Text style={styles.searchResultUsername}>
+                        @{user.username}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            ) : (
+              <View style={styles.searchDropdownEmpty}>
+                <Text style={styles.searchDropdownEmptyText}>No users found</Text>
+              </View>
+            )}
+          </View>
+        )}
+        
+        {/* Scrollable Content */}
+        <FlatList
         contentContainerStyle={{ 
           paddingTop: headerHeight + 20, // Header + reduced tab bar spacing
           paddingBottom: bottomNavHeight,
@@ -537,5 +684,71 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 16,
     color: "#666",
+  },
+  searchDropdown: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    maxHeight: 400,
+    zIndex: 9,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  searchDropdownScroll: {
+    maxHeight: 400,
+  },
+  searchResultItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f5f5f5',
+  },
+  searchResultAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#D4A574',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  searchResultInfo: {
+    flex: 1,
+  },
+  searchResultName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#000',
+    marginBottom: 2,
+  },
+  searchResultUsername: {
+    fontSize: 14,
+    color: '#666',
+  },
+  searchDropdownLoading: {
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchDropdownLoadingText: {
+    marginTop: 8,
+    fontSize: 14,
+    color: '#666',
+  },
+  searchDropdownEmpty: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  searchDropdownEmptyText: {
+    fontSize: 14,
+    color: '#999',
   },
 });

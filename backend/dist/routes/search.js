@@ -34,8 +34,8 @@ router.get("/", async (req, res) => {
 router.get("/users", async (req, res) => {
     try {
         const query = (req.query.q || "").trim().toLowerCase();
-        if (!query || query.length < 2) {
-            res.status(400).json({ error: "Query must be at least 2 characters" });
+        if (!query || query.length < 1) {
+            res.status(400).json({ error: "Query must be at least 1 character" });
             return;
         }
         const users = await searchUsers(query);
@@ -97,10 +97,18 @@ async function searchUsers(query) {
         const result = await db_1.default.query(`SELECT id, username, email, first_name, last_name, created_at
        FROM users
        WHERE LOWER(username) LIKE $1 
-          OR LOWER(first_name) LIKE $1 
-          OR LOWER(last_name) LIKE $1
+          OR (first_name IS NOT NULL AND LOWER(first_name) LIKE $1)
+          OR (last_name IS NOT NULL AND LOWER(last_name) LIKE $1)
+          OR (first_name IS NOT NULL AND last_name IS NOT NULL AND LOWER(first_name || ' ' || last_name) LIKE $1)
           OR LOWER(email) LIKE $1
-       LIMIT 20`, [`%${query}%`]);
+       ORDER BY 
+         CASE 
+           WHEN LOWER(username) LIKE $2 THEN 1
+           WHEN (first_name IS NOT NULL AND LOWER(first_name) LIKE $2) OR (last_name IS NOT NULL AND LOWER(last_name) LIKE $2) THEN 2
+           WHEN (first_name IS NOT NULL AND last_name IS NOT NULL AND LOWER(first_name || ' ' || last_name) LIKE $2) THEN 3
+           ELSE 4
+         END
+       LIMIT 20`, [`%${query}%`, `${query}%`]);
         return result.rows;
     }
     catch (error) {

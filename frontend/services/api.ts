@@ -850,7 +850,7 @@ export const search = async (query: string): Promise<SearchResults> => {
 // Search users
 export const searchUsers = async (query: string): Promise<SearchUser[]> => {
   try {
-    if (!query || query.trim().length < 2) {
+    if (!query || query.trim().length < 1) {
       return [];
     }
 
@@ -862,11 +862,18 @@ export const searchUsers = async (query: string): Promise<SearchUser[]> => {
     );
 
     if (!response.ok) {
-      throw new Error(`Failed to search users: ${response.statusText}`);
+      let errorMessage = `Failed to search users: ${response.statusText}`;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorMessage;
+      } catch (e) {
+        // Couldn't parse error response
+      }
+      throw new Error(errorMessage);
     }
 
     const data = await response.json();
-    return data.users;
+    return data.users || [];
   } catch (error) {
     console.error("Error searching users:", error);
     throw error;
