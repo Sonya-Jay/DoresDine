@@ -15,7 +15,8 @@ import styles from "../styles";
 import { ImageData, Post } from "../types";
 import CommentsModal from "./CommentsModal";
 import FlagPostModal from "./FlagPostModal";
-import { flagPost } from "../services/api";
+import EditPostModal from "./EditPostModal";
+import { flagPost, deletePost, updatePost } from "../services/api";
 
 interface PostCardProps {
   post: Post;
@@ -23,6 +24,8 @@ interface PostCardProps {
   onCommentCountUpdate?: (postId: number | string, newCount: number) => void;
   onCreateSimilarPost?: (diningHall: string, mealType: string) => void;
   onPostFlagged?: (postId: number | string) => void; // Callback when post is flagged
+  onPostDeleted?: (postId: number | string) => void; // Callback when post is deleted
+  onPostUpdated?: (postId: number | string, updates: any) => void; // Callback when post is updated
   isOwnPost?: boolean; // Whether this is the current user's post
 }
 
@@ -32,6 +35,8 @@ const PostCard: React.FC<PostCardProps> = ({
   onCommentCountUpdate,
   onCreateSimilarPost,
   onPostFlagged,
+  onPostDeleted,
+  onPostUpdated,
   isOwnPost = false,
 }) => {
   const router = useRouter();
@@ -44,6 +49,8 @@ const PostCard: React.FC<PostCardProps> = ({
   );
   const [expandedImage, setExpandedImage] = useState<ImageData | null>(null);
   const [flagModalVisible, setFlagModalVisible] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [showOptionsMenu, setShowOptionsMenu] = useState(false);
 
   const handleUsernamePress = () => {
     if (post.author_id) {
@@ -146,6 +153,44 @@ const PostCard: React.FC<PostCardProps> = ({
     }
   };
 
+  const handleDelete = () => {
+    Alert.alert(
+      "Delete Post",
+      "Are you sure you want to delete this post? This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deletePost(post.id);
+              if (onPostDeleted) {
+                onPostDeleted(post.id);
+              }
+              Alert.alert("Success", "Post deleted successfully");
+            } catch (error: any) {
+              Alert.alert("Error", error.message || "Failed to delete post");
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleEdit = async (updates: any) => {
+    try {
+      await updatePost(post.id, updates);
+      if (onPostUpdated) {
+        onPostUpdated(post.id, updates);
+      }
+      Alert.alert("Success", "Post updated successfully");
+    } catch (error: any) {
+      Alert.alert("Error", error.message || "Failed to update post");
+      throw error;
+    }
+  };
+
   // If post is flagged and it's the owner viewing their own post, show "Under Review" overlay
   if (post.isFlagged && isOwnPost) {
     return (
@@ -220,6 +265,16 @@ const PostCard: React.FC<PostCardProps> = ({
             </View>
           </View>
         </View>
+
+        {/* Three-dot menu for own posts */}
+        {isOwnPost && (
+          <TouchableOpacity
+            style={localStyles.optionsButton}
+            onPress={() => setShowOptionsMenu(true)}
+          >
+            <Icon name="more-vertical" size={24} color="#666" />
+          </TouchableOpacity>
+        )}
       </View>
 
       <View style={styles.imagesContainer}>
@@ -458,6 +513,58 @@ const PostCard: React.FC<PostCardProps> = ({
         onClose={() => setFlagModalVisible(false)}
         onFlag={handleFlag}
       />
+
+      {/* Edit Post Modal */}
+      <EditPostModal
+        visible={editModalVisible}
+        onClose={() => setEditModalVisible(false)}
+        onSave={handleEdit}
+        initialCaption={post.notes}
+        initialRating={post.rating}
+        initialMenuItems={post.menuItems}
+      />
+
+      {/* Options Menu */}
+      <Modal
+        visible={showOptionsMenu}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowOptionsMenu(false)}
+      >
+        <TouchableOpacity
+          style={localStyles.optionsOverlay}
+          activeOpacity={1}
+          onPress={() => setShowOptionsMenu(false)}
+        >
+          <View style={localStyles.optionsMenu}>
+            <TouchableOpacity
+              style={localStyles.optionsMenuItem}
+              onPress={() => {
+                setShowOptionsMenu(false);
+                setEditModalVisible(true);
+              }}
+            >
+              <Icon name="edit-2" size={20} color="#374151" />
+              <Text style={localStyles.optionsMenuText}>Edit Post</Text>
+            </TouchableOpacity>
+
+            <View style={localStyles.optionsDivider} />
+
+            <TouchableOpacity
+              style={localStyles.optionsMenuItem}
+              onPress={() => {
+                setShowOptionsMenu(false);
+                handleDelete();
+              }}
+            >
+              <Icon name="trash-2" size={20} color="#EF4444" />
+              <Text style={[localStyles.optionsMenuText, { color: "#EF4444" }]}>
+                Delete Post
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 };
@@ -465,6 +572,41 @@ const PostCard: React.FC<PostCardProps> = ({
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 const localStyles = StyleSheet.create({
+  optionsButton: {
+    padding: 8,
+  },
+  optionsOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  optionsMenu: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    width: 220,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  optionsMenuItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    gap: 12,
+  },
+  optionsMenuText: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#374151",
+  },
+  optionsDivider: {
+    height: 1,
+    backgroundColor: "#E5E7EB",
+  },
   reviewOverlay: {
     backgroundColor: "rgba(0, 0, 0, 0.03)",
     padding: 40,

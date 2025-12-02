@@ -594,4 +594,96 @@ router.post("/:id/flag", async (req, res) => {
         client.release();
     }
 });
+// DELETE /posts/:id - Delete a post (only by author)
+router.delete("/:id", async (req, res) => {
+    try {
+        const postId = req.params.id;
+        const userId = req.userId || req.headers["x-user-id"];
+        if (!userId) {
+            res.status(401).json({ error: "Authentication required" });
+            return;
+        }
+        // Check if post exists and user is the author
+        const postCheck = await db_1.default.query("SELECT id, author_id FROM posts WHERE id = $1", [postId]);
+        if (postCheck.rows.length === 0) {
+            res.status(404).json({ error: "Post not found" });
+            return;
+        }
+        if (postCheck.rows[0].author_id !== userId) {
+            res.status(403).json({ error: "You can only delete your own posts" });
+            return;
+        }
+        // Delete post (cascade will delete photos, comments, likes, flags, rated_items)
+        await db_1.default.query("DELETE FROM posts WHERE id = $1", [postId]);
+        res.json({ success: true, message: "Post deleted successfully" });
+    }
+    catch (error) {
+        console.error("Error deleting post:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+// PATCH /posts/:id - Update a post (only by author)
+router.patch("/:id", async (req, res) => {
+    const client = await db_1.default.connect();
+    try {
+        const postId = req.params.id;
+        const userId = req.userId || req.headers["x-user-id"];
+        const { caption, rating, menu_items } = req.body;
+        if (!userId) {
+            res.status(401).json({ error: "Authentication required" });
+            return;
+        }
+        // Check if post exists and user is the author
+        const postCheck = await client.query("SELECT id, author_id FROM posts WHERE id = $1", [postId]);
+        if (postCheck.rows.length === 0) {
+            res.status(404).json({ error: "Post not found" });
+            return;
+        }
+        if (postCheck.rows[0].author_id !== userId) {
+            res.status(403).json({ error: "You can only edit your own posts" });
+            return;
+        }
+        await client.query("BEGIN");
+        // Build update query dynamically based on provided fields
+        const updates = [];
+        const values = [];
+        let paramIndex = 1;
+        if (caption !== undefined) {
+            updates.push(`caption = $${paramIndex++}`);
+            values.push(caption);
+        }
+        if (rating !== undefined) {
+            updates.push(`rating = $${paramIndex++}`);
+            values.push(rating);
+        }
+        if (menu_items !== undefined) {
+            updates.push(`menu_items = $${paramIndex++}`);
+            values.push(menu_items);
+        }
+        if (updates.length === 0) {
+            await client.query("ROLLBACK");
+            res.status(400).json({ error: "No fields to update" });
+            return;
+        }
+        // Add postId as the last parameter
+        values.push(postId);
+        const updateQuery = `
+        UPDATE posts 
+        SET ${updates.join(", ")}
+        WHERE id = $${paramIndex}
+        RETURNING *
+      `;
+        const result = await client.query(updateQuery, values);
+        await client.query("COMMIT");
+        res.json({ success: true, post: result.rows[0] });
+    }
+    catch (error) {
+        await client.query("ROLLBACK");
+        console.error("Error updating post:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+    finally {
+        client.release();
+    }
+});
 exports.default = router;

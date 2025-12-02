@@ -163,6 +163,27 @@ export default function ProfileScreen() {
     setPosts((prev) => prev.map((p) => (String(p.id) === String(postId) ? { ...p, commentCount: newCount } : p)));
   };
 
+  const handlePostDeleted = (postId: number | string) => {
+    setPosts((prev) => prev.filter((p) => String(p.id) !== String(postId)));
+  };
+
+  const handlePostUpdated = (postId: number | string, updates: any) => {
+    setPosts((prev) =>
+      prev.map((p) =>
+        String(p.id) === String(postId)
+          ? {
+              ...p,
+              notes: updates.caption !== undefined ? updates.caption : p.notes,
+              rating: updates.rating !== undefined ? updates.rating : p.rating,
+              menuItems: updates.menu_items !== undefined ? updates.menu_items : p.menuItems,
+            }
+          : p
+      )
+    );
+    // Reload to get fresh data from server
+    loadPosts();
+  };
+
   const [headerHeight, setHeaderHeight] = useState(180);
   const bottomNavHeight = 60 + Math.max(insets.bottom, 8);
 
@@ -254,6 +275,8 @@ export default function ProfileScreen() {
             post={item}
             onLike={handleLike}
             onCommentCountUpdate={handleCommentCountUpdate}
+            onPostDeleted={handlePostDeleted}
+            onPostUpdated={handlePostUpdated}
             isOwnPost={true}
           />
         )}

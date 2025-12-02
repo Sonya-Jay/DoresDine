@@ -682,6 +682,60 @@ export const flagPost = async (
   }
 };
 
+// Delete a post
+export const deletePost = async (postId: number | string): Promise<void> => {
+  try {
+    const postIdStr = String(postId);
+    const response = await fetch(`${API_URL}/posts/${postIdStr}`, {
+      method: "DELETE",
+      headers: getHeaders(),
+    });
+
+    if (!response.ok) {
+      const error = await response
+        .json()
+        .catch(() => ({ error: response.statusText }));
+      throw new Error(error.error || "Failed to delete post");
+    }
+
+    await response.json();
+  } catch (error) {
+    console.error("Error deleting post:", error);
+    throw error;
+  }
+};
+
+// Update a post
+export const updatePost = async (
+  postId: number | string,
+  updates: {
+    caption?: string;
+    rating?: number;
+    menu_items?: string[];
+  }
+): Promise<void> => {
+  try {
+    const postIdStr = String(postId);
+    const response = await fetch(`${API_URL}/posts/${postIdStr}`, {
+      method: "PATCH",
+      headers: getHeaders(),
+      body: JSON.stringify(updates),
+    });
+
+    if (!response.ok) {
+      const error = await response
+        .json()
+        .catch(() => ({ error: response.statusText }));
+      throw new Error(error.error || "Failed to update post");
+    }
+
+    await response.json();
+  } catch (error) {
+    console.error("Error updating post:", error);
+    throw error;
+  }
+};
+
 // Fetch comments for a post
 export const fetchComments = async (
   postId: number | string
