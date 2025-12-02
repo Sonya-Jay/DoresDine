@@ -37,7 +37,7 @@ router.get("/", async (req, res) => {
         ) as photos,
         COALESCE(
           JSON_AGG(
-            DISTINCT JSON_BUILD_OBJECT(
+            JSON_BUILD_OBJECT(
               'id', pri.id,
               'menu_item_name', pri.menu_item_name,
               'rating', CAST(pri.rating AS FLOAT),
@@ -69,12 +69,14 @@ router.get("/", async (req, res) => {
       ORDER BY p.created_at DESC
     `;
         const result = await db_1.default.query(query, [userId || null]);
-        // Parse rating from string to number if present
+        // Parse numeric values from strings
         const rows = result.rows.map((row) => ({
             ...row,
             rating: row.rating !== null && row.rating !== undefined
                 ? parseFloat(row.rating)
                 : null,
+            like_count: parseInt(row.like_count) || 0,
+            comment_count: parseInt(row.comment_count) || 0,
         }));
         res.json(rows);
     }
@@ -120,7 +122,7 @@ router.get("/me", async (req, res) => {
         ) as photos,
         COALESCE(
           JSON_AGG(
-            DISTINCT JSON_BUILD_OBJECT(
+            JSON_BUILD_OBJECT(
               'id', pri.id,
               'menu_item_name', pri.menu_item_name,
               'rating', CAST(pri.rating AS FLOAT),
@@ -152,12 +154,14 @@ router.get("/me", async (req, res) => {
       ORDER BY p.created_at DESC
     `;
         const result = await db_1.default.query(query, [userId]);
-        // Parse rating from string to number if present
+        // Parse numeric values from strings
         const rows = result.rows.map((row) => ({
             ...row,
             rating: row.rating !== null && row.rating !== undefined
                 ? parseFloat(row.rating)
                 : null,
+            like_count: parseInt(row.like_count) || 0,
+            comment_count: parseInt(row.comment_count) || 0,
         }));
         res.json(rows);
     }
@@ -199,7 +203,7 @@ router.get("/user/:userId", async (req, res) => {
         ) as photos,
         COALESCE(
           JSON_AGG(
-            DISTINCT JSON_BUILD_OBJECT(
+            JSON_BUILD_OBJECT(
               'id', pri.id,
               'menu_item_name', pri.menu_item_name,
               'rating', CAST(pri.rating AS FLOAT),
@@ -233,12 +237,14 @@ router.get("/user/:userId", async (req, res) => {
       ORDER BY p.created_at DESC
     `;
         const result = await db_1.default.query(query, [userId, currentUserId || null]);
-        // Parse rating from string to number if present
+        // Parse numeric values from strings
         const rows = result.rows.map((row) => ({
             ...row,
             rating: row.rating !== null && row.rating !== undefined
                 ? parseFloat(row.rating)
                 : null,
+            like_count: parseInt(row.like_count) || 0,
+            comment_count: parseInt(row.comment_count) || 0,
         }));
         console.log(`[Posts] Found ${rows.length} posts for user: ${userId}`);
         res.json(rows);

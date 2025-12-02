@@ -22,8 +22,10 @@ export const createTestUser = async (
 ): Promise<TestUser> => {
   const pool = getTestPool();
   const id = overrides.id || uuidv4();
-  const username = overrides.username || `testuser_${Date.now()}`;
-  const email = overrides.email || `test_${Date.now()}@vanderbilt.edu`;
+  // Add random suffix to prevent collisions in parallel tests
+  const randomSuffix = Math.random().toString(36).substring(7);
+  const username = overrides.username || `testuser_${Date.now()}_${randomSuffix}`;
+  const email = overrides.email || `test_${Date.now()}_${randomSuffix}@vanderbilt.edu`;
   const first_name = overrides.first_name || 'Test';
   const last_name = overrides.last_name || 'User';
   const password = 'testpassword123';

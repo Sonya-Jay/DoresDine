@@ -36,8 +36,8 @@ router.get("/users", async (req: Request, res: Response): Promise<void> => {
   try {
     const query = ((req.query.q as string) || "").trim().toLowerCase();
 
-    if (!query || query.length < 1) {
-      res.status(400).json({ error: "Query must be at least 1 character" });
+    if (!query || query.length < 2) {
+      res.status(400).json({ error: "Query must be at least 2 characters" });
       return;
     }
 
@@ -56,8 +56,8 @@ router.get(
     try {
       const query = ((req.query.q as string) || "").trim().toLowerCase();
 
-      if (!query || query.length < 1) {
-        res.status(400).json({ error: "Query must be at least 1 character" });
+      if (!query || query.length < 2) {
+        res.status(400).json({ error: "Query must be at least 2 characters" });
         return;
       }
 
@@ -75,8 +75,8 @@ router.get("/dishes", async (req: Request, res: Response): Promise<void> => {
   try {
     const query = ((req.query.q as string) || "").trim().toLowerCase();
 
-    if (!query || query.length < 1) {
-      res.status(400).json({ error: "Query must be at least 1 character" });
+    if (!query || query.length < 2) {
+      res.status(400).json({ error: "Query must be at least 2 characters" });
       return;
     }
 
@@ -158,7 +158,7 @@ async function searchDiningHalls(query: string): Promise<any[]> {
   try {
     // First try to get from our database
     const result = await pool.query(
-      `SELECT id, name, cbordUnitId
+      `SELECT id, name, "cbordUnitId"
        FROM dining_halls
        WHERE LOWER(name) LIKE $1
        LIMIT 10`,

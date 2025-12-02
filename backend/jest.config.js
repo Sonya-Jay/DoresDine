@@ -23,5 +23,9 @@ module.exports = {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
   testTimeout: 30000,
+  // Limit parallel execution to avoid database conflicts
+  maxWorkers: 2,
+  // Ensure proper cleanup between test files
+  maxConcurrency: 2,
 };
 

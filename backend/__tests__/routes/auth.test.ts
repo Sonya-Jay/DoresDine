@@ -18,6 +18,7 @@ describe('Auth Routes', () => {
           last_name: 'Doe',
           email,
           password: 'password123',
+          confirm_password: 'password123',
         });
 
       expect(response.status).toBe(201);
@@ -46,6 +47,7 @@ describe('Auth Routes', () => {
           last_name: 'Doe',
           email: 'john@example.com',
           password: 'password123',
+          confirm_password: 'password123',
         });
 
       expect(response.status).toBe(400);
@@ -60,10 +62,11 @@ describe('Auth Routes', () => {
           last_name: 'Doe',
           email: `test_${Date.now()}@vanderbilt.edu`,
           password: '12345',
+          confirm_password: '12345',
         });
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toContain('password');
+      expect(response.body.error).toContain('Password');
     });
 
     it('should reject duplicate email registration', async () => {
@@ -75,6 +78,7 @@ describe('Auth Routes', () => {
           last_name: 'Doe',
           email,
           password: 'password123',
+          confirm_password: 'password123',
         });
 
       const response = await request(app)
@@ -84,6 +88,7 @@ describe('Auth Routes', () => {
           last_name: 'Doe',
           email,
           password: 'password456',
+          confirm_password: 'password456',
         });
 
       expect(response.status).toBe(409);
@@ -99,6 +104,7 @@ describe('Auth Routes', () => {
           last_name: 'Doe',
           email,
           password: 'password123',
+          confirm_password: 'password123',
         });
 
       expect(response.status).toBe(201);
@@ -179,7 +185,7 @@ describe('Auth Routes', () => {
 
       const response = await request(app)
         .post('/auth/verify')
-        .send({ email: user.email, code: 'wrongcode' });
+        .send({ email: user.email, code: '999999' });
 
       expect(response.status).toBe(400);
       expect(response.body.error).toContain('Invalid');
@@ -263,7 +269,7 @@ describe('Auth Routes', () => {
         .post('/auth/login')
         .send({ email: user.email, password: 'wrongpassword' });
 
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(401);
       expect(response.body.error).toContain('Invalid credentials');
     });
 
@@ -272,7 +278,7 @@ describe('Auth Routes', () => {
         .post('/auth/login')
         .send({ email: 'nonexistent@vanderbilt.edu', password: 'password123' });
 
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(401);
       expect(response.body.error).toContain('Invalid credentials');
     });
 
@@ -301,7 +307,7 @@ describe('Auth Routes', () => {
         .post('/auth/login')
         .send({ email: user.email, password: 'anypassword' });
 
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(401);
       expect(response.body.error).toContain('Invalid credentials');
     });
 

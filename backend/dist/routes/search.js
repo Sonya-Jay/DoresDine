@@ -35,8 +35,8 @@ router.get("/", async (req, res) => {
 router.get("/users", async (req, res) => {
     try {
         const query = (req.query.q || "").trim().toLowerCase();
-        if (!query || query.length < 1) {
-            res.status(400).json({ error: "Query must be at least 1 character" });
+        if (!query || query.length < 2) {
+            res.status(400).json({ error: "Query must be at least 2 characters" });
             return;
         }
         const users = await searchUsers(query);
@@ -51,8 +51,8 @@ router.get("/users", async (req, res) => {
 router.get("/dining-halls", async (req, res) => {
     try {
         const query = (req.query.q || "").trim().toLowerCase();
-        if (!query || query.length < 1) {
-            res.status(400).json({ error: "Query must be at least 1 character" });
+        if (!query || query.length < 2) {
+            res.status(400).json({ error: "Query must be at least 2 characters" });
             return;
         }
         const diningHalls = await searchDiningHalls(query);
@@ -67,8 +67,8 @@ router.get("/dining-halls", async (req, res) => {
 router.get("/dishes", async (req, res) => {
     try {
         const query = (req.query.q || "").trim().toLowerCase();
-        if (!query || query.length < 1) {
-            res.status(400).json({ error: "Query must be at least 1 character" });
+        if (!query || query.length < 2) {
+            res.status(400).json({ error: "Query must be at least 2 characters" });
             return;
         }
         // Search through posts for menu items
@@ -136,7 +136,7 @@ async function searchUsers(query) {
 async function searchDiningHalls(query) {
     try {
         // First try to get from our database
-        const result = await db_1.default.query(`SELECT id, name, cbordUnitId
+        const result = await db_1.default.query(`SELECT id, name, "cbordUnitId"
        FROM dining_halls
        WHERE LOWER(name) LIKE $1
        LIMIT 10`, [`%${query}%`]);

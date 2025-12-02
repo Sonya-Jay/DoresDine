@@ -210,18 +210,19 @@ describe('CbordService', () => {
     it('should fetch menu items for a meal using table rows', async () => {
       const mockGet = jest.fn().mockResolvedValue({ data: {} });
       const mockPost = jest.fn()
-        .mockResolvedValueOnce({ data: { success: true } })
+        .mockResolvedValueOnce({ data: { success: true } }) // session init
+        .mockResolvedValueOnce({ data: { success: true } }) // unit selection
         .mockResolvedValueOnce({
           data: {
             success: true,
             panels: [
               {
                 id: 'itemPanel',
-                html: '<tr class="cbo_nn_itemPrimaryRow"><td><a class="cbo_nn_itemHover">Pizza</a></td><td></td><td>1 slice</td></tr>',
+                html: '<table><tr class="cbo_nn_itemPrimaryRow"><td><a class="cbo_nn_itemHover">Pizza</a></td><td></td><td>1 slice</td></tr></table>',
               },
             ],
           },
-        });
+        }); // menu items
 
       const mockAxiosInstance = {
         get: mockGet,
@@ -311,18 +312,19 @@ describe('CbordService', () => {
     it('should parse menu items with allergens', async () => {
       const mockGet = jest.fn().mockResolvedValue({ data: {} });
       const mockPost = jest.fn()
-        .mockResolvedValueOnce({ data: { success: true } })
+        .mockResolvedValueOnce({ data: { success: true } }) // session init
+        .mockResolvedValueOnce({ data: { success: true } }) // unit selection
         .mockResolvedValueOnce({
           data: {
             success: true,
             panels: [
               {
                 id: 'itemPanel',
-                html: '<tr class="cbo_nn_itemPrimaryRow"><td><a class="cbo_nn_itemHover">Pizza<img alt="Dairy" /><img alt="Gluten" /></a></td><td></td><td>1 slice</td></tr>',
+                html: '<table><tr class="cbo_nn_itemPrimaryRow"><td><a class="cbo_nn_itemHover">Pizza<img alt="Dairy" /><img alt="Gluten" /></a></td><td></td><td>1 slice</td></tr></table>',
               },
             ],
           },
-        });
+        }); // menu items
 
       const mockAxiosInstance = {
         get: mockGet,

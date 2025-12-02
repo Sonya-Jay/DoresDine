@@ -261,7 +261,7 @@ describe('Posts Routes', () => {
         });
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toContain('Photos must be an array');
+      expect(response.body.error).toContain('photos must be an array');
     });
 
     it('should reject more than 10 photos', async () => {
@@ -279,7 +279,7 @@ describe('Posts Routes', () => {
         });
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toContain('max 10 photos');
+      expect(response.body.error).toContain('maximum 10 photos');
     });
 
     it('should reject photo without storage_key', async () => {
@@ -335,7 +335,7 @@ describe('Posts Routes', () => {
         });
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toContain('Menu items must be an array');
+      expect(response.body.error).toContain('menu_items must be an array');
     });
 
     it('should reject too many menu items', async () => {
@@ -350,7 +350,7 @@ describe('Posts Routes', () => {
         });
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toContain('20 items');
+      expect(response.body.error).toContain('maximum 20 menu items');
     });
 
     it('should reject empty menu item', async () => {

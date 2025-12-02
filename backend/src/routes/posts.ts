@@ -36,7 +36,7 @@ router.get("/", async (req: Request, res: Response): Promise<void> => {
         ) as photos,
         COALESCE(
           JSON_AGG(
-            DISTINCT JSON_BUILD_OBJECT(
+            JSON_BUILD_OBJECT(
               'id', pri.id,
               'menu_item_name', pri.menu_item_name,
               'rating', CAST(pri.rating AS FLOAT),
@@ -69,13 +69,15 @@ router.get("/", async (req: Request, res: Response): Promise<void> => {
     `;
 
     const result = await pool.query(query, [userId || null]);
-    // Parse rating from string to number if present
+    // Parse numeric values from strings
     const rows = result.rows.map((row: any) => ({
       ...row,
       rating:
         row.rating !== null && row.rating !== undefined
           ? parseFloat(row.rating)
           : null,
+      like_count: parseInt(row.like_count) || 0,
+      comment_count: parseInt(row.comment_count) || 0,
     }));
     res.json(rows);
   } catch (error: any) {
@@ -122,7 +124,7 @@ router.get("/me", async (req: Request, res: Response): Promise<void> => {
         ) as photos,
         COALESCE(
           JSON_AGG(
-            DISTINCT JSON_BUILD_OBJECT(
+            JSON_BUILD_OBJECT(
               'id', pri.id,
               'menu_item_name', pri.menu_item_name,
               'rating', CAST(pri.rating AS FLOAT),
@@ -153,13 +155,15 @@ router.get("/me", async (req: Request, res: Response): Promise<void> => {
       GROUP BY p.id, p.author_id, p.caption, p.rating, p.menu_items, p.dining_hall_name, p.meal_type, p.created_at, p.is_flagged, p.flag_count, u.username, u.email, l.like_count, c.comment_count, ul.user_id
       ORDER BY p.created_at DESC
     `;    const result = await pool.query(query, [userId]);
-    // Parse rating from string to number if present
+    // Parse numeric values from strings
     const rows = result.rows.map((row: any) => ({
       ...row,
       rating:
         row.rating !== null && row.rating !== undefined
           ? parseFloat(row.rating)
           : null,
+      like_count: parseInt(row.like_count) || 0,
+      comment_count: parseInt(row.comment_count) || 0,
     }));
     res.json(rows);
   } catch (error: any) {
@@ -208,7 +212,7 @@ router.get(
         ) as photos,
         COALESCE(
           JSON_AGG(
-            DISTINCT JSON_BUILD_OBJECT(
+            JSON_BUILD_OBJECT(
               'id', pri.id,
               'menu_item_name', pri.menu_item_name,
               'rating', CAST(pri.rating AS FLOAT),
@@ -243,13 +247,15 @@ router.get(
     `;
 
       const result = await pool.query(query, [userId, currentUserId || null]);
-      // Parse rating from string to number if present
+      // Parse numeric values from strings
       const rows = result.rows.map((row: any) => ({
         ...row,
         rating:
           row.rating !== null && row.rating !== undefined
             ? parseFloat(row.rating)
             : null,
+        like_count: parseInt(row.like_count) || 0,
+        comment_count: parseInt(row.comment_count) || 0,
       }));
       console.log(`[Posts] Found ${rows.length} posts for user: ${userId}`);
       res.json(rows);

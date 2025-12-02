@@ -277,11 +277,13 @@ class CbordService {
                         console.log(`[Status] ${hall.name}: ${status ? 'OPEN' : 'CLOSED'}`);
                     }
                     else {
-                        console.warn(`[Status] ${hall.name}: Could not determine status`);
+                        console.warn(`[Status] ${hall.name}: Could not determine status, defaulting to closed`);
+                        unitStatusMap.set(hall.cbordUnitId, false); // Default to closed if unable to determine
                     }
                 }
                 catch (error) {
                     console.error(`[Status] Error for ${hall.name}:`, error.message || error);
+                    unitStatusMap.set(hall.cbordUnitId, false); // Default to closed on error
                 }
             });
             // Wait for all requests to complete (with timeout)
@@ -308,12 +310,10 @@ class CbordService {
             const unitStatusMap = await this.getUnitStatusFromAPI();
             console.log(`[getDiningHalls] Status map size: ${unitStatusMap.size} out of ${exports.DINING_HALLS.length} halls`);
             for (const hall of exports.DINING_HALLS) {
-                // Get status from map if available, otherwise leave undefined
-                const isOpen = unitStatusMap.has(hall.cbordUnitId)
-                    ? unitStatusMap.get(hall.cbordUnitId) ?? undefined
-                    : undefined;
-                if (isOpen === undefined) {
-                    console.warn(`[getDiningHalls] No status for ${hall.name} (unitId: ${hall.cbordUnitId})`);
+                // Get status from map, default to false (closed) if not available
+                const isOpen = unitStatusMap.get(hall.cbordUnitId) ?? false;
+                if (!unitStatusMap.has(hall.cbordUnitId)) {
+                    console.warn(`[getDiningHalls] No status for ${hall.name} (unitId: ${hall.cbordUnitId}), defaulting to closed`);
                 }
                 hallsWithStatus.push({
                     ...hall,

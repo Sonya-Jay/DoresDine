@@ -71,7 +71,8 @@ export const getTestPool = (): Pool => {
     }
     testPool = new Pool({
       connectionString,
-      max: 5,
+      // Increase pool size for parallel tests
+      max: 10,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 2000,
       // Use SSL only if DATABASE_URL contains amazonaws.com (RDS)
