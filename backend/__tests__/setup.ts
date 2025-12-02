@@ -21,12 +21,30 @@ dotenv.config();
 // Set test environment variables
 process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret';
-// Use test database URL if provided, otherwise use the actual DATABASE_URL
-// Tests will clean up after themselves, so it's safe to use the same database
-if (!process.env.DATABASE_URL) {
-  console.warn('WARNING: DATABASE_URL is not set. Tests may fail.');
-  // Try to use a local test database as fallback (may not exist)
-  process.env.DATABASE_URL = 'postgresql://postgres:postgres@localhost:5432/doresdine_test';
+
+// Use test database URL - REQUIRED to prevent wiping production database
+if (process.env.TEST_DATABASE_URL) {
+  process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
+  console.log('✅ Using TEST_DATABASE_URL for tests');
+} else {
+  // Default to a local test database (for development)
+  // In production/CI, TEST_DATABASE_URL should be set explicitly
+  const defaultTestDb = 'postgresql://postgres:postgres@localhost:5432/doresdine_test';
+  if (!process.env.DATABASE_URL || process.env.DATABASE_URL.includes('amazonaws.com')) {
+    // If using production RDS, require TEST_DATABASE_URL to be set
+    if (process.env.DATABASE_URL?.includes('amazonaws.com')) {
+      console.error('❌ ERROR: Production database detected but TEST_DATABASE_URL is not set!');
+      console.error('❌ Tests will NOT run to protect your production data.');
+      console.error('❌ Please set TEST_DATABASE_URL in your .env file.');
+      throw new Error('TEST_DATABASE_URL must be set when using production database');
+    }
+    process.env.DATABASE_URL = defaultTestDb;
+    console.log(`⚠️  Using default test database: ${defaultTestDb}`);
+    console.log('⚠️  Set TEST_DATABASE_URL in .env to use a specific test database');
+  } else {
+    // Using a non-production database, assume it's safe for tests
+    console.log('✅ Using DATABASE_URL for tests (non-production database)');
+  }
 }
 
 // Mock nodemailer to prevent actual email sending in tests
@@ -212,6 +230,7 @@ beforeAll(async () => {
 }, 30000); // 30 second timeout for database setup
 
 // After all tests - cleanup and close connections
+// Safe to run since we're using a separate test database
 afterAll(async () => {
   try {
     await teardownTestDatabase();
@@ -221,6 +240,7 @@ afterAll(async () => {
 }, 10000);
 
 // Before each test - clean data but keep schema
+// Safe to run since we're using a separate test database
 beforeEach(async () => {
   try {
     await cleanupTestDatabase();
