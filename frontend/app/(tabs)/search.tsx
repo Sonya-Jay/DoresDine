@@ -1,6 +1,6 @@
 import BottomNav from "@/components/BottomNav";
 import Header from "@/components/Header";
-import { searchDishAvailability, DishAvailability, getTrendingDishes, SearchDish } from "@/services/api";
+import { searchDishAvailability, DishAvailability, getTrendingDishes, SearchDish, searchDiningHalls, SearchDiningHall } from "@/services/api";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -27,14 +27,38 @@ export default function DishSearchScreen() {
   const [error, setError] = useState<string | null>(null);
   const [headerHeight, setHeaderHeight] = useState(180);
   const [trendingDishes, setTrendingDishes] = useState<SearchDish[]>([]);
-  const [showTrending, setShowTrending] = useState(false);
+  const [trendingHalls, setTrendingHalls] = useState<SearchDiningHall[]>([]);
+  const [showTrending, setShowTrending] = useState(true); // Default to showing trending
 
   useEffect(() => {
-    if (params.showTrending === "true") {
-      setShowTrending(true);
-      loadTrendingDishes();
+    // Always show trending by default
+    loadTrendingHalls();
+  }, []);
+
+  const loadTrendingHalls = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      console.log('[Trending] Loading trending dining halls...');
+      // Get top rated dining halls based on average rating
+      const halls = await searchDiningHalls("");
+      console.log('[Trending] Fetched halls:', halls.length);
+      // Sort by average rating (descending) and post count
+      const sortedHalls = halls.sort((a, b) => {
+        const ratingDiff = (b.average_rating || 0) - (a.average_rating || 0);
+        if (Math.abs(ratingDiff) > 0.1) return ratingDiff;
+        return (b.post_count || 0) - (a.post_count || 0);
+      });
+      const topHalls = sortedHalls.slice(0, 20); // Top 20
+      console.log('[Trending] Top halls:', topHalls.length, topHalls.map(h => `${h.name}: ${h.average_rating}`));
+      setTrendingHalls(topHalls);
+    } catch (err: any) {
+      console.error("Error loading trending halls:", err);
+      setError(err.message || "Failed to load trending dining halls");
+    } finally {
+      setLoading(false);
     }
-  }, [params.showTrending]);
+  };
 
   const loadTrendingDishes = async () => {
     setLoading(true);
@@ -114,7 +138,7 @@ export default function DishSearchScreen() {
         <Header searchText="" setSearchText={() => {}} hideSearch={true} />
       </View>
 
-      {/* Search Section - Below Header */}
+      {/* Search/Trending Section - Below Header */}
       <ScrollView
         contentContainerStyle={{
           paddingTop: headerHeight + 20,
@@ -123,48 +147,63 @@ export default function DishSearchScreen() {
         }}
       >
         <View style={styles.searchSection}>
-          <Text style={styles.title}>Search for a Dish</Text>
-          <Text style={styles.subtitle}>
-            Find which dining halls are serving your favorite dish
-          </Text>
+          {showTrending ? (
+            <>
+              <Text style={styles.title}>Trending Dining Halls</Text>
+              <Text style={styles.subtitle}>
+                Top-rated dining halls based on recent reviews
+              </Text>
+            </>
+          ) : (
+            <>
+              <Text style={styles.title}>Search for a Dish</Text>
+              <Text style={styles.subtitle}>
+                Find which dining halls are serving your favorite dish
+              </Text>
+            </>
+          )}
 
-          <View style={styles.searchContainer}>
-            <View style={styles.searchInputContainer}>
-              <Icon name="search" size={20} color="#999" style={styles.searchIcon} />
-              <TextInput
-                placeholder="Enter dish name (e.g., pizza, pasta, salad)"
-                value={searchText}
-                onChangeText={setSearchText}
-                style={styles.searchInput}
-                placeholderTextColor="#999"
-                onSubmitEditing={handleSearch}
-                returnKeyType="search"
-              />
-              {searchText ? (
-                <TouchableOpacity
-                  onPress={() => {
-                    setSearchText("");
-                    setResults(null);
-                    setError(null);
-                  }}
-                  style={styles.clearButton}
-                >
-                  <Icon name="x" size={18} color="#999" />
-                </TouchableOpacity>
-              ) : null}
+          {!showTrending && (
+            <View style={styles.searchContainer}>
+              <View style={styles.searchInputContainer}>
+                <Icon name="search" size={20} color="#999" style={styles.searchIcon} />
+                <TextInput
+                  placeholder="Enter dish name (e.g., pizza, pasta, salad)"
+                  value={searchText}
+                  onChangeText={setSearchText}
+                  style={styles.searchInput}
+                  placeholderTextColor="#999"
+                  onSubmitEditing={handleSearch}
+                  returnKeyType="search"
+                />
+                {searchText ? (
+                  <TouchableOpacity
+                    onPress={() => {
+                      setSearchText("");
+                      setResults(null);
+                      setError(null);
+                    }}
+                    style={styles.clearButton}
+                  >
+                    <Icon name="x" size={16} color="#999" />
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+
+              <TouchableOpacity
+                style={[styles.searchButton, loading && styles.searchButtonDisabled]}
+                onPress={handleSearch}
+                disabled={loading}
+                activeOpacity={0.8}
+              >
+                {loading ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.searchButtonText}>Search</Text>
+                )}
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity
-              style={[styles.searchButton, loading && styles.searchButtonDisabled]}
-              onPress={handleSearch}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Text style={styles.searchButtonText}>Search</Text>
-              )}
-            </TouchableOpacity>
-          </View>
+          )}
 
           {error && (
             <View style={styles.errorContainer}>
@@ -266,8 +305,91 @@ export default function DishSearchScreen() {
             </View>
           )}
 
+          {/* Loading State */}
+          {loading && showTrending && (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#D4A574" />
+              <Text style={styles.loadingText}>Loading trending dining halls...</Text>
+            </View>
+          )}
+
+          {/* Trending Dining Halls */}
+          {showTrending && !loading && trendingHalls.length > 0 && (
+            <View style={styles.trendingContainer}>
+              {trendingHalls.map((hall, index) => (
+                <TouchableOpacity
+                  key={`trending-hall-${hall.id}-${index}`}
+                  style={styles.trendingHallCard}
+                  onPress={() => {
+                    router.push({
+                      pathname: "/(tabs)/dining-hall-profile",
+                      params: { diningHallName: hall.name },
+                    } as any);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.trendingHallHeader}>
+                    <View style={styles.trendingHallIcon}>
+                      <Icon name="star" size={24} color="#D4A574" />
+                    </View>
+                    <View style={styles.trendingHallInfo}>
+                      <Text style={styles.trendingHallName}>{hall.name}</Text>
+                      {hall.is_open !== undefined && (
+                        <View style={styles.statusBadge}>
+                          <View style={[
+                            styles.statusDot,
+                            { backgroundColor: hall.is_open ? "#4CAF50" : "#f44336" }
+                          ]} />
+                          <Text style={[
+                            styles.statusText,
+                            { color: hall.is_open ? "#4CAF50" : "#f44336" }
+                          ]}>
+                            {hall.is_open ? "Open" : "Closed"}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                    <Icon name="chevron-right" size={20} color="#999" />
+                  </View>
+                  
+                  <View style={styles.trendingHallStats}>
+                    {hall.average_rating !== undefined && hall.average_rating !== null && (
+                      <View style={styles.statItem}>
+                        <Icon name="star" size={16} color="#D4A574" />
+                        <Text style={styles.statValue}>
+                          {hall.average_rating.toFixed(1)}
+                        </Text>
+                        <Text style={styles.statLabel}>avg rating</Text>
+                      </View>
+                    )}
+                    {hall.post_count !== undefined && (
+                      <View style={styles.statItem}>
+                        <Icon name="message-circle" size={16} color="#666" />
+                        <Text style={styles.statValue}>{hall.post_count}</Text>
+                        <Text style={styles.statLabel}>
+                          {hall.post_count === 1 ? "review" : "reviews"}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
+          {/* Empty State for Trending */}
+          {showTrending && !loading && trendingHalls.length === 0 && !error && (
+            <View style={styles.emptyContainer}>
+              <Icon name="trending-up" size={64} color="#ddd" />
+              <Text style={styles.emptyTitle}>No trending dining halls yet</Text>
+              <Text style={styles.emptyText}>
+                Check back after some reviews are posted
+              </Text>
+            </View>
+          )}
+
           {/* Trending Dishes */}
-          {showTrending && trendingDishes.length > 0 && (
+          {!showTrending && trendingDishes.length > 0 && (
             <View style={styles.trendingContainer}>
               <View style={styles.sectionHeader}>
                 <Icon name="trending-up" size={18} color="#D4A574" />
@@ -499,5 +621,83 @@ const styles = StyleSheet.create({
   },
   trendingContainer: {
     marginTop: 8,
+  },
+  loadingContainer: {
+    alignItems: "center",
+    padding: 40,
+    marginTop: 40,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: "#666",
+    marginTop: 16,
+  },
+  trendingHallCard: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  trendingHallHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  trendingHallIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#FFF8F0",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  trendingHallInfo: {
+    flex: 1,
+  },
+  trendingHallName: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#000",
+    marginBottom: 4,
+  },
+  statusBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  statusText: {
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  trendingHallStats: {
+    flexDirection: "row",
+    gap: 24,
+  },
+  statItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  statValue: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#000",
+  },
+  statLabel: {
+    fontSize: 14,
+    color: "#666",
   },
 });
