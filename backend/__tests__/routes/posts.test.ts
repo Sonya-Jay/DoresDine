@@ -157,6 +157,82 @@ describe('Posts Routes', () => {
       expect(response.body.photos.length).toBe(2);
     });
 
+    it('should create post with photos and dish_name', async () => {
+      const user = await createTestUser();
+      const response = await request(app)
+        .post('/posts')
+        .set('x-user-id', user.id)
+        .send({
+          caption: 'Test post with dish photos',
+          photos: [
+            { storage_key: 'photo1.jpg', display_order: 0, dish_name: 'Pizza' },
+            { storage_key: 'photo2.jpg', display_order: 1, dish_name: 'Salad' },
+          ],
+        });
+
+      expect(response.status).toBe(201);
+      expect(response.body.photos.length).toBe(2);
+      expect(response.body.photos[0].dish_name).toBe('Pizza');
+      expect(response.body.photos[1].dish_name).toBe('Salad');
+    });
+
+    it('should create post with rated_items', async () => {
+      const user = await createTestUser();
+      const response = await request(app)
+        .post('/posts')
+        .set('x-user-id', user.id)
+        .send({
+          caption: 'Test post with rated items',
+          rated_items: [
+            { menu_item_name: 'Pizza', rating: 8.5 },
+            { menu_item_name: 'Salad', rating: 7.0 },
+          ],
+        });
+
+      expect(response.status).toBe(201);
+      expect(response.body.rating).toBeCloseTo(7.75, 1); // Average of 8.5 and 7.0
+    });
+
+    it('should calculate overall rating from rated_items when rating not provided', async () => {
+      const user = await createTestUser();
+      const response = await request(app)
+        .post('/posts')
+        .set('x-user-id', user.id)
+        .send({
+          caption: 'Test post',
+          rated_items: [
+            { menu_item_name: 'Pizza', rating: 9.0 },
+            { menu_item_name: 'Salad', rating: 8.0 },
+            { menu_item_name: 'Soup', rating: 7.0 },
+          ],
+        });
+
+      expect(response.status).toBe(201);
+      expect(response.body.rating).toBeCloseTo(8.0, 1); // Average of 9.0, 8.0, 7.0
+    });
+
+    it('should create post with both rated_items and photos with dish_name', async () => {
+      const user = await createTestUser();
+      const response = await request(app)
+        .post('/posts')
+        .set('x-user-id', user.id)
+        .send({
+          caption: 'Test post with everything',
+          rated_items: [
+            { menu_item_name: 'Pizza', rating: 8.5 },
+            { menu_item_name: 'Salad', rating: 7.0 },
+          ],
+          photos: [
+            { storage_key: 'pizza.jpg', display_order: 0, dish_name: 'Pizza' },
+            { storage_key: 'salad.jpg', display_order: 1, dish_name: 'Salad' },
+          ],
+        });
+
+      expect(response.status).toBe(201);
+      expect(response.body.photos.length).toBe(2);
+      expect(response.body.rating).toBeCloseTo(7.75, 1);
+    });
+
     it('should create post with menu items', async () => {
       const user = await createTestUser();
       const response = await request(app)
