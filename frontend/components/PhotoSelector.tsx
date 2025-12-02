@@ -1,8 +1,8 @@
-import { uploadPhoto } from "@/services/api";
+import { uploadPhoto, getPhotoUrl } from "@/services/api";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import React from "react";
-import { Alert, StyleSheet, Text, TouchableOpacity } from "react-native";
+import { Alert, StyleSheet, Text, TouchableOpacity, View, Image, ScrollView } from "react-native";
 import Icon from "react-native-vector-icons/Feather";
 
 interface PhotoSelectorProps {
@@ -131,17 +131,47 @@ const PhotoSelector: React.FC<PhotoSelectorProps> = ({
     }
   };
 
+  const handleDeletePhoto = (index: number) => {
+    const newPhotos = photos.filter((_, i) => i !== index);
+    onPhotosChange(newPhotos);
+  };
+
   return (
-    <TouchableOpacity 
-      style={[styles.container, isUploading && styles.containerDisabled]} 
-      onPress={handlePress}
-      disabled={isUploading}
-    >
-      <Text style={styles.text}>
-        {isUploading ? "Uploading..." : `Add photos ${photos.length > 0 ? `(${photos.length})` : ""}`}
-      </Text>
-      {!isUploading && <Icon name="chevron-right" size={20} color="#666" />}
-    </TouchableOpacity>
+    <View>
+      <TouchableOpacity 
+        style={[styles.container, isUploading && styles.containerDisabled]} 
+        onPress={handlePress}
+        disabled={isUploading}
+      >
+        <Text style={styles.text}>
+          {isUploading ? "Uploading..." : `Add photos ${photos.length > 0 ? `(${photos.length})` : ""}`}
+        </Text>
+        {!isUploading && <Icon name="chevron-right" size={20} color="#666" />}
+      </TouchableOpacity>
+      
+      {photos.length > 0 && (
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          style={styles.photoList}
+        >
+          {photos.map((photo, index) => (
+            <View key={index} style={styles.photoContainer}>
+              <Image 
+                source={{ uri: getPhotoUrl(photo) }} 
+                style={styles.photoThumbnail}
+              />
+              <TouchableOpacity 
+                style={styles.deleteButton}
+                onPress={() => handleDeletePhoto(index)}
+              >
+                <Icon name="x" size={16} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          ))}
+        </ScrollView>
+      )}
+    </View>
   );
 };
 
@@ -161,6 +191,30 @@ const styles = StyleSheet.create({
   },
   containerDisabled: {
     opacity: 0.5,
+  },
+  photoList: {
+    marginBottom: 12,
+  },
+  photoContainer: {
+    marginRight: 12,
+    position: "relative",
+  },
+  photoThumbnail: {
+    width: 100,
+    height: 100,
+    borderRadius: 8,
+    backgroundColor: "#f0f0f0",
+  },
+  deleteButton: {
+    position: "absolute",
+    top: 4,
+    right: 4,
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });
 

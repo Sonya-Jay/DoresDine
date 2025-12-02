@@ -43,6 +43,21 @@ export default function CreatePostScreen() {
     }
   }, [params.diningHall, params.mealType]);
 
+  // Reset form when component unmounts or when navigating back
+  useEffect(() => {
+    return () => {
+      // Cleanup function - reset all state when unmounting
+      setSelectedDiningHall(null);
+      setSelectedMealType(null);
+      setMenuItems([]);
+      setRatedItems([]);
+      setShowAddDishInput(false);
+      setNewDishName("");
+      setCompanions([]);
+      setNotes("");
+    };
+  }, []);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async () => {
@@ -115,6 +130,17 @@ export default function CreatePostScreen() {
       
       await createPost(postData);
       console.log("Post created successfully!");
+      
+      // Reset all form fields after successful post
+      setSelectedDiningHall(null);
+      setSelectedMealType(null);
+      setMenuItems([]);
+      setRatedItems([]);
+      setShowAddDishInput(false);
+      setNewDishName("");
+      setCompanions([]);
+      setNotes("");
+      
       router.back();
     } catch (error: any) {
       console.error("Error creating post:", error);
