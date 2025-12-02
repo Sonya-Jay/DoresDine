@@ -49,6 +49,16 @@ const PostCard: React.FC<PostCardProps> = ({
     }
   };
 
+  const handleDiningHallPress = () => {
+    if (post.dininghall) {
+      console.log("[PostCard] Navigating to dining hall profile:", post.dininghall);
+      router.push({
+        pathname: "/(tabs)/dining-hall-profile",
+        params: { diningHallName: post.dininghall },
+      } as any);
+    }
+  };
+
   // Update local state when post prop changes
   React.useEffect(() => {
     setIsLiked(post.isLiked);
@@ -111,7 +121,9 @@ const PostCard: React.FC<PostCardProps> = ({
               <Text style={styles.username}>{post.username}</Text>
             </TouchableOpacity>
             <Text style={styles.rankedText}> ranked </Text>
-            <Text style={styles.restaurant}>{post.dininghall}</Text>
+            <TouchableOpacity onPress={handleDiningHallPress} activeOpacity={0.7}>
+              <Text style={styles.restaurant}>{post.dininghall}</Text>
+            </TouchableOpacity>
           </View>
 
           <View style={styles.metadata}>
