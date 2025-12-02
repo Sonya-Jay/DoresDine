@@ -117,6 +117,11 @@ export default function FeedScreen() {
     );
   };
 
+  const handlePostFlagged = (postId: number | string) => {
+    // Remove the flagged post from the feed
+    setPosts((prevPosts) => prevPosts.filter((post) => post.id !== postId));
+  };
+
   const handleCreateSimilarPost = (diningHall: string, mealType: string) => {
     console.log("Create similar post:", diningHall, mealType);
     router.push({
@@ -253,6 +258,7 @@ export default function FeedScreen() {
             onLike={handleLike}
             onCommentCountUpdate={handleCommentCountUpdate}
             onCreateSimilarPost={handleCreateSimilarPost}
+            onPostFlagged={handlePostFlagged}
           />
         )}
         ListEmptyComponent={

@@ -22,6 +22,7 @@ interface PostCardProps {
   onLike?: (postId: number | string) => Promise<void>;
   onCommentCountUpdate?: (postId: number | string, newCount: number) => void;
   onCreateSimilarPost?: (diningHall: string, mealType: string) => void;
+  onPostFlagged?: (postId: number | string) => void; // Callback when post is flagged
   isOwnPost?: boolean; // Whether this is the current user's post
 }
 
@@ -30,6 +31,7 @@ const PostCard: React.FC<PostCardProps> = ({
   onLike,
   onCommentCountUpdate,
   onCreateSimilarPost,
+  onPostFlagged,
   isOwnPost = false,
 }) => {
   const router = useRouter();
@@ -117,12 +119,25 @@ const PostCard: React.FC<PostCardProps> = ({
   const handleFlag = async (reason: "misleading" | "inappropriate" | "other") => {
     try {
       await flagPost(post.id, reason);
-      Alert.alert(
-        "Post Flagged",
-        "Thank you for your report. This post will be reviewed by our team.",
-        [{ text: "OK" }]
-      );
+      
+      // Close the flag modal first
+      setFlagModalVisible(false);
+      
+      // Notify parent to remove this post from the feed
+      if (onPostFlagged) {
+        onPostFlagged(post.id);
+      }
+      
+      // Show confirmation after a brief delay to ensure state update
+      setTimeout(() => {
+        Alert.alert(
+          "Post Flagged",
+          "Thank you for your report. This post has been removed from your feed.",
+          [{ text: "OK" }]
+        );
+      }, 100);
     } catch (error: any) {
+      setFlagModalVisible(false);
       Alert.alert(
         "Error",
         error.message || "Failed to flag post. Please try again.",

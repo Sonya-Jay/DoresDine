@@ -301,6 +301,10 @@ export default function FriendsScreen() {
     );
   };
 
+  const handlePostFlagged = (postId: number | string) => {
+    setActivityPosts((prevPosts) => prevPosts.filter((post) => post.id !== postId));
+  };
+
   const renderTabBar = () => (
     <View style={styles.tabBar}>
       <TouchableOpacity
@@ -384,6 +388,7 @@ export default function FriendsScreen() {
             post={post}
             onLike={handleLike}
             onCommentCountUpdate={handleCommentCountUpdate}
+            onPostFlagged={handlePostFlagged}
           />
         ))
       ) : (
