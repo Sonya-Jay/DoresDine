@@ -20,6 +20,8 @@ router.get("/", async (req, res) => {
         p.dining_hall_name,
         p.meal_type,
         p.created_at,
+        p.is_flagged,
+        p.flag_count,
         u.username,
         u.email,
         COALESCE(
@@ -62,7 +64,8 @@ router.get("/", async (req, res) => {
         GROUP BY post_id
       ) c ON p.id = c.post_id
       LEFT JOIN likes ul ON p.id = ul.post_id AND ul.user_id = $1
-      GROUP BY p.id, p.author_id, p.caption, p.rating, p.menu_items, p.dining_hall_name, p.meal_type, p.created_at, u.username, u.email, l.like_count, c.comment_count, ul.user_id
+      WHERE p.is_flagged = false OR p.is_flagged IS NULL
+      GROUP BY p.id, p.author_id, p.caption, p.rating, p.menu_items, p.dining_hall_name, p.meal_type, p.created_at, p.is_flagged, p.flag_count, u.username, u.email, l.like_count, c.comment_count, ul.user_id
       ORDER BY p.created_at DESC
     `;
         const result = await db_1.default.query(query, [userId || null]);
@@ -99,6 +102,8 @@ router.get("/me", async (req, res) => {
         p.dining_hall_name,
         p.meal_type,
         p.created_at,
+        p.is_flagged,
+        p.flag_count,
         u.username,
         u.email,
         COALESCE(
@@ -143,7 +148,7 @@ router.get("/me", async (req, res) => {
       ) c ON p.id = c.post_id
       LEFT JOIN likes ul ON p.id = ul.post_id AND ul.user_id = $1
       WHERE p.author_id = $1
-      GROUP BY p.id, p.author_id, p.caption, p.rating, p.menu_items, p.dining_hall_name, p.meal_type, p.created_at, u.username, u.email, l.like_count, c.comment_count, ul.user_id
+      GROUP BY p.id, p.author_id, p.caption, p.rating, p.menu_items, p.dining_hall_name, p.meal_type, p.created_at, p.is_flagged, p.flag_count, u.username, u.email, l.like_count, c.comment_count, ul.user_id
       ORDER BY p.created_at DESC
     `;
         const result = await db_1.default.query(query, [userId]);
@@ -177,6 +182,8 @@ router.get("/user/:userId", async (req, res) => {
         p.dining_hall_name,
         p.meal_type,
         p.created_at,
+        p.is_flagged,
+        p.flag_count,
         u.username,
         u.email,
         COALESCE(
@@ -219,8 +226,10 @@ router.get("/user/:userId", async (req, res) => {
         GROUP BY post_id
       ) c ON p.id = c.post_id
       LEFT JOIN likes ul ON p.id = ul.post_id AND ul.user_id = $2
-      WHERE p.author_id = $1
-      GROUP BY p.id, p.author_id, p.caption, p.rating, p.menu_items, p.dining_hall_name, p.meal_type, p.created_at, u.username, u.email, l.like_count, c.comment_count, ul.user_id
+      WHERE p.author_id = $1 AND (
+        p.author_id = $2 OR p.is_flagged = false OR p.is_flagged IS NULL
+      )
+      GROUP BY p.id, p.author_id, p.caption, p.rating, p.menu_items, p.dining_hall_name, p.meal_type, p.created_at, p.is_flagged, p.flag_count, u.username, u.email, l.like_count, c.comment_count, ul.user_id
       ORDER BY p.created_at DESC
     `;
         const result = await db_1.default.query(query, [userId, currentUserId || null]);
@@ -519,6 +528,66 @@ router.post("/:id/comments", async (req, res) => {
     }
     catch (error) {
         console.error("Error creating comment:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+    finally {
+        client.release();
+    }
+});
+// POST /posts/:id/flag - Flag a post
+router.post("/:id/flag", async (req, res) => {
+    const client = await db_1.default.connect();
+    try {
+        const postId = req.params.id;
+        const userId = req.userId || req.headers["x-user-id"];
+        const { reason } = req.body;
+        if (!userId) {
+            res.status(401).json({ error: "Authentication required" });
+            return;
+        }
+        if (!reason || !["misleading", "inappropriate", "other"].includes(reason)) {
+            res.status(400).json({ error: "Valid reason required (misleading, inappropriate, or other)" });
+            return;
+        }
+        // Check if post exists
+        const postCheck = await client.query("SELECT id, author_id FROM posts WHERE id = $1", [postId]);
+        if (postCheck.rows.length === 0) {
+            res.status(404).json({ error: "Post not found" });
+            return;
+        }
+        // Prevent users from flagging their own posts
+        if (postCheck.rows[0].author_id === userId) {
+            res.status(400).json({ error: "Cannot flag your own post" });
+            return;
+        }
+        await client.query("BEGIN");
+        // Insert flag (will fail if user already flagged this post due to UNIQUE constraint)
+        try {
+            await client.query("INSERT INTO post_flags (post_id, user_id, reason) VALUES ($1, $2, $3)", [postId, userId, reason]);
+        }
+        catch (error) {
+            if (error.code === "23505") { // Unique violation
+                await client.query("ROLLBACK");
+                res.status(400).json({ error: "You have already flagged this post" });
+                return;
+            }
+            throw error;
+        }
+        // Update post flag status and count
+        const flagCountResult = await client.query("SELECT COUNT(*) as count FROM post_flags WHERE post_id = $1", [postId]);
+        const flagCount = parseInt(flagCountResult.rows[0].count);
+        // Flag the post if it has at least 1 flag
+        await client.query(`UPDATE posts 
+         SET is_flagged = true, 
+             flag_count = $1,
+             flagged_at = CURRENT_TIMESTAMP
+         WHERE id = $2`, [flagCount, postId]);
+        await client.query("COMMIT");
+        res.json({ success: true, message: "Post flagged successfully" });
+    }
+    catch (error) {
+        await client.query("ROLLBACK");
+        console.error("Error flagging post:", error);
         res.status(500).json({ error: "Internal server error" });
     }
     finally {

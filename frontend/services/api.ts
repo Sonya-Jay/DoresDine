@@ -463,6 +463,8 @@ const transformPost = (backendPost: BackendPost): Post => {
     likeCount: Number(backendPost.like_count) || 0,
     commentCount: Number(backendPost.comment_count) || 0,
     isLiked: backendPost.is_liked || false,
+    isFlagged: backendPost.is_flagged || false,
+    flagCount: backendPost.flag_count || 0,
   };
 };
 
@@ -649,6 +651,33 @@ export const toggleLikePost = async (
     await response.json();
   } catch (error) {
     console.error("Error liking post:", error);
+    throw error;
+  }
+};
+
+// Flag a post
+export const flagPost = async (
+  postId: number | string,
+  reason: "misleading" | "inappropriate" | "other"
+): Promise<void> => {
+  try {
+    const postIdStr = String(postId);
+    const response = await fetch(`${API_URL}/posts/${postIdStr}/flag`, {
+      method: "POST",
+      headers: getHeaders(),
+      body: JSON.stringify({ reason }),
+    });
+
+    if (!response.ok) {
+      const error = await response
+        .json()
+        .catch(() => ({ error: response.statusText }));
+      throw new Error(error.error || "Failed to flag post");
+    }
+
+    await response.json();
+  } catch (error) {
+    console.error("Error flagging post:", error);
     throw error;
   }
 };

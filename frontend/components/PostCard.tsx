@@ -8,17 +8,21 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Alert,
 } from "react-native";
 import Icon from "react-native-vector-icons/Feather";
 import styles from "../styles";
 import { ImageData, Post } from "../types";
 import CommentsModal from "./CommentsModal";
+import FlagPostModal from "./FlagPostModal";
+import { flagPost } from "../services/api";
 
 interface PostCardProps {
   post: Post;
   onLike?: (postId: number | string) => Promise<void>;
   onCommentCountUpdate?: (postId: number | string, newCount: number) => void;
   onCreateSimilarPost?: (diningHall: string, mealType: string) => void;
+  isOwnPost?: boolean; // Whether this is the current user's post
 }
 
 const PostCard: React.FC<PostCardProps> = ({
@@ -26,6 +30,7 @@ const PostCard: React.FC<PostCardProps> = ({
   onLike,
   onCommentCountUpdate,
   onCreateSimilarPost,
+  isOwnPost = false,
 }) => {
   const router = useRouter();
   const [isLiking, setIsLiking] = useState(false);
@@ -36,6 +41,7 @@ const PostCard: React.FC<PostCardProps> = ({
     Number(post.commentCount) || 0
   );
   const [expandedImage, setExpandedImage] = useState<ImageData | null>(null);
+  const [flagModalVisible, setFlagModalVisible] = useState(false);
 
   const handleUsernamePress = () => {
     if (post.author_id) {
@@ -107,6 +113,68 @@ const PostCard: React.FC<PostCardProps> = ({
       onCreateSimilarPost(post.dininghall, mealType);
     }
   };
+
+  const handleFlag = async (reason: "misleading" | "inappropriate" | "other") => {
+    try {
+      await flagPost(post.id, reason);
+      Alert.alert(
+        "Post Flagged",
+        "Thank you for your report. This post will be reviewed by our team.",
+        [{ text: "OK" }]
+      );
+    } catch (error: any) {
+      Alert.alert(
+        "Error",
+        error.message || "Failed to flag post. Please try again.",
+        [{ text: "OK" }]
+      );
+    }
+  };
+
+  // If post is flagged and it's the owner viewing their own post, show "Under Review" overlay
+  if (post.isFlagged && isOwnPost) {
+    return (
+      <View style={styles.post}>
+        <View style={styles.userInfo}>
+          <View style={styles.avatar}>
+            <Icon name="user" size={24} color="#fff" />
+          </View>
+
+          <View style={styles.userDetails}>
+            <View style={styles.userHeader}>
+              <TouchableOpacity onPress={handleUsernamePress} activeOpacity={0.7}>
+                <Text style={styles.username}>{post.username}</Text>
+              </TouchableOpacity>
+              <Text style={styles.rankedText}> ranked </Text>
+              <TouchableOpacity onPress={handleDiningHallPress} activeOpacity={0.7}>
+                <Text style={styles.restaurant}>{post.dininghall}</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.metadata}>
+              <View style={styles.metadataRow}>
+                <Icon name="calendar" size={11} color="#666" />
+                <Text style={styles.metadataText}> {post.date}</Text>
+              </View>
+              <View style={styles.metadataRow}>
+                <Icon name="x" size={11} color="#666" />
+                <Text style={styles.metadataText}> {post.visits} Visits</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* Blurred content with "Under Review" overlay */}
+        <View style={localStyles.reviewOverlay}>
+          <Icon name="flag" size={48} color="#EF4444" />
+          <Text style={localStyles.reviewTitle}>Under Review</Text>
+          <Text style={localStyles.reviewText}>
+            This post has been flagged and is being reviewed by our team.
+          </Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.post}>
@@ -272,6 +340,15 @@ const PostCard: React.FC<PostCardProps> = ({
           </TouchableOpacity>
         </View>
         <View style={styles.actionsRight}>
+          {!isOwnPost && (
+            <TouchableOpacity
+              testID="flag-button"
+              onPress={() => setFlagModalVisible(true)}
+              style={{ marginRight: 20 }}
+            >
+              <Icon name="flag" size={24} color="#666" />
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
             testID="create-similar-button"
             onPress={handleCreateSimilarPost}
@@ -359,11 +436,47 @@ const PostCard: React.FC<PostCardProps> = ({
           )}
         </View>
       </Modal>
+
+      {/* Flag Post Modal */}
+      <FlagPostModal
+        visible={flagModalVisible}
+        onClose={() => setFlagModalVisible(false)}
+        onFlag={handleFlag}
+      />
     </View>
   );
 };
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+
+const localStyles = StyleSheet.create({
+  reviewOverlay: {
+    backgroundColor: "rgba(0, 0, 0, 0.03)",
+    padding: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 200,
+    borderRadius: 12,
+    marginHorizontal: 16,
+    marginVertical: 12,
+    borderWidth: 2,
+    borderColor: "#EF4444",
+    borderStyle: "dashed",
+  },
+  reviewTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#EF4444",
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  reviewText: {
+    fontSize: 14,
+    color: "#666",
+    textAlign: "center",
+    lineHeight: 20,
+  },
+});
 
 const imageModalStyles = StyleSheet.create({
   modalContainer: {

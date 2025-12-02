@@ -51,6 +51,8 @@ export interface BackendPost {
   like_count: number;
   comment_count: number;
   is_liked: boolean;
+  is_flagged?: boolean;
+  flag_count?: number;
   photos: {
     id: string | number;
     storage_key: string;
@@ -83,6 +85,8 @@ export interface Post {
   likeCount: number;
   commentCount: number;
   isLiked: boolean;
+  isFlagged?: boolean;
+  flagCount?: number;
 }
 
 export interface Comment {

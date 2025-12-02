@@ -254,6 +254,7 @@ export default function ProfileScreen() {
             post={item}
             onLike={handleLike}
             onCommentCountUpdate={handleCommentCountUpdate}
+            isOwnPost={true}
           />
         )}
         ListHeaderComponent={renderProfileHeader}
