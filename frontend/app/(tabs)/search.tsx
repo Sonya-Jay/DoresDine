@@ -1,6 +1,6 @@
 import BottomNav from "@/components/BottomNav";
 import Header from "@/components/Header";
-import { searchDishAvailability, DishAvailability, getTrendingDishes, SearchDish, searchDiningHalls, SearchDiningHall } from "@/services/api";
+import { searchDishAvailability, DishAvailability, getTrendingDishes, SearchDish, searchDiningHalls, SearchDiningHall, fetchTrendingHalls } from "@/services/api";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -27,7 +27,14 @@ export default function DishSearchScreen() {
   const [error, setError] = useState<string | null>(null);
   const [headerHeight, setHeaderHeight] = useState(180);
   const [trendingDishes, setTrendingDishes] = useState<SearchDish[]>([]);
-  const [trendingHalls, setTrendingHalls] = useState<SearchDiningHall[]>([]);
+  const [trendingHalls, setTrendingHalls] = useState<Array<{
+    dining_hall_name: string;
+    meal_type: string;
+    post_date: string;
+    post_count: number;
+    average_rating: number | null;
+    latest_post: string;
+  }>>([]);
   const [showTrending, setShowTrending] = useState(true); // Default to showing trending
 
   useEffect(() => {
@@ -40,18 +47,10 @@ export default function DishSearchScreen() {
     setError(null);
     try {
       console.log('[Trending] Loading trending dining halls...');
-      // Get top rated dining halls based on average rating
-      const halls = await searchDiningHalls("");
-      console.log('[Trending] Fetched halls:', halls.length);
-      // Sort by average rating (descending) and post count
-      const sortedHalls = halls.sort((a, b) => {
-        const ratingDiff = (b.average_rating || 0) - (a.average_rating || 0);
-        if (Math.abs(ratingDiff) > 0.1) return ratingDiff;
-        return (b.post_count || 0) - (a.post_count || 0);
-      });
-      const topHalls = sortedHalls.slice(0, 20); // Top 20
-      console.log('[Trending] Top halls:', topHalls.length, topHalls.map(h => `${h.name}: ${h.average_rating}`));
-      setTrendingHalls(topHalls);
+      // Get dining halls with multiple posts for same hall/meal/day
+      const halls = await fetchTrendingHalls(20);
+      console.log('[Trending] Fetched trending halls:', halls.length);
+      setTrendingHalls(halls);
     } catch (err: any) {
       console.error("Error loading trending halls:", err);
       setError(err.message || "Failed to load trending dining halls");
@@ -151,7 +150,7 @@ export default function DishSearchScreen() {
             <>
               <Text style={styles.title}>Trending Dining Halls</Text>
               <Text style={styles.subtitle}>
-                Top-rated dining halls based on recent reviews
+                Popular dining halls with multiple reviews for the same meal today
               </Text>
             </>
           ) : (
@@ -318,36 +317,32 @@ export default function DishSearchScreen() {
             <View style={styles.trendingContainer}>
               {trendingHalls.map((hall, index) => (
                 <TouchableOpacity
-                  key={`trending-hall-${hall.id}-${index}`}
+                  key={`trending-hall-${index}-${hall.dining_hall_name}-${hall.meal_type}`}
                   style={styles.trendingHallCard}
                   onPress={() => {
                     router.push({
                       pathname: "/(tabs)/dining-hall-profile",
-                      params: { diningHallName: hall.name },
+                      params: { diningHallName: hall.dining_hall_name },
                     } as any);
                   }}
                   activeOpacity={0.7}
                 >
                   <View style={styles.trendingHallHeader}>
                     <View style={styles.trendingHallIcon}>
-                      <Icon name="star" size={24} color="#D4A574" />
+                      <Icon name="trending-up" size={24} color="#D4A574" />
                     </View>
                     <View style={styles.trendingHallInfo}>
-                      <Text style={styles.trendingHallName}>{hall.name}</Text>
-                      {hall.is_open !== undefined && (
-                        <View style={styles.statusBadge}>
-                          <View style={[
-                            styles.statusDot,
-                            { backgroundColor: hall.is_open ? "#4CAF50" : "#f44336" }
-                          ]} />
-                          <Text style={[
-                            styles.statusText,
-                            { color: hall.is_open ? "#4CAF50" : "#f44336" }
-                          ]}>
-                            {hall.is_open ? "Open" : "Closed"}
-                          </Text>
-                        </View>
-                      )}
+                      <Text style={styles.trendingHallName}>{hall.dining_hall_name}</Text>
+                      <View style={styles.mealTypeBadge}>
+                        <Icon name="clock" size={12} color="#666" />
+                        <Text style={styles.mealTypeText}>{hall.meal_type}</Text>
+                        <Text style={styles.postDateText}>
+                          {new Date(hall.post_date).toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric' 
+                          })}
+                        </Text>
+                      </View>
                     </View>
                     <Icon name="chevron-right" size={20} color="#999" />
                   </View>
@@ -667,6 +662,22 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#000",
     marginBottom: 4,
+  },
+  mealTypeBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  mealTypeText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#666",
+    textTransform: "capitalize",
+  },
+  postDateText: {
+    fontSize: 14,
+    color: "#999",
+    marginLeft: 4,
   },
   statusBadge: {
     flexDirection: "row",

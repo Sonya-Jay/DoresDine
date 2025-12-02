@@ -582,6 +582,31 @@ export const fetchMyPosts = async (): Promise<Post[]> => {
   }
 };
 
+// Fetch trending dining halls (multiple posts for same hall/meal/day)
+export const fetchTrendingHalls = async (limit: number = 20): Promise<Array<{
+  dining_hall_name: string;
+  meal_type: string;
+  post_date: string;
+  post_count: number;
+  average_rating: number | null;
+  latest_post: string;
+}>> => {
+  try {
+    const response = await fetch(`${API_URL}/posts/trending?limit=${limit}`, {
+      headers: getHeaders(false),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch trending halls: ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching trending halls:", error);
+    throw error;
+  }
+};
+
 // Create a new post
 export const createPost = async (postData: PostData): Promise<Post> => {
   try {
@@ -1173,3 +1198,6 @@ export const searchDishAvailability = async (
     throw error;
   }
 };
+
+// Re-export getPhotoUrl for convenience
+export { getPhotoUrl } from "@/constants/API";

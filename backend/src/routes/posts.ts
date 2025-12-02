@@ -892,4 +892,46 @@ router.patch(
   }
 );
 
+// GET /posts/trending - Get trending dining halls based on multiple posts for same hall/meal/day
+router.get("/trending", async (req: Request, res: Response): Promise<void> => {
+  try {
+    const limit = parseInt(req.query.limit as string) || 20;
+    
+    // Find dining halls with multiple posts for the same hall, meal type, and date
+    const query = `
+      SELECT 
+        p.dining_hall_name,
+        p.meal_type,
+        DATE(p.created_at) as post_date,
+        COUNT(*) as post_count,
+        AVG(CAST(p.rating AS FLOAT)) as average_rating,
+        MAX(p.created_at) as latest_post
+      FROM posts p
+      WHERE p.dining_hall_name IS NOT NULL
+        AND p.meal_type IS NOT NULL
+        AND p.created_at >= NOW() - INTERVAL '7 days'
+      GROUP BY p.dining_hall_name, p.meal_type, DATE(p.created_at)
+      HAVING COUNT(*) > 1
+      ORDER BY COUNT(*) DESC, AVG(CAST(p.rating AS FLOAT)) DESC, MAX(p.created_at) DESC
+      LIMIT $1
+    `;
+    
+    const result = await pool.query(query, [limit]);
+    
+    const trendingHalls = result.rows.map(row => ({
+      dining_hall_name: row.dining_hall_name,
+      meal_type: row.meal_type,
+      post_date: row.post_date,
+      post_count: parseInt(row.post_count),
+      average_rating: row.average_rating ? parseFloat(row.average_rating) : null,
+      latest_post: row.latest_post
+    }));
+    
+    res.json(trendingHalls);
+  } catch (error: any) {
+    console.error("Error fetching trending halls:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 export default router;
