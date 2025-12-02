@@ -1,6 +1,7 @@
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
+  Modal,
   ScrollView,
   Text,
   TextInput,
@@ -23,6 +24,9 @@ interface HeaderProps {
   searchPlaceholder?: string;
   disableSearchModal?: boolean;
   dishSearchMode?: boolean; // New prop for dish search mode
+  showSortButton?: boolean; // Show sort button (for feed page)
+  sortBy?: "newest" | "rating-high" | "rating-low" | "likes"; // Current sort option
+  onSortChange?: (sort: "newest" | "rating-high" | "rating-low" | "likes") => void; // Callback when sort changes
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -36,10 +40,14 @@ const Header: React.FC<HeaderProps> = ({
   searchPlaceholder,
   disableSearchModal,
   dishSearchMode = false,
+  showSortButton = false,
+  sortBy = "newest",
+  onSortChange,
 }) => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [searchModalVisible, setSearchModalVisible] = useState(false);
+  const [showSortModal, setShowSortModal] = useState(false);
 
   const handleAddPress = () => {
     try {
@@ -170,6 +178,16 @@ const Header: React.FC<HeaderProps> = ({
               </TouchableOpacity>
             );
           })}
+          {showSortButton && (
+            <TouchableOpacity
+              style={styles.filterButton}
+              onPress={() => setShowSortModal(true)}
+            >
+              <Text style={styles.filterText}>
+                Sort By
+              </Text>
+            </TouchableOpacity>
+          )}
           {onFilterPress && (
             <TouchableOpacity
               style={styles.filterButton}
@@ -191,6 +209,83 @@ const Header: React.FC<HeaderProps> = ({
         searchText={searchText}
         onClose={() => setSearchModalVisible(false)}
       />
+
+      {/* Sort Modal */}
+      {showSortButton && (
+        <Modal
+          visible={showSortModal}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setShowSortModal(false)}
+        >
+          <TouchableOpacity
+            style={{
+              flex: 1,
+              backgroundColor: "rgba(0, 0, 0, 0.5)",
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+            activeOpacity={1}
+            onPress={() => setShowSortModal(false)}
+          >
+            <TouchableOpacity
+              activeOpacity={1}
+              onPress={(e) => e.stopPropagation()}
+              style={{
+                backgroundColor: "#fff",
+                borderRadius: 12,
+                padding: 20,
+                width: "80%",
+                maxWidth: 300,
+              }}
+            >
+              <Text style={{ fontSize: 18, fontWeight: "600", marginBottom: 20 }}>
+                Sort By
+              </Text>
+              
+              {[
+                { value: "newest", label: "Newest" },
+                { value: "rating-high", label: "Rating: High to Low" },
+                { value: "rating-low", label: "Rating: Low to High" },
+                { value: "likes", label: "Most Likes" },
+              ].map((option) => (
+                <TouchableOpacity
+                  key={option.value}
+                  onPress={() => {
+                    if (onSortChange) {
+                      onSortChange(option.value as "newest" | "rating-high" | "rating-low" | "likes");
+                    }
+                    setShowSortModal(false);
+                  }}
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    paddingVertical: 12,
+                    borderBottomWidth: 1,
+                    borderBottomColor: "#f0f0f0",
+                  }}
+                >
+                  <Icon
+                    name={sortBy === option.value ? "check" : "circle"}
+                    size={20}
+                    color={sortBy === option.value ? "#007AFF" : "#ccc"}
+                  />
+                  <Text
+                    style={{
+                      marginLeft: 12,
+                      fontSize: 16,
+                      color: sortBy === option.value ? "#007AFF" : "#000",
+                      fontWeight: sortBy === option.value ? "600" : "400",
+                    }}
+                  >
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </Modal>
+      )}
     </>
   );
 };

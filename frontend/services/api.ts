@@ -449,6 +449,7 @@ const transformPost = (backendPost: BackendPost): Post => {
     username: backendPost.username,
     dininghall: backendPost.dining_hall_name || "Unknown",
     date: formattedDate,
+    created_at: backendPost.created_at, // Keep timestamp for sorting
     visits: 1, // TODO: Get from backend if available
     images,
     notes: backendPost.caption || "",

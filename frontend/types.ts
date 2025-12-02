@@ -66,6 +66,7 @@ export interface Post {
   username: string;
   dininghall: string;
   date: string;
+  created_at?: string; // Timestamp for sorting by newest
   visits: number;
   images: ImageData[];
   notes: string;

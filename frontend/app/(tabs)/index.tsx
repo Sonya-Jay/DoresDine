@@ -10,7 +10,7 @@ import {
 import { Post } from "@/types";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -33,6 +33,7 @@ export default function FeedScreen() {
   const hasLoadedRef = useRef(false);
   const [headerHeight, setHeaderHeight] = useState(180);
   const [showFriendRecs, setShowFriendRecs] = useState(false);
+  const [sortBy, setSortBy] = useState<"newest" | "rating-high" | "rating-low" | "likes">("newest");
 
   // Initialize user on mount
   useEffect(() => {
@@ -124,6 +125,40 @@ export default function FeedScreen() {
     } as any);
   };
 
+  // Sort posts based on selected sort option
+  const sortedPosts = useMemo(() => {
+    const postsCopy = [...posts];
+    
+    switch (sortBy) {
+      case "newest":
+        return postsCopy.sort((a, b) => {
+          const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+          return dateB - dateA; // Newest first (descending)
+        });
+      case "rating-high":
+        return postsCopy.sort((a, b) => {
+          const ratingA = a.rating || 0;
+          const ratingB = b.rating || 0;
+          return ratingB - ratingA; // High to low
+        });
+      case "rating-low":
+        return postsCopy.sort((a, b) => {
+          const ratingA = a.rating || 0;
+          const ratingB = b.rating || 0;
+          return ratingA - ratingB; // Low to high
+        });
+      case "likes":
+        return postsCopy.sort((a, b) => {
+          const likesA = Number(a.likeCount) || 0;
+          const likesB = Number(b.likeCount) || 0;
+          return likesB - likesA; // Most likes first (descending)
+        });
+      default:
+        return postsCopy;
+    }
+  }, [posts, sortBy]);
+
   if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
@@ -191,6 +226,9 @@ export default function FeedScreen() {
           onFriendRecsPress={() => setShowFriendRecs(!showFriendRecs)}
           activeFriendRecs={showFriendRecs}
           hideSearch={true}
+          showSortButton={true}
+          sortBy={sortBy}
+          onSortChange={setSortBy}
         />
       </View>
 
@@ -201,7 +239,7 @@ export default function FeedScreen() {
           paddingTop: headerHeight,
           paddingBottom: bottomNavHeight,
         }}
-        data={posts}
+        data={sortedPosts}
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
           <PostCard
