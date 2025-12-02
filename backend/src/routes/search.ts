@@ -130,7 +130,7 @@ router.get(
 async function searchUsers(query: string): Promise<any[]> {
   try {
     const result = await pool.query(
-      `SELECT id, username, email, first_name, last_name, created_at
+      `SELECT id, username, email, first_name, last_name, profile_photo, created_at
        FROM users
        WHERE LOWER(username) LIKE $1 
           OR (first_name IS NOT NULL AND LOWER(first_name) LIKE $1)

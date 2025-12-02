@@ -1,6 +1,7 @@
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
+  Alert,
   Dimensions,
   Image,
   Modal,
@@ -8,15 +9,15 @@ import {
   Text,
   TouchableOpacity,
   View,
-  Alert,
 } from "react-native";
 import Icon from "react-native-vector-icons/Feather";
+import { getPhotoUrl } from "../constants/API";
+import { deletePost, flagPost, updatePost } from "../services/api";
 import styles from "../styles";
 import { ImageData, Post } from "../types";
 import CommentsModal from "./CommentsModal";
-import FlagPostModal from "./FlagPostModal";
 import EditPostModal from "./EditPostModal";
-import { flagPost, deletePost, updatePost } from "../services/api";
+import FlagPostModal from "./FlagPostModal";
 
 interface PostCardProps {
   post: Post;
@@ -196,9 +197,16 @@ const PostCard: React.FC<PostCardProps> = ({
     return (
       <View style={styles.post}>
         <View style={styles.userInfo}>
-          <View style={styles.avatar}>
-            <Icon name="user" size={24} color="#fff" />
-          </View>
+          {post.authorProfilePhoto ? (
+            <Image
+              source={{ uri: getPhotoUrl(post.authorProfilePhoto) }}
+              style={styles.avatar}
+            />
+          ) : (
+            <View style={styles.avatar}>
+              <Icon name="user" size={24} color="#fff" />
+            </View>
+          )}
 
           <View style={styles.userDetails}>
             <View style={styles.userHeader}>
@@ -244,9 +252,16 @@ const PostCard: React.FC<PostCardProps> = ({
   return (
     <View style={styles.post}>
       <View style={styles.userInfo}>
-        <View style={styles.avatar}>
-          <Icon name="user" size={24} color="#fff" />
-        </View>
+        {post.authorProfilePhoto ? (
+          <Image
+            source={{ uri: getPhotoUrl(post.authorProfilePhoto) }}
+            style={styles.avatar}
+          />
+        ) : (
+          <View style={styles.avatar}>
+            <Icon name="user" size={24} color="#fff" />
+          </View>
+        )}
 
         <View style={styles.userDetails}>
           <View style={styles.userHeader}>

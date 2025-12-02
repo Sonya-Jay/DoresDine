@@ -111,7 +111,7 @@ router.get("/dish-availability", async (req, res) => {
 // Helper functions
 async function searchUsers(query) {
     try {
-        const result = await db_1.default.query(`SELECT id, username, email, first_name, last_name, created_at
+        const result = await db_1.default.query(`SELECT id, username, email, first_name, last_name, profile_photo, created_at
        FROM users
        WHERE LOWER(username) LIKE $1 
           OR (first_name IS NOT NULL AND LOWER(first_name) LIKE $1)

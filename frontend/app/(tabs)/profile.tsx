@@ -1,24 +1,23 @@
 import BottomNav from "@/components/BottomNav";
+import FriendsListModal from "@/components/FriendsListModal";
 import Header from "@/components/Header";
 import PostCard from "@/components/PostCard";
-import FriendsListModal from "@/components/FriendsListModal";
-import { fetchMyPosts, toggleLikePost, getMe } from "@/services/api";
 import { API_ENDPOINTS, API_URL, getPhotoUrl } from "@/constants/API";
+import { fetchMyPosts, getMe, toggleLikePost } from "@/services/api";
 import { Post } from "@/types";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  Text,
-  View,
-  TouchableOpacity,
   Image,
   StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import Icon from "react-native-vector-icons/Feather";
 
 interface User {
   id: string;
@@ -59,6 +58,7 @@ export default function ProfileScreen() {
   const loadUserData = async () => {
     try {
       const userData = await getMe();
+      console.log('[Profile] Loaded user data:', { id: userData.id, username: userData.username, hasProfilePhoto: !!userData.profile_photo });
       setUser(userData);
     } catch (err: any) {
       console.error("Failed to load user data:", err);
@@ -128,6 +128,7 @@ export default function ProfileScreen() {
   useFocusEffect(
     useCallback(() => {
       if (hasLoadedRef.current) {
+        console.log('[Profile] Screen focused, refreshing data...');
         loadAllData();
       }
     }, [])
@@ -206,6 +207,12 @@ export default function ProfileScreen() {
             <Image
               source={{ uri: getPhotoUrl(user.profile_photo) }}
               style={styles.avatar}
+              onError={(e) => {
+                console.error('[Profile] Failed to load profile photo:', user.profile_photo, e.nativeEvent.error);
+              }}
+              onLoad={() => {
+                console.log('[Profile] Profile photo loaded successfully:', user.profile_photo);
+              }}
             />
           ) : (
             <View style={styles.avatarPlaceholder}>

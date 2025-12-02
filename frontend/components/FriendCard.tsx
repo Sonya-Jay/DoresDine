@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import { Text, TouchableOpacity, View, StyleSheet } from "react-native";
+import { Text, TouchableOpacity, View, StyleSheet, Image } from "react-native";
 import Icon from "react-native-vector-icons/Feather";
+import { getPhotoUrl } from "@/constants/API";
 
 interface Friend {
   id: string;
@@ -8,6 +9,7 @@ interface Friend {
   email: string;
   first_name?: string;
   last_name?: string;
+  profile_photo?: string;
   post_count?: number;
   follower_count?: number;
   followed_at?: string;
@@ -53,7 +55,14 @@ const FriendCard: React.FC<FriendCardProps> = ({ friend, onToggleFollow, onPress
       activeOpacity={0.7}
     >
       <View style={localStyles.avatarContainer}>
-        <Icon name="user" size={24} color="#fff" />
+        {friend.profile_photo ? (
+          <Image
+            source={{ uri: getPhotoUrl(friend.profile_photo) }}
+            style={localStyles.avatar}
+          />
+        ) : (
+          <Icon name="user" size={24} color="#fff" />
+        )}
       </View>
 
       <View style={localStyles.infoContainer}>
@@ -116,6 +125,12 @@ const localStyles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
+    overflow: "hidden",
+  },
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
   },
   infoContainer: {
     flex: 1,

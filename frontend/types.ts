@@ -48,6 +48,7 @@ export interface BackendPost {
   created_at: string;
   username: string;
   email: string;
+  author_profile_photo?: string;
   like_count: number;
   comment_count: number;
   is_liked: boolean;
@@ -72,6 +73,7 @@ export interface Post {
   id: number | string; // Backend ID (UUID string or number) - use for API calls
   author_id?: string; // User ID of the post author
   username: string;
+  authorProfilePhoto?: string; // Profile photo of the post author
   dininghall: string;
   date: string;
   created_at?: string; // Timestamp for sorting by newest
@@ -93,6 +95,7 @@ export interface Comment {
   id: string;
   text: string;
   username: string;
+  author_profile_photo?: string;
   created_at: string;
 }
 

@@ -16,7 +16,7 @@ router.get('/me', requireAuth, async (req: Request, res: Response): Promise<void
     }
 
     const result = await pool.query(
-      `SELECT id, username, email, first_name, last_name, email_verified, created_at FROM users WHERE id = $1 LIMIT 1`,
+      `SELECT id, username, email, first_name, last_name, email_verified, profile_photo, created_at FROM users WHERE id = $1 LIMIT 1`,
       [userId]
     );
 
@@ -62,7 +62,7 @@ router.get('/:id', async (req: Request, res: Response): Promise<void> => {
 
     // Select only columns that exist in the database
     const result = await pool.query(
-      'SELECT id, username, email, first_name, last_name, email_verified, created_at FROM users WHERE id = $1 LIMIT 1',
+      'SELECT id, username, email, first_name, last_name, email_verified, profile_photo, created_at FROM users WHERE id = $1 LIMIT 1',
       [id]
     );
 

@@ -2,13 +2,26 @@ import { getCurrentUser, getMe, logout, updateProfile } from '@/services/api';
 import { getPhotoUrl } from '@/constants/API';
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from 'expo-router';
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Alert, FlatList, Image, Modal, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import Icon from "react-native-vector-icons/Feather";
 
 export default function SettingsProfileScreen() {
   const router = useRouter();
   const [user, setUser] = useState(getCurrentUser());
+
+  // Load fresh user data on mount
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const userData = await getMe();
+        setUser(userData);
+      } catch (err) {
+        console.error('Failed to load user in settings:', err);
+      }
+    };
+    loadUser();
+  }, []);
 
   // Modal state
   const [modalVisible, setModalVisible] = useState(false);
@@ -46,10 +59,15 @@ export default function SettingsProfileScreen() {
       const { uploadPhoto } = await import("@/services/api");
       const fileName = asset.fileName || `profile_${Date.now()}.jpg`;
       const storageKey = await uploadPhoto(asset.uri, fileName);
+      console.log('[Settings] Profile photo uploaded, storage_key:', storageKey);
       await updateProfile({ profile_photo: storageKey });
+      console.log('[Settings] Profile updated, fetching user data...');
       const updatedUser = await getMe();
+      console.log('[Settings] Updated user data:', { id: updatedUser.id, profile_photo: updatedUser.profile_photo });
       setUser(updatedUser);
+      Alert.alert("Success", "Profile picture updated successfully!");
     } catch (err: any) {
+      console.error('[Settings] Error updating profile photo:', err);
       Alert.alert("Error", err.message || "Failed to upload photo");
     }
   };

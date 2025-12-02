@@ -23,6 +23,7 @@ router.get("/", async (req: Request, res: Response): Promise<void> => {
         p.flag_count,
         u.username,
         u.email,
+        u.profile_photo as author_profile_photo,
         COALESCE(
           JSON_AGG(
             JSON_BUILD_OBJECT(
@@ -64,7 +65,7 @@ router.get("/", async (req: Request, res: Response): Promise<void> => {
       ) c ON p.id = c.post_id
       LEFT JOIN likes ul ON p.id = ul.post_id AND ul.user_id = $1
       WHERE p.is_flagged = false OR p.is_flagged IS NULL
-      GROUP BY p.id, p.author_id, p.caption, p.rating, p.menu_items, p.dining_hall_name, p.meal_type, p.created_at, p.is_flagged, p.flag_count, u.username, u.email, l.like_count, c.comment_count, ul.user_id
+      GROUP BY p.id, p.author_id, p.caption, p.rating, p.menu_items, p.dining_hall_name, p.meal_type, p.created_at, p.is_flagged, p.flag_count, u.username, u.email, u.profile_photo, l.like_count, c.comment_count, ul.user_id
       ORDER BY p.created_at DESC
     `;
 
@@ -136,6 +137,7 @@ router.get("/me", async (req: Request, res: Response): Promise<void> => {
         p.flag_count,
         u.username,
         u.email,
+        u.profile_photo as author_profile_photo,
         COALESCE(
           JSON_AGG(
             JSON_BUILD_OBJECT(
@@ -178,7 +180,7 @@ router.get("/me", async (req: Request, res: Response): Promise<void> => {
       ) c ON p.id = c.post_id
       LEFT JOIN likes ul ON p.id = ul.post_id AND ul.user_id = $1
       WHERE p.author_id = $1
-      GROUP BY p.id, p.author_id, p.caption, p.rating, p.menu_items, p.dining_hall_name, p.meal_type, p.created_at, p.is_flagged, p.flag_count, u.username, u.email, l.like_count, c.comment_count, ul.user_id
+      GROUP BY p.id, p.author_id, p.caption, p.rating, p.menu_items, p.dining_hall_name, p.meal_type, p.created_at, p.is_flagged, p.flag_count, u.username, u.email, u.profile_photo, l.like_count, c.comment_count, ul.user_id
       ORDER BY p.created_at DESC
     `;    const result = await pool.query(query, [userId]);
     // Parse numeric values from strings
@@ -225,6 +227,7 @@ router.get(
         p.flag_count,
         u.username,
         u.email,
+        u.profile_photo as author_profile_photo,
         COALESCE(
           JSON_AGG(
             JSON_BUILD_OBJECT(
@@ -268,7 +271,7 @@ router.get(
       WHERE p.author_id = $1 AND (
         p.author_id = $2 OR p.is_flagged = false OR p.is_flagged IS NULL
       )
-      GROUP BY p.id, p.author_id, p.caption, p.rating, p.menu_items, p.dining_hall_name, p.meal_type, p.created_at, p.is_flagged, p.flag_count, u.username, u.email, l.like_count, c.comment_count, ul.user_id
+      GROUP BY p.id, p.author_id, p.caption, p.rating, p.menu_items, p.dining_hall_name, p.meal_type, p.created_at, p.is_flagged, p.flag_count, u.username, u.email, u.profile_photo, l.like_count, c.comment_count, ul.user_id
       ORDER BY p.created_at DESC
     `;
 
@@ -604,7 +607,8 @@ router.get(
         c.text,
         c.created_at,
         u.username,
-        u.email
+        u.email,
+        u.profile_photo as author_profile_photo
       FROM comments c
       JOIN users u ON c.author_id = u.id
       WHERE c.post_id = $1

@@ -1,22 +1,24 @@
-import React, { useCallback, useEffect, useState, useRef } from "react";
+import { addComment, fetchComments } from "@/services/api";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
+  Animated,
+  Image,
   KeyboardAvoidingView,
   Modal,
+  PanResponder,
   Platform,
   ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
-  StyleSheet,
-  ActivityIndicator,
-  PanResponder,
-  Animated,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/Feather";
-import { fetchComments, addComment } from "@/services/api";
+import { getPhotoUrl } from "../constants/API";
 import { Comment } from "../types";
 interface CommentsModalProps {
   visible: boolean;
@@ -232,9 +234,16 @@ const CommentsModal: React.FC<CommentsModalProps> = ({
           ) : (
             comments.map((comment) => (
               <View key={comment.id} style={localStyles.commentItem}>
-                <View style={localStyles.commentAvatar}>
-                  <Icon name="user" size={20} color="#666" />
-                </View>
+                {comment.author_profile_photo ? (
+                  <Image
+                    source={{ uri: getPhotoUrl(comment.author_profile_photo) }}
+                    style={localStyles.commentAvatar}
+                  />
+                ) : (
+                  <View style={localStyles.commentAvatar}>
+                    <Icon name="user" size={20} color="#666" />
+                  </View>
+                )}
                 <View style={localStyles.commentContent}>
                   <View style={localStyles.commentHeader}>
                     <Text style={localStyles.commentUsername}>{comment.username}</Text>

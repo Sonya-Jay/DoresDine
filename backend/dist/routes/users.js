@@ -16,7 +16,7 @@ router.get('/me', auth_1.requireAuth, async (req, res) => {
             res.status(401).json({ error: 'Authentication required' });
             return;
         }
-        const result = await db_1.default.query(`SELECT id, username, email, first_name, last_name, email_verified, created_at FROM users WHERE id = $1 LIMIT 1`, [userId]);
+        const result = await db_1.default.query(`SELECT id, username, email, first_name, last_name, email_verified, profile_photo, created_at FROM users WHERE id = $1 LIMIT 1`, [userId]);
         if (result.rows.length === 0) {
             res.status(404).json({ error: 'User not found' });
             return;
@@ -50,7 +50,7 @@ router.get('/:id', async (req, res) => {
         const { id } = req.params;
         console.log(`[Users] Fetching user by ID: ${id}`);
         // Select only columns that exist in the database
-        const result = await db_1.default.query('SELECT id, username, email, first_name, last_name, email_verified, created_at FROM users WHERE id = $1 LIMIT 1', [id]);
+        const result = await db_1.default.query('SELECT id, username, email, first_name, last_name, email_verified, profile_photo, created_at FROM users WHERE id = $1 LIMIT 1', [id]);
         if (result.rows.length === 0) {
             console.log(`[Users] User not found: ${id}`);
             res.status(404).json({ error: 'User not found' });

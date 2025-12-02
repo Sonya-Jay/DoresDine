@@ -24,6 +24,7 @@ router.get("/", async (req, res) => {
         p.flag_count,
         u.username,
         u.email,
+        u.profile_photo as author_profile_photo,
         COALESCE(
           JSON_AGG(
             JSON_BUILD_OBJECT(
@@ -65,7 +66,7 @@ router.get("/", async (req, res) => {
       ) c ON p.id = c.post_id
       LEFT JOIN likes ul ON p.id = ul.post_id AND ul.user_id = $1
       WHERE p.is_flagged = false OR p.is_flagged IS NULL
-      GROUP BY p.id, p.author_id, p.caption, p.rating, p.menu_items, p.dining_hall_name, p.meal_type, p.created_at, p.is_flagged, p.flag_count, u.username, u.email, l.like_count, c.comment_count, ul.user_id
+      GROUP BY p.id, p.author_id, p.caption, p.rating, p.menu_items, p.dining_hall_name, p.meal_type, p.created_at, p.is_flagged, p.flag_count, u.username, u.email, u.profile_photo, l.like_count, c.comment_count, ul.user_id
       ORDER BY p.created_at DESC
     `;
         const result = await db_1.default.query(query, [userId || null]);
@@ -133,6 +134,7 @@ router.get("/me", async (req, res) => {
         p.flag_count,
         u.username,
         u.email,
+        u.profile_photo as author_profile_photo,
         COALESCE(
           JSON_AGG(
             JSON_BUILD_OBJECT(
@@ -175,7 +177,7 @@ router.get("/me", async (req, res) => {
       ) c ON p.id = c.post_id
       LEFT JOIN likes ul ON p.id = ul.post_id AND ul.user_id = $1
       WHERE p.author_id = $1
-      GROUP BY p.id, p.author_id, p.caption, p.rating, p.menu_items, p.dining_hall_name, p.meal_type, p.created_at, p.is_flagged, p.flag_count, u.username, u.email, l.like_count, c.comment_count, ul.user_id
+      GROUP BY p.id, p.author_id, p.caption, p.rating, p.menu_items, p.dining_hall_name, p.meal_type, p.created_at, p.is_flagged, p.flag_count, u.username, u.email, u.profile_photo, l.like_count, c.comment_count, ul.user_id
       ORDER BY p.created_at DESC
     `;
         const result = await db_1.default.query(query, [userId]);
@@ -215,6 +217,7 @@ router.get("/user/:userId", async (req, res) => {
         p.flag_count,
         u.username,
         u.email,
+        u.profile_photo as author_profile_photo,
         COALESCE(
           JSON_AGG(
             JSON_BUILD_OBJECT(
@@ -258,7 +261,7 @@ router.get("/user/:userId", async (req, res) => {
       WHERE p.author_id = $1 AND (
         p.author_id = $2 OR p.is_flagged = false OR p.is_flagged IS NULL
       )
-      GROUP BY p.id, p.author_id, p.caption, p.rating, p.menu_items, p.dining_hall_name, p.meal_type, p.created_at, p.is_flagged, p.flag_count, u.username, u.email, l.like_count, c.comment_count, ul.user_id
+      GROUP BY p.id, p.author_id, p.caption, p.rating, p.menu_items, p.dining_hall_name, p.meal_type, p.created_at, p.is_flagged, p.flag_count, u.username, u.email, u.profile_photo, l.like_count, c.comment_count, ul.user_id
       ORDER BY p.created_at DESC
     `;
         const result = await db_1.default.query(query, [userId, currentUserId || null]);
@@ -526,7 +529,8 @@ router.get("/:id/comments", async (req, res) => {
         c.text,
         c.created_at,
         u.username,
-        u.email
+        u.email,
+        u.profile_photo as author_profile_photo
       FROM comments c
       JOIN users u ON c.author_id = u.id
       WHERE c.post_id = $1
@@ -746,6 +750,44 @@ router.patch("/:id", async (req, res) => {
     }
     finally {
         client.release();
+    }
+});
+// GET /posts/trending - Get trending dining halls based on multiple posts for same hall/meal/day
+router.get("/trending", async (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit) || 20;
+        // Find dining halls with multiple posts for the same hall, meal type, and date
+        const query = `
+      SELECT 
+        p.dining_hall_name,
+        p.meal_type,
+        DATE(p.created_at) as post_date,
+        COUNT(*) as post_count,
+        AVG(CAST(p.rating AS FLOAT)) as average_rating,
+        MAX(p.created_at) as latest_post
+      FROM posts p
+      WHERE p.dining_hall_name IS NOT NULL
+        AND p.meal_type IS NOT NULL
+        AND p.created_at >= NOW() - INTERVAL '7 days'
+      GROUP BY p.dining_hall_name, p.meal_type, DATE(p.created_at)
+      HAVING COUNT(*) > 1
+      ORDER BY COUNT(*) DESC, AVG(CAST(p.rating AS FLOAT)) DESC, MAX(p.created_at) DESC
+      LIMIT $1
+    `;
+        const result = await db_1.default.query(query, [limit]);
+        const trendingHalls = result.rows.map(row => ({
+            dining_hall_name: row.dining_hall_name,
+            meal_type: row.meal_type,
+            post_date: row.post_date,
+            post_count: parseInt(row.post_count),
+            average_rating: row.average_rating ? parseFloat(row.average_rating) : null,
+            latest_post: row.latest_post
+        }));
+        res.json(trendingHalls);
+    }
+    catch (error) {
+        console.error("Error fetching trending halls:", error);
+        res.status(500).json({ error: "Internal server error" });
     }
 });
 exports.default = router;

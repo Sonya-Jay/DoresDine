@@ -470,6 +470,7 @@ const transformPost = (backendPost: BackendPost): Post => {
     id: backendPost.id, // Keep original ID (string UUID or number)
     author_id: backendPost.author_id, // Include author ID for navigation
     username: backendPost.username,
+    authorProfilePhoto: backendPost.author_profile_photo || undefined,
     dininghall: backendPost.dining_hall_name || "Unknown",
     date: formattedDate,
     created_at: backendPost.created_at, // Keep timestamp for sorting
@@ -987,6 +988,7 @@ export interface SearchUser {
   email: string;
   first_name?: string;
   last_name?: string;
+  profile_photo?: string;
   created_at: string;
 }
 

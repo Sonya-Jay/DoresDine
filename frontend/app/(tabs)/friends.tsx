@@ -9,6 +9,7 @@ import {
   StyleSheet,
   LayoutChangeEvent,
   ScrollView,
+  Image,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
@@ -41,12 +42,14 @@ export default function FriendsScreen() {
   const [friends, setFriends] = useState<Friend[]>([]);
   const [suggestions, setSuggestions] = useState<Friend[]>([]);
   const [activityPosts, setActivityPosts] = useState<Post[]>([]);
+  const [showRecommended, setShowRecommended] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchResults, setSearchResults] = useState<SearchUser[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const hasLoadedRef = useRef(false);
 
   const getAuthHeaders = async () => {
     const token = await AsyncStorage.getItem("authToken");
@@ -110,10 +113,13 @@ export default function FriendsScreen() {
     }
   };
 
-  const fetchActivity = async () => {
+  const fetchActivity = async (recommended: boolean = false) => {
     try {
       const headers = await getAuthHeaders();
-      const response = await fetch(`${API_URL}${API_ENDPOINTS.FOLLOWS_ACTIVITY}`, {
+      const url = recommended 
+        ? `${API_URL}${API_ENDPOINTS.FOLLOWS_ACTIVITY}?recommended=true`
+        : `${API_URL}${API_ENDPOINTS.FOLLOWS_ACTIVITY}`;
+      const response = await fetch(url, {
         headers,
       });
 
@@ -150,6 +156,7 @@ export default function FriendsScreen() {
           likeCount: Number(post.like_count) || 0,
           commentCount: Number(post.comment_count) || 0,
           isLiked: post.is_liked || false,
+          authorProfilePhoto: post.author_profile_photo || undefined,
         };
       });
 
@@ -163,7 +170,7 @@ export default function FriendsScreen() {
   const loadData = async () => {
     try {
       setError(null);
-      await Promise.all([fetchFriends(), fetchSuggestions(), fetchActivity()]);
+      await Promise.all([fetchFriends(), fetchSuggestions(), fetchActivity(showRecommended)]);
     } catch (err: any) {
       console.error("Error loading data:", err);
       setError(err.message || "Failed to load data");
@@ -175,7 +182,15 @@ export default function FriendsScreen() {
 
   useEffect(() => {
     loadData();
+    hasLoadedRef.current = true;
   }, []);
+
+  // Refetch activity when filter changes
+  useEffect(() => {
+    if (hasLoadedRef.current) {
+      fetchActivity(showRecommended);
+    }
+  }, [showRecommended]);
 
   useFocusEffect(
     useCallback(() => {
@@ -233,6 +248,20 @@ export default function FriendsScreen() {
     loadData();
   };
 
+  const handleToggleRecommended = async () => {
+    const newValue = !showRecommended;
+    setShowRecommended(newValue);
+    setRefreshing(true);
+    try {
+      await fetchActivity(newValue);
+    } catch (err: any) {
+      console.error("Error fetching recommended activity:", err);
+      setError(err.message);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const handleToggleFollow = async (userId: string, isCurrentlyFollowing: boolean) => {
     try {
       const headers = await getAuthHeaders();
@@ -253,7 +282,7 @@ export default function FriendsScreen() {
       await Promise.all([
         fetchFriends(),
         fetchSuggestions(),
-        fetchActivity(), // Refresh activity feed to show new posts from followed user
+        fetchActivity(showRecommended), // Refresh activity feed to show new posts from followed user
       ]);
     } catch (err: any) {
       console.error("Error toggling follow:", err);
@@ -381,6 +410,34 @@ export default function FriendsScreen() {
 
   const renderActivityFeed = () => (
     <>
+      {/* Filter Toggle Button */}
+      <View style={styles.filterContainer}>
+        <TouchableOpacity
+          style={[styles.filterButton, !showRecommended && styles.filterButtonActive]}
+          onPress={() => {
+            if (showRecommended) {
+              handleToggleRecommended();
+            }
+          }}
+        >
+          <Text style={[styles.filterButtonText, !showRecommended && styles.filterButtonTextActive]}>
+            All
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.filterButton, showRecommended && styles.filterButtonActive]}
+          onPress={() => {
+            if (!showRecommended) {
+              handleToggleRecommended();
+            }
+          }}
+        >
+          <Text style={[styles.filterButtonText, showRecommended && styles.filterButtonTextActive]}>
+            Friend Rec
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       {activityPosts.length > 0 ? (
         activityPosts.map((post) => (
           <PostCard
@@ -397,6 +454,8 @@ export default function FriendsScreen() {
           <Text style={styles.emptyText}>
             {friends.length === 0
               ? "Follow friends to see their dining posts here!"
+              : showRecommended
+              ? "No recommended posts from friends yet."
               : "Your friends haven't posted anything yet."}
           </Text>
         </View>
@@ -461,7 +520,14 @@ export default function FriendsScreen() {
                     activeOpacity={0.7}
                   >
                     <View style={styles.searchResultAvatar}>
-                      <Icon name="user" size={20} color="#fff" />
+                      {user.profile_photo ? (
+                        <Image
+                          source={{ uri: getPhotoUrl(user.profile_photo) }}
+                          style={styles.searchResultAvatarImage}
+                        />
+                      ) : (
+                        <Icon name="user" size={20} color="#fff" />
+                      )}
                     </View>
                     <View style={styles.searchResultInfo}>
                       <Text style={styles.searchResultName}>
@@ -563,7 +629,14 @@ export default function FriendsScreen() {
                     activeOpacity={0.7}
                   >
                     <View style={styles.searchResultAvatar}>
-                      <Icon name="user" size={20} color="#fff" />
+                      {user.profile_photo ? (
+                        <Image
+                          source={{ uri: getPhotoUrl(user.profile_photo) }}
+                          style={styles.searchResultAvatarImage}
+                        />
+                      ) : (
+                        <Icon name="user" size={20} color="#fff" />
+                      )}
                     </View>
                     <View style={styles.searchResultInfo}>
                       <Text style={styles.searchResultName}>
@@ -724,6 +797,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
+    overflow: 'hidden',
+  },
+  searchResultAvatarImage: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
   },
   searchResultInfo: {
     flex: 1,
@@ -755,5 +834,35 @@ const styles = StyleSheet.create({
   searchDropdownEmptyText: {
     fontSize: 14,
     color: '#999',
+  },
+  filterContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    gap: 8,
+  },
+  filterButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#f5f5f5',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  filterButtonActive: {
+    backgroundColor: '#D4A574',
+    borderColor: '#D4A574',
+  },
+  filterButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#666',
+  },
+  filterButtonTextActive: {
+    color: '#fff',
+    fontWeight: '600',
   },
 });

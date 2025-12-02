@@ -5,6 +5,7 @@ export interface User {
   first_name?: string;
   last_name?: string;
   email_verified?: boolean;
+  profile_photo?: string;
   created_at: Date;
 }
 

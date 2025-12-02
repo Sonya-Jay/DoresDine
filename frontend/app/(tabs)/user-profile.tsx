@@ -307,7 +307,6 @@ export default function UserProfileScreen() {
             post={item}
             onLike={handleLike}
             onCommentCountUpdate={handleCommentCountUpdate}
-            onPostFlagged={handlePostFlagged}
           />
         )}
         ListHeaderComponent={renderProfileHeader}

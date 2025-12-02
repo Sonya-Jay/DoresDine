@@ -22,6 +22,7 @@ router.get("/following", async (req: Request, res: Response): Promise<void> => {
         u.email,
         u.first_name,
         u.last_name,
+        u.profile_photo,
         f.created_at as followed_at
       FROM follows f
       JOIN users u ON f.following_id = u.id
@@ -59,6 +60,7 @@ router.get("/followers", async (req: Request, res: Response): Promise<void> => {
         u.email,
         u.first_name,
         u.last_name,
+        u.profile_photo,
         f.created_at as followed_at
       FROM follows f
       JOIN users u ON f.follower_id = u.id
@@ -75,6 +77,7 @@ router.get("/followers", async (req: Request, res: Response): Promise<void> => {
 });
 
 // GET /follows/activity - Get recent posts from users the current user is following
+// Optional query param: ?recommended=true to filter posts with rating >= 6.8
 router.get("/activity", async (req: Request, res: Response): Promise<void> => {
   try {
     // Get userId from JWT token (attached by middleware) or fallback to header
@@ -83,6 +86,9 @@ router.get("/activity", async (req: Request, res: Response): Promise<void> => {
       res.status(401).json({ error: "Authentication required" });
       return;
     }
+
+    const recommended = req.query.recommended === 'true' || req.query.recommended === '1';
+    const ratingFilter = recommended ? 'AND p.rating >= 6.8' : '';
 
     const query = `
       SELECT
@@ -98,6 +104,7 @@ router.get("/activity", async (req: Request, res: Response): Promise<void> => {
         u.email,
         u.first_name,
         u.last_name,
+        u.profile_photo as author_profile_photo,
         COALESCE(
           JSON_AGG(
             JSON_BUILD_OBJECT(
@@ -127,8 +134,8 @@ router.get("/activity", async (req: Request, res: Response): Promise<void> => {
         GROUP BY post_id
       ) c ON p.id = c.post_id
       LEFT JOIN likes ul ON p.id = ul.post_id AND ul.user_id = $1
-      WHERE f.follower_id = $1 AND p.rating >= 6.7
-      GROUP BY p.id, p.author_id, p.caption, p.rating, p.menu_items, p.dining_hall_name, p.meal_type, p.created_at, u.username, u.email, u.first_name, u.last_name, l.like_count, c.comment_count, ul.user_id
+      WHERE f.follower_id = $1 ${ratingFilter}
+      GROUP BY p.id, p.author_id, p.caption, p.rating, p.menu_items, p.dining_hall_name, p.meal_type, p.created_at, u.username, u.email, u.first_name, u.last_name, u.profile_photo, l.like_count, c.comment_count, ul.user_id
       ORDER BY p.created_at DESC
       LIMIT 50
     `;
@@ -162,6 +169,7 @@ router.get(
         u.email,
         u.first_name,
         u.last_name,
+        u.profile_photo,
         COUNT(DISTINCT p.id) as post_count,
         COUNT(DISTINCT f.follower_id) as follower_count
       FROM users u
@@ -173,7 +181,7 @@ router.get(
           FROM follows
           WHERE follower_id = $1
         )
-      GROUP BY u.id, u.username, u.email, u.first_name, u.last_name
+      GROUP BY u.id, u.username, u.email, u.first_name, u.last_name, u.profile_photo
       ORDER BY post_count DESC, follower_count DESC
       LIMIT 20
     `;
