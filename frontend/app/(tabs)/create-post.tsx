@@ -1,7 +1,8 @@
 import { useRouter, useLocalSearchParams } from "expo-router";
 import React, { useState, useEffect } from "react";
-import { View, Alert, ScrollView, Text, TouchableOpacity, StyleSheet, TextInput } from "react-native";
+import { View, Alert, ScrollView, Text, TouchableOpacity, StyleSheet, TextInput, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import DateTimePicker from '@react-native-community/datetimepicker';
 import Icon from "react-native-vector-icons/Feather";
 import { DINING_HALLS, MEAL_TYPES, MealType } from "@/data/diningHalls";
 import { DiningHall, PostData, RatedItem } from "@/types";
@@ -20,6 +21,8 @@ export default function CreatePostScreen() {
   
   const [selectedDiningHall, setSelectedDiningHall] = useState<DiningHall | null>(null);
   const [selectedMealType, setSelectedMealType] = useState<MealType | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [menuItems, setMenuItems] = useState<string[]>([]);
   const [ratedItems, setRatedItems] = useState<RatedItem[]>([]);
   const [showAddDishInput, setShowAddDishInput] = useState(false);
@@ -49,6 +52,7 @@ export default function CreatePostScreen() {
       // Cleanup function - reset all state when unmounting
       setSelectedDiningHall(null);
       setSelectedMealType(null);
+      setSelectedDate(new Date());
       setMenuItems([]);
       setRatedItems([]);
       setShowAddDishInput(false);
@@ -109,7 +113,7 @@ export default function CreatePostScreen() {
     const postData: PostData = {
       restaurantId: selectedDiningHall.id.toString(),
       restaurantName: selectedDiningHall.name,
-      date: new Date().toISOString().split("T")[0],
+      date: selectedDate.toISOString().split("T")[0],
       mealType: selectedMealType || "Lunch",
       menuItems: ratedItems.map(item => item.menuItemName), // Keep for backward compatibility
       rating: overallRating ? Math.round(overallRating * 10) / 10 : undefined, // Overall rating as average
@@ -134,6 +138,7 @@ export default function CreatePostScreen() {
       // Reset all form fields after successful post
       setSelectedDiningHall(null);
       setSelectedMealType(null);
+      setSelectedDate(new Date());
       setMenuItems([]);
       setRatedItems([]);
       setShowAddDishInput(false);
@@ -190,13 +195,40 @@ export default function CreatePostScreen() {
           />
         </View>
 
-        <Text style={styles.dateText}>
-          {new Date().toLocaleDateString("en-US", {
-            month: "2-digit",
-            day: "2-digit",
-            year: "numeric",
-          })}
-        </Text>
+        {/* Date Selector */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Date</Text>
+          <TouchableOpacity 
+            style={styles.dateSelector}
+            onPress={() => setShowDatePicker(true)}
+          >
+            <Icon name="calendar" size={18} color="#666" />
+            <Text style={styles.dateSelectorText}>
+              {selectedDate.toLocaleDateString("en-US", {
+                month: "long",
+                day: "numeric",
+                year: "numeric",
+              })}
+            </Text>
+            <Icon name="chevron-down" size={18} color="#666" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Date Picker */}
+        {showDatePicker && (
+          <DateTimePicker
+            value={selectedDate}
+            mode="date"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={(event, date) => {
+              setShowDatePicker(Platform.OS === 'ios');
+              if (date) {
+                setSelectedDate(date);
+              }
+            }}
+            maximumDate={new Date()}
+          />
+        )}
 
         {/* Rated Dishes Section */}
         <View style={styles.section}>
@@ -372,8 +404,21 @@ const styles = StyleSheet.create({
   },
   dateText: {
     fontSize: 14,
-    color: "#666",
+    color: "#666\",
     marginBottom: 16,
+  },
+  dateSelector: {
+    backgroundColor: "#f8f8f8",
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  dateSelectorText: {
+    flex: 1,
+    fontSize: 16,
+    color: "#000",
   },
   footer: {
     paddingHorizontal: 20,
