@@ -208,14 +208,10 @@ export default function SettingsProfileScreen() {
             <Text style={styles.sectionTitle}>Basic Personal Info</Text>
             <View style={styles.infoRow}><Text style={styles.label}>Name:</Text><Text style={styles.value}>{user ? `${user.first_name || ''} ${user.last_name || ''}`.trim() : ''}</Text><TouchableOpacity style={styles.editButton} onPress={() => openEditModal('Name', `${user?.first_name || ''} ${user?.last_name || ''}`.trim())}><Text style={styles.editButtonText}>Edit</Text></TouchableOpacity></View>
             <View style={styles.infoRow}><Text style={styles.label}>Username:</Text><Text style={styles.value}>{user?.username || ''}</Text><TouchableOpacity style={styles.editButton} onPress={() => openEditModal('Username', user?.username || '')}><Text style={styles.editButtonText}>Edit</Text></TouchableOpacity></View>
-            <View style={styles.infoRow}><Text style={styles.label}>Bio:</Text><Text style={styles.value}>{user?.bio || ''}</Text><TouchableOpacity style={styles.editButton} onPress={() => openEditModal('Bio', user?.bio || '')}><Text style={styles.editButtonText}>Edit</Text></TouchableOpacity></View>
-            <View style={styles.infoRow}><Text style={styles.label}>Gender:</Text><Text style={styles.value}>{user?.gender || '—'}</Text><TouchableOpacity style={styles.editButton} onPress={() => openEditModal('Gender', user?.gender || '')}><Text style={styles.editButtonText}>Edit</Text></TouchableOpacity></View>
-            <View style={styles.infoRow}><Text style={styles.label}>Birthday:</Text><Text style={styles.value}>{user?.birthday || '—'}</Text><TouchableOpacity style={styles.editButton} onPress={() => openEditModal('Birthday', user?.birthday || '')}><Text style={styles.editButtonText}>Edit</Text></TouchableOpacity></View>
 
             {/* Contact Info */}
             <Text style={styles.sectionTitle}>Contact Info</Text>
             <View style={styles.infoRow}><Text style={styles.label}>Email:</Text><Text style={styles.value}>{user?.email || ''}</Text><TouchableOpacity style={styles.editButton} onPress={() => openEditModal('Email', user?.email || '')}><Text style={styles.editButtonText}>Edit</Text></TouchableOpacity></View>
-            <View style={styles.infoRow}><Text style={styles.label}>Phone:</Text><Text style={styles.value}>{user?.phone || '—'}</Text><TouchableOpacity style={styles.editButton} onPress={() => openEditModal('Phone', user?.phone || '')}><Text style={styles.editButtonText}>Edit</Text></TouchableOpacity></View>
 
             {/* Preferences */}
             <Text style={styles.sectionTitle}>Preferences</Text>
