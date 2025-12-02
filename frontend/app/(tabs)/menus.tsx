@@ -218,9 +218,22 @@ export default function MenusScreen() {
           paddingBottom: bottomNavHeight,
         }}
         ListHeaderComponent={
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Dining Facilities</Text>
-          </View>
+          <>
+            {/* Compare Button */}
+            <TouchableOpacity
+              style={styles.compareButton}
+              onPress={() => router.push("/(tabs)/compare-halls")}
+              activeOpacity={0.8}
+            >
+              <Icon name="columns" size={20} color="#D4A574" />
+              <Text style={styles.compareButtonText}>Compare Dining Halls</Text>
+              <Icon name="chevron-right" size={20} color="#D4A574" />
+            </TouchableOpacity>
+            
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Dining Facilities</Text>
+            </View>
+          </>
         }
         data={filteredHalls}
         keyExtractor={(item) => item.id.toString()}
@@ -286,6 +299,30 @@ export default function MenusScreen() {
 }
 
 const styles = StyleSheet.create({
+  compareButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFFBF5",
+    borderRadius: 12,
+    padding: 16,
+    marginHorizontal: 20,
+    marginBottom: 16,
+    borderWidth: 1.5,
+    borderColor: "#D4A574",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  compareButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#D4A574",
+    marginLeft: 10,
+    marginRight: 10,
+  },
   sectionHeader: {
     paddingHorizontal: 20,
     paddingTop: 8,
