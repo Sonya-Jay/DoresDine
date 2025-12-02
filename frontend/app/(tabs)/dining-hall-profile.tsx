@@ -102,6 +102,22 @@ export default function DiningHallProfileScreen() {
     setPosts((prev) => prev.map((p) => (String(p.id) === String(postId) ? { ...p, commentCount: newCount } : p)));
   };
 
+  const handlePostFlagged = (postId: number | string) => {
+    setPosts((prev) => prev.filter((p) => String(p.id) !== String(postId)));
+  };
+
+  const handlePostDeleted = (postId: number | string) => {
+    setPosts((prev) => prev.filter((p) => String(p.id) !== String(postId)));
+  };
+
+  const handlePostUpdated = (postId: number | string, updates: any) => {
+    setPosts((prev) =>
+      prev.map((p) => (String(p.id) === String(postId) ? { ...p, ...updates } : p))
+    );
+    // Reload to get fresh data
+    loadPosts();
+  };
+
   // Get unique meal types from posts
   const mealTypes = useMemo(() => {
     const types = new Set<string>();
@@ -322,6 +338,8 @@ export default function DiningHallProfileScreen() {
             onLike={handleLike}
             onCommentCountUpdate={handleCommentCountUpdate}
             onPostFlagged={handlePostFlagged}
+            onPostDeleted={handlePostDeleted}
+            onPostUpdated={handlePostUpdated}
           />
         )}
         ListHeaderComponent={renderProfileHeader}
