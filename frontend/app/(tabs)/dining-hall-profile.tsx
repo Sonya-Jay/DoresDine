@@ -1,7 +1,7 @@
 import BottomNav from "@/components/BottomNav";
 import PostCard from "@/components/PostCard";
 import FilterModal, { FilterOptions } from "@/components/FilterModal";
-import { fetchPostsByDiningHall, toggleLikePost } from "@/services/api";
+import { fetchPostsByDiningHall, toggleLikePost, getCurrentUser } from "@/services/api";
 import { Post } from "@/types";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -24,6 +24,7 @@ export default function DiningHallProfileScreen() {
   const insets = useSafeAreaInsets();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [headerComponentHeight, setHeaderComponentHeight] = useState(180);
@@ -59,10 +60,15 @@ export default function DiningHallProfileScreen() {
   };
 
   useEffect(() => {
-    if (diningHallName && !hasLoadedRef.current) {
-      loadPosts();
-      hasLoadedRef.current = true;
-    }
+    const loadUserIdAndPosts = async () => {
+      const user = getCurrentUser();
+      setCurrentUserId(user?.id || null);
+      if (diningHallName && !hasLoadedRef.current) {
+        loadPosts();
+        hasLoadedRef.current = true;
+      }
+    };
+    loadUserIdAndPosts();
   }, [diningHallName]);
 
   // Refresh data when screen comes into focus
@@ -117,6 +123,26 @@ export default function DiningHallProfileScreen() {
     // Reload to get fresh data
     loadPosts();
   };
+
+  // Calculate averages
+  const historicalAverage = useMemo(() => {
+    if (posts.length === 0) return 0;
+    const sum = posts.reduce((acc, post) => acc + (post.rating || 0), 0);
+    return (sum / posts.length).toFixed(1);
+  }, [posts]);
+
+  const userAverage = useMemo(() => {
+    if (!currentUserId) return null;
+    const userPosts = posts.filter(post => post.author_id === currentUserId);
+    if (userPosts.length === 0) return null;
+    const sum = userPosts.reduce((acc, post) => acc + (post.rating || 0), 0);
+    return (sum / userPosts.length).toFixed(1);
+  }, [posts, currentUserId]);
+
+  const userPostCount = useMemo(() => {
+    if (!currentUserId) return 0;
+    return posts.filter(post => post.author_id === currentUserId).length;
+  }, [posts, currentUserId]);
 
   // Get unique meal types from posts
   const mealTypes = useMemo(() => {
@@ -214,6 +240,16 @@ export default function DiningHallProfileScreen() {
               <Text style={styles.statNumber}>{posts.length}</Text>
               <Text style={styles.statLabel}>Posts</Text>
             </View>
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>{historicalAverage}</Text>
+              <Text style={styles.statLabel}>Avg Rating</Text>
+            </View>
+            {userAverage !== null && (
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>{userAverage}</Text>
+                <Text style={styles.statLabel}>Your Avg</Text>
+              </View>
+            )}
           </View>
         </View>
 
