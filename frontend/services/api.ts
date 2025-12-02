@@ -418,11 +418,22 @@ const transformPost = (backendPost: BackendPost): Post => {
   // Filter out any photos with empty storage_key and ensure we have valid URLs
   // Also filter out HEIC files as React Native Image doesn't support them
 
-  const images = (backendPost.photos || [])
+  // Deduplicate photos by storage_key to avoid showing duplicates
+  const seenStorageKeys = new Set<string>();
+  const uniquePhotos = (backendPost.photos || []).filter((photo) => {
+    if (!photo.storage_key || photo.storage_key.trim().length === 0) {
+      return false;
+    }
+    // Check for duplicates
+    if (seenStorageKeys.has(photo.storage_key)) {
+      return false;
+    }
+    seenStorageKeys.add(photo.storage_key);
+    return true;
+  });
+
+  const images = uniquePhotos
     .filter((photo) => {
-      if (!photo.storage_key || photo.storage_key.trim().length === 0) {
-        return false;
-      }
       // Filter out HEIC files - React Native Image doesn't support them
       const extension = photo.storage_key.toLowerCase().split(".").pop();
       if (extension === "heic" || extension === "heif") {
@@ -433,10 +444,27 @@ const transformPost = (backendPost: BackendPost): Post => {
     })
     .map((photo) => {
       const photoUrl = getPhotoUrl(photo.storage_key);
-      // Use dish_name from backend if available
+      
+      // Find the rating for this specific dish from rated_items
+      let dishRating = backendPost.rating || 5.0; // Default to overall rating
+      
+      if (photo.dish_name && backendPost.rated_items && backendPost.rated_items.length > 0) {
+        // Normalize strings for comparison (trim and lowercase)
+        const photoDishName = (photo.dish_name || "").trim().toLowerCase();
+        
+        const ratedItem = backendPost.rated_items.find((item) => {
+          const itemDishName = (item.menu_item_name || "").trim().toLowerCase();
+          return itemDishName === photoDishName;
+        });
+        
+        if (ratedItem) {
+          dishRating = ratedItem.rating;
+        }
+      }
+      
       return {
         uri: photoUrl,
-        rating: backendPost.rating || 5.0,
+        rating: dishRating,
         dishName: photo.dish_name,
       };
     });
@@ -455,7 +483,14 @@ const transformPost = (backendPost: BackendPost): Post => {
     images,
     notes: backendPost.caption || "",
     menuItems: backendPost.menu_items || [],
-    rating: backendPost.rating || 5.0,
+    // Calculate average rating from ratedItems if available, otherwise use post.rating
+    rating: (() => {
+      if (backendPost.rated_items && backendPost.rated_items.length > 0) {
+        const sum = backendPost.rated_items.reduce((acc, item) => acc + item.rating, 0);
+        return Math.round((sum / backendPost.rated_items.length) * 10) / 10;
+      }
+      return backendPost.rating || 5.0;
+    })(),
     ratedItems: backendPost.rated_items?.map(item => ({
       menuItemName: item.menu_item_name,
       rating: item.rating
@@ -569,9 +604,15 @@ export const createPost = async (postData: PostData): Promise<Post> => {
       menu_items: postData.menuItems.length > 0 ? postData.menuItems : null,
       dining_hall_name: postData.restaurantName || null,
       meal_type: postData.mealType || null,
-      // Send null if no photos, otherwise send array
+      // Send photos with dish_name if provided, otherwise use simple photos array
       photos:
-        postData.photos.length > 0
+        postData.photosWithDishNames && postData.photosWithDishNames.length > 0
+          ? postData.photosWithDishNames.map((photo) => ({
+              storage_key: photo.storage_key,
+              display_order: photo.display_order,
+              dish_name: photo.dish_name,
+            }))
+          : postData.photos.length > 0
           ? postData.photos.map((storageKey, index) => ({
               storage_key: storageKey,
               display_order: index,

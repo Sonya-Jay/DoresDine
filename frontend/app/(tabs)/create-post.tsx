@@ -1,15 +1,14 @@
 import { useRouter, useLocalSearchParams } from "expo-router";
 import React, { useState, useEffect } from "react";
-import { View, Alert, ScrollView, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Alert, ScrollView, Text, TouchableOpacity, StyleSheet, TextInput } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/Feather";
 import { DINING_HALLS, MEAL_TYPES, MealType } from "@/data/diningHalls";
-import { DiningHall, PostData } from "@/types";
+import { DiningHall, PostData, RatedItem } from "@/types";
 import { createPost } from "@/services/api";
 import CompanionSelector from "@/components/CompanionSelector";
 import DiningHallSelector from "@/components/DiningHallSelector";
 import MealTypeSelector from "@/components/MealTypeSelector";
-import MenuItemSelector from "@/components/MenuItemSelector";
 import NotesInput from "@/components/NotesInput";
 import PhotoSelector from "@/components/PhotoSelector";
 import RatingSlider from "@/components/RatingSlider";
@@ -22,10 +21,11 @@ export default function CreatePostScreen() {
   const [selectedDiningHall, setSelectedDiningHall] = useState<DiningHall | null>(null);
   const [selectedMealType, setSelectedMealType] = useState<MealType | null>(null);
   const [menuItems, setMenuItems] = useState<string[]>([]);
-  const [rating, setRating] = useState<number>(5.0);
+  const [ratedItems, setRatedItems] = useState<RatedItem[]>([]);
+  const [showAddDishInput, setShowAddDishInput] = useState(false);
+  const [newDishName, setNewDishName] = useState("");
   const [companions, setCompanions] = useState<string[]>([]);
   const [notes, setNotes] = useState("");
-  const [photos, setPhotos] = useState<string[]>([]);
 
   // Set initial values from params
   useEffect(() => {
@@ -57,25 +57,60 @@ export default function CreatePostScreen() {
 
     setIsSubmitting(true);
 
+    // Validate that at least one dish is rated
+    if (ratedItems.length === 0) {
+      Alert.alert("Error", "Please rate at least one dish");
+      return;
+    }
+
+    // Collect all photos with their associated dish names
+    const photosWithDishNames: Array<{
+      storage_key: string;
+      display_order: number;
+      dish_name: string;
+    }> = [];
+    
+    let photoOrder = 0;
+    ratedItems.forEach((item) => {
+      if (item.photos && item.photos.length > 0) {
+        item.photos.forEach((photoKey) => {
+          photosWithDishNames.push({
+            storage_key: photoKey,
+            display_order: photoOrder++,
+            dish_name: item.menuItemName,
+          });
+        });
+      }
+    });
+
+    // Calculate overall rating as average of dish ratings
+    const overallRating = ratedItems.length > 0
+      ? ratedItems.reduce((sum, item) => sum + item.rating, 0) / ratedItems.length
+      : null;
+
+    console.log(`[Submit] Rated items:`, ratedItems.map(i => `${i.menuItemName}: ${i.rating}`));
+    console.log(`[Submit] Overall rating (average):`, overallRating);
+
     const postData: PostData = {
       restaurantId: selectedDiningHall.id.toString(),
       restaurantName: selectedDiningHall.name,
       date: new Date().toISOString().split("T")[0],
       mealType: selectedMealType || "Lunch",
-      menuItems,
-      rating,
+      menuItems: ratedItems.map(item => item.menuItemName), // Keep for backward compatibility
+      rating: overallRating ? Math.round(overallRating * 10) / 10 : undefined, // Overall rating as average
+      ratedItems: ratedItems.length > 0 ? ratedItems : undefined,
       companions,
       notes,
-      photos,
+      photos: photosWithDishNames.map(p => p.storage_key), // Keep for backward compatibility
+      photosWithDishNames: photosWithDishNames.length > 0 ? photosWithDishNames : undefined,
     };
 
     try {
       console.log("Submitting post:", {
         diningHall: postData.restaurantName,
         mealType: postData.mealType,
-        menuItems: postData.menuItems.length,
-        photos: postData.photos.length,
-        rating: postData.rating,
+        ratedItems: postData.ratedItems?.length || 0,
+        photosWithDishNames: postData.photosWithDishNames?.length || 0,
       });
       
       await createPost(postData);
@@ -137,14 +172,110 @@ export default function CreatePostScreen() {
           })}
         </Text>
 
-        {/* Menu Item Selector */}
-        <MenuItemSelector
-          selectedItems={menuItems}
-          onItemsChange={setMenuItems}
-        />
-
-        {/* Rating Slider */}
-        <RatingSlider value={rating} onValueChange={setRating} />
+        {/* Rated Dishes Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Rate Your Dishes</Text>
+          {ratedItems.map((item, index) => (
+            <View key={`${item.menuItemName}-${index}`} style={styles.ratedItemContainer}>
+              <View style={styles.ratedItemHeader}>
+                <Text style={styles.ratedItemName}>{item.menuItemName}</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    setRatedItems((prevItems) => {
+                      return prevItems.filter((i) => i.menuItemName !== item.menuItemName);
+                    });
+                  }}
+                  style={styles.removeItemButton}
+                >
+                  <Icon name="x" size={18} color="#666" />
+                </TouchableOpacity>
+              </View>
+              <RatingSlider
+                key={`slider-${item.menuItemName}-${index}`}
+                value={item.rating}
+                onValueChange={(newRating) => {
+                  setRatedItems((prevItems) => {
+                    return prevItems.map((prevItem) => {
+                      if (prevItem.menuItemName === item.menuItemName) {
+                        return { ...prevItem, rating: newRating };
+                      }
+                      return prevItem;
+                    });
+                  });
+                }}
+              />
+              {/* Photo Selector for this dish */}
+              <View style={styles.dishPhotoSection}>
+                <Text style={styles.dishPhotoLabel}>Photos for this dish</Text>
+                <PhotoSelector
+                  photos={item.photos || []}
+                  onPhotosChange={(newPhotos) => {
+                    setRatedItems((prevItems) => {
+                      return prevItems.map((prevItem) => {
+                        if (prevItem.menuItemName === item.menuItemName) {
+                          return { ...prevItem, photos: newPhotos };
+                        }
+                        return prevItem;
+                      });
+                    });
+                  }}
+                />
+              </View>
+            </View>
+          ))}
+          
+          {/* Add Dish Input or Button */}
+          {showAddDishInput ? (
+            <View style={styles.addDishInputContainer}>
+              <TextInput
+                style={styles.addDishInput}
+                placeholder="Enter dish name..."
+                placeholderTextColor="#999"
+                value={newDishName}
+                onChangeText={setNewDishName}
+                autoFocus={true}
+              />
+              <View style={styles.addDishInputButtons}>
+                <TouchableOpacity
+                  style={styles.addDishCancelButton}
+                  onPress={() => {
+                    setShowAddDishInput(false);
+                    setNewDishName("");
+                  }}
+                >
+                  <Text style={styles.addDishCancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.addDishConfirmButton,
+                    !newDishName.trim() && styles.addDishConfirmButtonDisabled,
+                  ]}
+                  onPress={() => {
+                    if (newDishName.trim()) {
+                      setRatedItems([
+                        ...ratedItems,
+                        { menuItemName: newDishName.trim(), rating: 5.0, photos: [] },
+                      ]);
+                      setNewDishName("");
+                      setShowAddDishInput(false);
+                    }
+                  }}
+                  disabled={!newDishName.trim()}
+                >
+                  <Text style={styles.addDishConfirmText}>Add</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={styles.addDishButton}
+              onPress={() => setShowAddDishInput(true)}
+            >
+              <Icon name="plus" size={20} color="#007AFF" style={{ marginRight: 8 }} />
+              <Text style={styles.addDishButtonText}>Add Additional Item</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
         {/* Companion Selector */}
         <CompanionSelector
@@ -154,9 +285,6 @@ export default function CreatePostScreen() {
 
         {/* Notes Input */}
         <NotesInput notes={notes} onNotesChange={setNotes} />
-
-        {/* Photo Selector */}
-        <PhotoSelector photos={photos} onPhotosChange={setPhotos} />
       </ScrollView>
 
       {/* Post Button */}
@@ -241,6 +369,103 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 18,
     fontWeight: "700",
+  },
+  ratedItemContainer: {
+    backgroundColor: "#f8f8f8",
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 12,
+  },
+  ratedItemHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  ratedItemName: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#000",
+    flex: 1,
+  },
+  removeItemButton: {
+    padding: 4,
+  },
+  addDishButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#f0f0f0",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#007AFF",
+    borderStyle: "dashed",
+  },
+  addDishButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#007AFF",
+  },
+  addDishInputContainer: {
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#ddd",
+  },
+  addDishInput: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    color: "#000",
+    marginBottom: 12,
+  },
+  addDishInputButtons: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  addDishCancelButton: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: "#f0f0f0",
+    alignItems: "center",
+  },
+  addDishCancelText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#666",
+  },
+  addDishConfirmButton: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: "#007AFF",
+    alignItems: "center",
+  },
+  addDishConfirmButtonDisabled: {
+    opacity: 0.5,
+  },
+  addDishConfirmText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#fff",
+  },
+  dishPhotoSection: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#e0e0e0",
+  },
+  dishPhotoLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#666",
+    marginBottom: 8,
   },
 });
 

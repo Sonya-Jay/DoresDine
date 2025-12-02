@@ -76,8 +76,12 @@ async function populateDatabase() {
       : false,
   });
 
+  const client = await pool.connect();
+  
   try {
+    await client.query('BEGIN');
     console.log('🌱 Starting database population...\n');
+    console.log(`📍 Database: ${process.env.DATABASE_URL?.split('@')[1]?.split('/')[0] || 'unknown'}\n`);
 
     // Create users
     const users = [
@@ -94,7 +98,7 @@ async function populateDatabase() {
     for (const userData of users) {
       try {
         // Check if user exists
-        const existing = await pool.query(
+        const existing = await client.query(
           'SELECT id FROM users WHERE email = $1',
           [userData.email.toLowerCase()]
         );
@@ -102,10 +106,15 @@ async function populateDatabase() {
         let userId;
         if (existing.rows.length > 0) {
           userId = existing.rows[0].id;
-          console.log(`✓ User ${userData.username} already exists`);
+          // Update password and verification status for existing user
+          await client.query(
+            `UPDATE users SET password_hash = $1, email_verified = true WHERE id = $2`,
+            [password_hash, userId]
+          );
+          console.log(`✓ User ${userData.username} already exists (updated password and verification)`);
         } else {
           // Create user
-          const result = await pool.query(
+          const result = await client.query(
             `INSERT INTO users (id, username, first_name, last_name, email, password_hash, email_verified)
              VALUES ($1, $2, $3, $4, $5, $6, true)
              RETURNING id, username, email`,
@@ -114,7 +123,7 @@ async function populateDatabase() {
           userId = result.rows[0].id;
           console.log(`✓ Created user: ${userData.username} (${userData.email})`);
         }
-        createdUsers.push({ id: userId, ...userData });
+        createdUsers.push({ id: userId, username: userData.username, email: userData.email, first_name: userData.first_name, last_name: userData.last_name });
       } catch (error) {
         if (error.code === '23505') {
           // User already exists, fetch it
@@ -134,9 +143,30 @@ async function populateDatabase() {
 
     console.log(`\n📝 Creating posts...\n`);
 
+    // Verify all users exist in database before creating posts
+    console.log(`\n🔍 Verifying users before creating posts...\n`);
+    const verifiedUsers = [];
+    for (const user of createdUsers) {
+      const verifyResult = await client.query(
+        'SELECT id FROM users WHERE email = $1',
+        [user.email.toLowerCase()]
+      );
+      if (verifyResult.rows.length > 0) {
+        verifiedUsers.push({
+          ...user,
+          id: verifyResult.rows[0].id // Use the actual database ID
+        });
+        console.log(`✓ Verified: ${user.username} (${verifyResult.rows[0].id})`);
+      } else {
+        console.log(`✗ User not found: ${user.username}`);
+      }
+    }
+
+    console.log(`\n📝 Creating posts...\n`);
+
     // Create posts for each user (more posts for a richer feed)
-    for (let i = 0; i < createdUsers.length; i++) {
-      const user = createdUsers[i];
+    for (let i = 0; i < verifiedUsers.length; i++) {
+      const user = verifiedUsers[i];
       const numPosts = Math.floor(Math.random() * 4) + 3; // 3-6 posts per user
 
       for (let j = 0; j < numPosts; j++) {
@@ -161,25 +191,57 @@ async function populateDatabase() {
             photoIndices.push(randomIndex);
           }
 
-          // Create post
-          await pool.query(
+          // Calculate overall rating as average of dish ratings (will be set after rated_items are created)
+          // For now, use the random rating, but we'll recalculate it from rated_items
+          
+          // Create post (rating will be calculated from rated_items average)
+          await client.query(
             `INSERT INTO posts (id, author_id, caption, rating, menu_items, dining_hall_name, meal_type, created_at)
              VALUES ($1, $2, $3, $4, $5, $6, $7, NOW() - INTERVAL '${i * numPosts + j} hours')`,
             [postId, user.id, caption, rating, menu_items, dining_hall, meal_type]
           );
 
-          // Add photos
-          for (let k = 0; k < photoIndices.length; k++) {
-            const photoId = uuidv4();
-            const imageUrl = FOOD_IMAGES[photoIndices[k]];
-            await pool.query(
-              `INSERT INTO post_photos (id, post_id, storage_key, display_order)
+          // Create rated items for each menu item
+          const ratedItems = [];
+          for (let m = 0; m < menu_items.length; m++) {
+            const itemRating = parseFloat((Math.random() * 4 + 6).toFixed(1)); // 6.0 - 10.0
+            ratedItems.push({
+              menu_item_name: menu_items[m],
+              rating: itemRating,
+              display_order: m
+            });
+          }
+
+          // Insert rated items
+          for (const item of ratedItems) {
+            await client.query(
+              `INSERT INTO post_rated_items (post_id, menu_item_name, rating, display_order)
                VALUES ($1, $2, $3, $4)`,
-              [photoId, postId, imageUrl, k]
+              [postId, item.menu_item_name, item.rating, item.display_order]
             );
           }
 
-          console.log(`  ✓ Post by ${user.username}: "${caption.substring(0, 30)}..." (${numPhotos} photo(s))`);
+          // Calculate average rating from rated items and update post
+          const avgRating = ratedItems.reduce((sum, item) => sum + item.rating, 0) / ratedItems.length;
+          await client.query(
+            `UPDATE posts SET rating = $1 WHERE id = $2`,
+            [parseFloat(avgRating.toFixed(1)), postId]
+          );
+
+          // Add photos - associate each photo with a dish
+          for (let k = 0; k < photoIndices.length; k++) {
+            const photoId = uuidv4();
+            const imageUrl = FOOD_IMAGES[photoIndices[k]];
+            // Associate photo with a dish (cycle through menu items)
+            const dishName = menu_items[k % menu_items.length];
+            await client.query(
+              `INSERT INTO post_photos (id, post_id, storage_key, display_order, dish_name)
+               VALUES ($1, $2, $3, $4, $5)`,
+              [photoId, postId, imageUrl, k, dishName]
+            );
+          }
+
+          console.log(`  ✓ Post by ${user.username}: "${caption.substring(0, 30)}..." (${numPhotos} photo(s), ${ratedItems.length} rated items)`);
         } catch (error) {
           console.error(`  ✗ Error creating post for ${user.username}:`, error.message);
         }
@@ -190,11 +252,11 @@ async function populateDatabase() {
     console.log(`\n❤️  Adding likes and comments...\n`);
 
     // Get all posts
-    const postsResult = await pool.query('SELECT id, author_id FROM posts ORDER BY created_at DESC');
+    const postsResult = await client.query('SELECT id, author_id FROM posts ORDER BY created_at DESC');
     const posts = postsResult.rows;
 
     // Add likes (each user likes multiple posts from other users for engagement)
-    for (const user of createdUsers) {
+    for (const user of verifiedUsers) {
       const postsToLike = posts
         .filter(p => p.author_id !== user.id)
         .sort(() => Math.random() - 0.5)
@@ -202,7 +264,7 @@ async function populateDatabase() {
 
       for (const post of postsToLike) {
         try {
-          await pool.query(
+          await client.query(
             `INSERT INTO likes (post_id, user_id)
              VALUES ($1, $2)
              ON CONFLICT (post_id, user_id) DO NOTHING`,
@@ -235,7 +297,7 @@ async function populateDatabase() {
     // Add 2-3 comments per post (for first 10 posts)
     for (let i = 0; i < Math.min(10, posts.length); i++) {
       const post = posts[i];
-      const possibleCommenters = createdUsers.filter(u => u.id !== post.author_id);
+      const possibleCommenters = verifiedUsers.filter(u => u.id !== post.author_id);
       const numComments = Math.floor(Math.random() * 2) + 2; // 2-3 comments
       
       for (let j = 0; j < numComments && j < possibleCommenters.length; j++) {
@@ -243,7 +305,7 @@ async function populateDatabase() {
         const commentText = comments[Math.floor(Math.random() * comments.length)];
         
         try {
-          await pool.query(
+          await client.query(
             `INSERT INTO comments (id, post_id, author_id, text, created_at)
              VALUES ($1, $2, $3, $4, NOW() - INTERVAL '${i * 10 + j} minutes')
              ON CONFLICT DO NOTHING`,
@@ -257,15 +319,21 @@ async function populateDatabase() {
 
     console.log(`\n✅ Database population complete!`);
     console.log(`\n📊 Summary:`);
-    console.log(`   - ${createdUsers.length} users`);
+    console.log(`   - ${verifiedUsers.length} users`);
     console.log(`   - ${posts.length} posts`);
     console.log(`   - Posts have food images from Unsplash`);
     console.log(`\n🔑 All users have password: password123`);
     console.log(`   (Email verification is already set to true)`);
+    
+    await client.query('COMMIT');
+    console.log(`\n✅ Transaction committed successfully!`);
 
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error('❌ Error populating database:', error);
+    console.error('   Stack:', error.stack);
   } finally {
+    client.release();
     await pool.end();
   }
 }

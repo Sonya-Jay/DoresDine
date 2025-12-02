@@ -69,15 +69,40 @@ router.get("/", async (req, res) => {
       ORDER BY p.created_at DESC
     `;
         const result = await db_1.default.query(query, [userId || null]);
-        // Parse numeric values from strings
-        const rows = result.rows.map((row) => ({
-            ...row,
-            rating: row.rating !== null && row.rating !== undefined
-                ? parseFloat(row.rating)
-                : null,
-            like_count: parseInt(row.like_count) || 0,
-            comment_count: parseInt(row.comment_count) || 0,
-        }));
+        // Parse rating from string to number if present, and parse JSON fields
+        const rows = result.rows.map((row) => {
+            // Parse JSON fields that come as strings from PostgreSQL
+            let photos = row.photos;
+            let rated_items = row.rated_items;
+            if (typeof photos === 'string') {
+                try {
+                    photos = JSON.parse(photos);
+                }
+                catch (e) {
+                    console.error('Error parsing photos JSON:', e);
+                    photos = [];
+                }
+            }
+            if (typeof rated_items === 'string') {
+                try {
+                    rated_items = JSON.parse(rated_items);
+                }
+                catch (e) {
+                    console.error('Error parsing rated_items JSON:', e);
+                    rated_items = [];
+                }
+            }
+            return {
+                ...row,
+                photos: photos || [],
+                rated_items: rated_items || [],
+                rating: row.rating !== null && row.rating !== undefined
+                    ? parseFloat(row.rating)
+                    : null,
+                like_count: parseInt(row.like_count) || 0,
+                comment_count: parseInt(row.comment_count) || 0,
+            };
+        });
         res.json(rows);
     }
     catch (error) {
@@ -237,15 +262,40 @@ router.get("/user/:userId", async (req, res) => {
       ORDER BY p.created_at DESC
     `;
         const result = await db_1.default.query(query, [userId, currentUserId || null]);
-        // Parse numeric values from strings
-        const rows = result.rows.map((row) => ({
-            ...row,
-            rating: row.rating !== null && row.rating !== undefined
-                ? parseFloat(row.rating)
-                : null,
-            like_count: parseInt(row.like_count) || 0,
-            comment_count: parseInt(row.comment_count) || 0,
-        }));
+        // Parse rating from string to number if present, and parse JSON fields
+        const rows = result.rows.map((row) => {
+            // Parse JSON fields that come as strings from PostgreSQL
+            let photos = row.photos;
+            let rated_items = row.rated_items;
+            if (typeof photos === 'string') {
+                try {
+                    photos = JSON.parse(photos);
+                }
+                catch (e) {
+                    console.error('Error parsing photos JSON:', e);
+                    photos = [];
+                }
+            }
+            if (typeof rated_items === 'string') {
+                try {
+                    rated_items = JSON.parse(rated_items);
+                }
+                catch (e) {
+                    console.error('Error parsing rated_items JSON:', e);
+                    rated_items = [];
+                }
+            }
+            return {
+                ...row,
+                photos: photos || [],
+                rated_items: rated_items || [],
+                rating: row.rating !== null && row.rating !== undefined
+                    ? parseFloat(row.rating)
+                    : null,
+                like_count: parseInt(row.like_count) || 0,
+                comment_count: parseInt(row.comment_count) || 0,
+            };
+        });
         console.log(`[Posts] Found ${rows.length} posts for user: ${userId}`);
         res.json(rows);
     }
@@ -357,10 +407,16 @@ router.post("/", async (req, res) => {
         }
         // Begin transaction
         await client.query("BEGIN");
-        // Insert post
+        // Calculate overall rating: use provided rating, or average of rated_items if available
+        let overallRating = rating;
+        if ((overallRating === undefined || overallRating === null) && rated_items && rated_items.length > 0) {
+            const sum = rated_items.reduce((acc, item) => acc + item.rating, 0);
+            overallRating = sum / rated_items.length;
+            console.log(`[Post] Calculated overall rating from rated_items: ${overallRating}`);
+        }
         // Round rating to 1 decimal place if provided
-        const roundedRating = rating !== undefined && rating !== null
-            ? Math.round(rating * 10) / 10
+        const roundedRating = overallRating !== undefined && overallRating !== null
+            ? Math.round(overallRating * 10) / 10
             : null;
         const postResult = await client.query(`INSERT INTO posts (author_id, caption, rating, menu_items, dining_hall_name, meal_type)
        VALUES ($1, $2, $3, $4, $5, $6)

@@ -236,6 +236,11 @@ const PostCard: React.FC<PostCardProps> = ({
     );
   }
 
+  // Calculate average rating from ratedItems if available, otherwise use post.rating
+  const averageRating = post.ratedItems && post.ratedItems.length > 0
+    ? Math.round((post.ratedItems.reduce((sum, item) => sum + item.rating, 0) / post.ratedItems.length) * 10) / 10
+    : post.rating;
+
   return (
     <View style={styles.post}>
       <View style={styles.userInfo}>
@@ -277,11 +282,27 @@ const PostCard: React.FC<PostCardProps> = ({
         )}
       </View>
 
+      {/* Average Rating Bubble - Top Right */}
+      <View style={[
+        localStyles.ratingBubble,
+        {
+          right: isOwnPost ? 50 : 12, // Adjust position based on whether three-dot menu is visible
+          borderColor:
+            averageRating >= 7
+              ? "#4CAF50"
+              : averageRating >= 5
+              ? "#FFA726"
+              : "#f44336",
+        },
+      ]}>
+        <Text style={localStyles.ratingBubbleText}>{averageRating.toFixed(1)}</Text>
+      </View>
+
       <View style={styles.imagesContainer}>
         {post.images && post.images.length > 0 ? (
           post.images.map((img, idx) => (
             <TouchableOpacity
-              key={idx}
+              key={`${img.uri}-${idx}`}
               style={[
                 styles.imageWrapper,
                 post.images.length === 1 && styles.singleImageWrapper,
@@ -632,6 +653,30 @@ const localStyles = StyleSheet.create({
     color: "#666",
     textAlign: "center",
     lineHeight: 20,
+  },
+  ratingBubble: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    zIndex: 5,
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    borderWidth: 3,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    minWidth: 50,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  ratingBubbleText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#000",
   },
 });
 

@@ -69,16 +69,42 @@ router.get("/", async (req: Request, res: Response): Promise<void> => {
     `;
 
     const result = await pool.query(query, [userId || null]);
-    // Parse numeric values from strings
-    const rows = result.rows.map((row: any) => ({
-      ...row,
-      rating:
-        row.rating !== null && row.rating !== undefined
-          ? parseFloat(row.rating)
-          : null,
-      like_count: parseInt(row.like_count) || 0,
-      comment_count: parseInt(row.comment_count) || 0,
-    }));
+    // Parse rating from string to number if present, and parse JSON fields
+    const rows = result.rows.map((row: any) => {
+      // Parse JSON fields that come as strings from PostgreSQL
+      let photos = row.photos;
+      let rated_items = row.rated_items;
+      
+      if (typeof photos === 'string') {
+        try {
+          photos = JSON.parse(photos);
+        } catch (e) {
+          console.error('Error parsing photos JSON:', e);
+          photos = [];
+        }
+      }
+      
+      if (typeof rated_items === 'string') {
+        try {
+          rated_items = JSON.parse(rated_items);
+        } catch (e) {
+          console.error('Error parsing rated_items JSON:', e);
+          rated_items = [];
+        }
+      }
+      
+      return {
+        ...row,
+        photos: photos || [],
+        rated_items: rated_items || [],
+        rating:
+          row.rating !== null && row.rating !== undefined
+            ? parseFloat(row.rating)
+            : null,
+        like_count: parseInt(row.like_count) || 0,
+        comment_count: parseInt(row.comment_count) || 0,
+      };
+    });
     res.json(rows);
   } catch (error: any) {
     console.error("Error fetching posts:", error);
@@ -247,16 +273,42 @@ router.get(
     `;
 
       const result = await pool.query(query, [userId, currentUserId || null]);
-      // Parse numeric values from strings
-      const rows = result.rows.map((row: any) => ({
-        ...row,
-        rating:
-          row.rating !== null && row.rating !== undefined
-            ? parseFloat(row.rating)
-            : null,
-        like_count: parseInt(row.like_count) || 0,
-        comment_count: parseInt(row.comment_count) || 0,
-      }));
+      // Parse rating from string to number if present, and parse JSON fields
+      const rows = result.rows.map((row: any) => {
+        // Parse JSON fields that come as strings from PostgreSQL
+        let photos = row.photos;
+        let rated_items = row.rated_items;
+        
+        if (typeof photos === 'string') {
+          try {
+            photos = JSON.parse(photos);
+          } catch (e) {
+            console.error('Error parsing photos JSON:', e);
+            photos = [];
+          }
+        }
+        
+        if (typeof rated_items === 'string') {
+          try {
+            rated_items = JSON.parse(rated_items);
+          } catch (e) {
+            console.error('Error parsing rated_items JSON:', e);
+            rated_items = [];
+          }
+        }
+        
+        return {
+          ...row,
+          photos: photos || [],
+          rated_items: rated_items || [],
+          rating:
+            row.rating !== null && row.rating !== undefined
+              ? parseFloat(row.rating)
+              : null,
+          like_count: parseInt(row.like_count) || 0,
+          comment_count: parseInt(row.comment_count) || 0,
+        };
+      });
       console.log(`[Posts] Found ${rows.length} posts for user: ${userId}`);
       res.json(rows);
     } catch (error: any) {
@@ -397,11 +449,18 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
     // Begin transaction
     await client.query("BEGIN");
 
-    // Insert post
+    // Calculate overall rating: use provided rating, or average of rated_items if available
+    let overallRating = rating;
+    if ((overallRating === undefined || overallRating === null) && rated_items && rated_items.length > 0) {
+      const sum = rated_items.reduce((acc, item) => acc + item.rating, 0);
+      overallRating = sum / rated_items.length;
+      console.log(`[Post] Calculated overall rating from rated_items: ${overallRating}`);
+    }
+
     // Round rating to 1 decimal place if provided
     const roundedRating =
-      rating !== undefined && rating !== null
-        ? Math.round(rating * 10) / 10
+      overallRating !== undefined && overallRating !== null
+        ? Math.round(overallRating * 10) / 10
         : null;
 
     const postResult = await client.query<Post>(

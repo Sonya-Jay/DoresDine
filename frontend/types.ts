@@ -99,6 +99,7 @@ export interface Comment {
 export interface RatedItem {
   menuItemName: string;
   rating: number;
+  photos: string[]; // Photos associated with this specific dish
 }
 
 export interface PostData {
@@ -107,11 +108,16 @@ export interface PostData {
   date: string;
   mealType: string;
   menuItems: string[];
-  rating: number;
-  ratedItems?: RatedItem[]; // Optional: Multiple items with individual ratings
+  rating?: number; // Optional - kept for backward compatibility
+  ratedItems?: RatedItem[]; // Array of dishes with individual ratings
   companions: string[];
   notes: string;
-  photos: string[];
+  photos: string[]; // Keep for backward compatibility
+  photosWithDishNames?: Array<{
+    storage_key: string;
+    display_order: number;
+    dish_name: string;
+  }>; // Photos with associated dish names
 }
 
 // Database types for when you integrate Postgres
