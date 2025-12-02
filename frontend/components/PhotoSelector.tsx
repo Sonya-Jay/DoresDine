@@ -1,4 +1,5 @@
-import { uploadPhoto, getPhotoUrl } from "@/services/api";
+import { uploadPhoto } from "@/services/api";
+import { getPhotoUrl } from "@/constants/API";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import React from "react";

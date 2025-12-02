@@ -7,7 +7,6 @@ import Icon from "react-native-vector-icons/Feather";
 import { DINING_HALLS, MEAL_TYPES, MealType } from "@/data/diningHalls";
 import { DiningHall, PostData, RatedItem } from "@/types";
 import { createPost } from "@/services/api";
-import CompanionSelector from "@/components/CompanionSelector";
 import DiningHallSelector from "@/components/DiningHallSelector";
 import MealTypeSelector from "@/components/MealTypeSelector";
 import NotesInput from "@/components/NotesInput";
@@ -27,7 +26,6 @@ export default function CreatePostScreen() {
   const [ratedItems, setRatedItems] = useState<RatedItem[]>([]);
   const [showAddDishInput, setShowAddDishInput] = useState(false);
   const [newDishName, setNewDishName] = useState("");
-  const [companions, setCompanions] = useState<string[]>([]);
   const [notes, setNotes] = useState("");
 
   // Set initial values from params
@@ -57,7 +55,6 @@ export default function CreatePostScreen() {
       setRatedItems([]);
       setShowAddDishInput(false);
       setNewDishName("");
-      setCompanions([]);
       setNotes("");
     };
   }, []);
@@ -118,7 +115,6 @@ export default function CreatePostScreen() {
       menuItems: ratedItems.map(item => item.menuItemName), // Keep for backward compatibility
       rating: overallRating ? Math.round(overallRating * 10) / 10 : undefined, // Overall rating as average
       ratedItems: ratedItems.length > 0 ? ratedItems : undefined,
-      companions,
       notes,
       photos: photosWithDishNames.map(p => p.storage_key), // Keep for backward compatibility
       photosWithDishNames: photosWithDishNames.length > 0 ? photosWithDishNames : undefined,
@@ -143,7 +139,6 @@ export default function CreatePostScreen() {
       setRatedItems([]);
       setShowAddDishInput(false);
       setNewDishName("");
-      setCompanions([]);
       setNotes("");
       
       router.back();
@@ -366,12 +361,6 @@ export default function CreatePostScreen() {
             </TouchableOpacity>
           )}
         </View>
-
-        {/* Companion Selector */}
-        <CompanionSelector
-          selectedCompanions={companions}
-          onCompanionsChange={setCompanions}
-        />
 
         {/* Notes Input */}
         <NotesInput notes={notes} onNotesChange={setNotes} />
