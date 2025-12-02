@@ -38,7 +38,9 @@ router.get("/following", async (req, res) => {
     catch (error) {
         console.error("Error fetching following:", error);
         console.error("Error details:", error.message, error.stack);
-        res.status(500).json({ error: "Internal server error", details: error.message });
+        res
+            .status(500)
+            .json({ error: "Internal server error", details: error.message });
     }
 });
 // GET /follows/followers - Get list of users following the current user
@@ -98,7 +100,8 @@ router.get("/activity", async (req, res) => {
             JSON_BUILD_OBJECT(
               'id', pp.id,
               'storage_key', pp.storage_key,
-              'display_order', pp.display_order
+              'display_order', pp.display_order,
+              'dish_name', pp.dish_name
             ) ORDER BY pp.display_order
           ) FILTER (WHERE pp.id IS NOT NULL),
           '[]'::json
@@ -121,12 +124,13 @@ router.get("/activity", async (req, res) => {
         GROUP BY post_id
       ) c ON p.id = c.post_id
       LEFT JOIN likes ul ON p.id = ul.post_id AND ul.user_id = $1
-      WHERE f.follower_id = $1
+      WHERE f.follower_id = $1 AND p.rating >= 6.7
       GROUP BY p.id, p.author_id, p.caption, p.rating, p.menu_items, p.dining_hall_name, p.meal_type, p.created_at, u.username, u.email, u.first_name, u.last_name, l.like_count, c.comment_count, ul.user_id
       ORDER BY p.created_at DESC
       LIMIT 50
     `;
         const result = await db_1.default.query(query, [userId]);
+        console.log(`[Follows] Found ${result.rows.length} friend posts with rating >= 6.7 for user: ${userId}`);
         res.json(result.rows);
     }
     catch (error) {
@@ -211,7 +215,9 @@ router.post("/:userId", async (req, res) => {
             return;
         }
         // Validate target user exists
-        const userCheck = await client.query("SELECT id FROM users WHERE id = $1", [targetUserId]);
+        const userCheck = await client.query("SELECT id FROM users WHERE id = $1", [
+            targetUserId,
+        ]);
         if (userCheck.rows.length === 0) {
             res.status(404).json({ error: "User not found" });
             return;

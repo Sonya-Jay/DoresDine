@@ -17,9 +17,12 @@ function generateVerificationCode() {
 // POST /auth/register
 router.post("/register", async (req, res) => {
     try {
-        const { first_name, last_name, email, password } = req.body;
-        if (!first_name || !last_name || !email || !password) {
+        const { first_name, last_name, email, password, confirm_password } = req.body;
+        if (!first_name || !last_name || !email || !password || !confirm_password) {
             return res.status(400).json({ error: "Missing required fields" });
+        }
+        if (password !== confirm_password) {
+            return res.status(400).json({ error: "Passwords do not match" });
         }
         // Validate email is vanderbilt.edu
         const emailLower = email.trim().toLowerCase();
@@ -29,7 +32,7 @@ router.post("/register", async (req, res) => {
         if (typeof password !== "string" || password.length < 6) {
             return res
                 .status(400)
-                .json({ error: "password must be a string of at least 6 characters" });
+                .json({ error: "Password must be a string of at least 6 characters" });
         }
         const password_hash = await bcrypt_1.default.hash(password, 10);
         const verification_code = generateVerificationCode();

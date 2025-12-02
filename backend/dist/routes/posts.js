@@ -27,7 +27,8 @@ router.get("/", async (req, res) => {
             JSON_BUILD_OBJECT(
               'id', pp.id,
               'storage_key', pp.storage_key,
-              'display_order', pp.display_order
+              'display_order', pp.display_order,
+              'dish_name', pp.dish_name
             ) ORDER BY pp.display_order
           ) FILTER (WHERE pp.id IS NOT NULL), 
           '[]'::json
@@ -56,7 +57,9 @@ router.get("/", async (req, res) => {
         // Parse rating from string to number if present
         const rows = result.rows.map((row) => ({
             ...row,
-            rating: row.rating !== null && row.rating !== undefined ? parseFloat(row.rating) : null,
+            rating: row.rating !== null && row.rating !== undefined
+                ? parseFloat(row.rating)
+                : null,
         }));
         res.json(rows);
     }
@@ -91,9 +94,11 @@ router.get("/me", async (req, res) => {
             JSON_BUILD_OBJECT(
               'id', pp.id,
               'storage_key', pp.storage_key,
-              'display_order', pp.display_order
+              'display_order', pp.display_order,
+              'dish_name', pp.dish_name,
+              'dish_name', pp.dish_name
             ) ORDER BY pp.display_order
-          ) FILTER (WHERE pp.id IS NOT NULL), 
+          ) FILTER (WHERE pp.id IS NOT NULL),
           '[]'::json
         ) as photos,
         COALESCE(l.like_count, 0) as like_count,
@@ -121,7 +126,9 @@ router.get("/me", async (req, res) => {
         // Parse rating from string to number if present
         const rows = result.rows.map((row) => ({
             ...row,
-            rating: row.rating !== null && row.rating !== undefined ? parseFloat(row.rating) : null,
+            rating: row.rating !== null && row.rating !== undefined
+                ? parseFloat(row.rating)
+                : null,
         }));
         res.json(rows);
     }
@@ -135,7 +142,7 @@ router.get("/user/:userId", async (req, res) => {
     try {
         const { userId } = req.params;
         const currentUserId = req.headers["x-user-id"];
-        console.log(`[Posts] Fetching posts for user: ${userId}, current user: ${currentUserId || 'none'}`);
+        console.log(`[Posts] Fetching posts for user: ${userId}, current user: ${currentUserId || "none"}`);
         const query = `
       SELECT 
         p.id,
@@ -153,7 +160,8 @@ router.get("/user/:userId", async (req, res) => {
             JSON_BUILD_OBJECT(
               'id', pp.id,
               'storage_key', pp.storage_key,
-              'display_order', pp.display_order
+              'display_order', pp.display_order,
+              'dish_name', pp.dish_name
             ) ORDER BY pp.display_order
           ) FILTER (WHERE pp.id IS NOT NULL), 
           '[]'::json
@@ -183,7 +191,9 @@ router.get("/user/:userId", async (req, res) => {
         // Parse rating from string to number if present
         const rows = result.rows.map((row) => ({
             ...row,
-            rating: row.rating !== null && row.rating !== undefined ? parseFloat(row.rating) : null,
+            rating: row.rating !== null && row.rating !== undefined
+                ? parseFloat(row.rating)
+                : null,
         }));
         console.log(`[Posts] Found ${rows.length} posts for user: ${userId}`);
         res.json(rows);
@@ -316,9 +326,14 @@ router.post("/", async (req, res) => {
         // Insert photos if provided
         if (photos && photos.length > 0) {
             for (const photo of photos) {
-                const photoResult = await client.query(`INSERT INTO post_photos (post_id, storage_key, display_order)
-           VALUES ($1, $2, $3)
-           RETURNING *`, [post.id, photo.storage_key.trim(), photo.display_order || 0]);
+                const photoResult = await client.query(`INSERT INTO post_photos (post_id, storage_key, display_order, dish_name)
+           VALUES ($1, $2, $3, $4)
+           RETURNING *`, [
+                    post.id,
+                    photo.storage_key.trim(),
+                    photo.display_order || 0,
+                    photo.dish_name || null,
+                ]);
                 photoRecords.push(photoResult.rows[0]);
             }
         }
@@ -326,7 +341,9 @@ router.post("/", async (req, res) => {
         await client.query("COMMIT");
         // Return post with photos
         // Parse rating from NUMERIC to number (DB returns as string)
-        const parsedRating = post.rating !== null && post.rating !== undefined ? parseFloat(String(post.rating)) : null;
+        const parsedRating = post.rating !== null && post.rating !== undefined
+            ? parseFloat(String(post.rating))
+            : null;
         const response = {
             ...post,
             rating: parsedRating,

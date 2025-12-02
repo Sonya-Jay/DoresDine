@@ -288,45 +288,6 @@ export const authMicrosoft = async (microsoftToken: string) => {
   }
 };
 
-// Microsoft Azure AD authentication
-export const authMicrosoft = async (microsoftToken: string) => {
-  try {
-    const res = await fetch(`${API_URL}/auth/microsoft`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: microsoftToken }),
-    });
-    
-    const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data.error || 'Microsoft authentication failed');
-    }
-    
-    if (data.token) {
-      authToken = data.token;
-      currentUserId = data.user?.id;
-      try {
-        await AsyncStorage.setItem('authToken', data.token);
-        if (data.user?.id) {
-          await AsyncStorage.setItem('userId', data.user.id);
-        }
-        // Store user info
-        currentUser = data.user;
-      } catch (err) {
-        console.error('Failed to store auth token', err);
-      }
-    }
-    
-    return data;
-  } catch (error: any) {
-    // Re-throw with more context if it's a network error
-    if (error.message && (error.message.includes('Failed to fetch') || error.message.includes('Network request failed'))) {
-      throw new Error('Network error: Could not connect to server. Please check your internet connection.');
-    }
-    throw error;
-  }
-};
-
 // Initialize token from storage (call on app startup if desired)
 export const initAuthFromStorage = async () => {
   try {
