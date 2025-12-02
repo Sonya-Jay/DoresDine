@@ -33,12 +33,24 @@ router.get("/", async (req, res) => {
           ) FILTER (WHERE pp.id IS NOT NULL), 
           '[]'::json
         ) as photos,
+        COALESCE(
+          JSON_AGG(
+            DISTINCT JSON_BUILD_OBJECT(
+              'id', pri.id,
+              'menu_item_name', pri.menu_item_name,
+              'rating', CAST(pri.rating AS FLOAT),
+              'display_order', pri.display_order
+            ) ORDER BY pri.display_order
+          ) FILTER (WHERE pri.id IS NOT NULL),
+          '[]'::json
+        ) as rated_items,
         COALESCE(l.like_count, 0) as like_count,
         COALESCE(c.comment_count, 0) as comment_count,
         CASE WHEN ul.user_id IS NOT NULL THEN true ELSE false END as is_liked
       FROM posts p
       JOIN users u ON p.author_id = u.id
       LEFT JOIN post_photos pp ON p.id = pp.post_id
+      LEFT JOIN post_rated_items pri ON p.id = pri.post_id
       LEFT JOIN (
         SELECT post_id, COUNT(*) as like_count
         FROM likes
@@ -101,12 +113,24 @@ router.get("/me", async (req, res) => {
           ) FILTER (WHERE pp.id IS NOT NULL),
           '[]'::json
         ) as photos,
+        COALESCE(
+          JSON_AGG(
+            DISTINCT JSON_BUILD_OBJECT(
+              'id', pri.id,
+              'menu_item_name', pri.menu_item_name,
+              'rating', CAST(pri.rating AS FLOAT),
+              'display_order', pri.display_order
+            ) ORDER BY pri.display_order
+          ) FILTER (WHERE pri.id IS NOT NULL),
+          '[]'::json
+        ) as rated_items,
         COALESCE(l.like_count, 0) as like_count,
         COALESCE(c.comment_count, 0) as comment_count,
         CASE WHEN ul.user_id IS NOT NULL THEN true ELSE false END as is_liked
       FROM posts p
       JOIN users u ON p.author_id = u.id
       LEFT JOIN post_photos pp ON p.id = pp.post_id
+      LEFT JOIN post_rated_items pri ON p.id = pri.post_id
       LEFT JOIN (
         SELECT post_id, COUNT(*) as like_count
         FROM likes
@@ -166,12 +190,24 @@ router.get("/user/:userId", async (req, res) => {
           ) FILTER (WHERE pp.id IS NOT NULL), 
           '[]'::json
         ) as photos,
+        COALESCE(
+          JSON_AGG(
+            DISTINCT JSON_BUILD_OBJECT(
+              'id', pri.id,
+              'menu_item_name', pri.menu_item_name,
+              'rating', CAST(pri.rating AS FLOAT),
+              'display_order', pri.display_order
+            ) ORDER BY pri.display_order
+          ) FILTER (WHERE pri.id IS NOT NULL),
+          '[]'::json
+        ) as rated_items,
         COALESCE(l.like_count, 0) as like_count,
         COALESCE(c.comment_count, 0) as comment_count,
         CASE WHEN ul.user_id IS NOT NULL THEN true ELSE false END as is_liked
       FROM posts p
       JOIN users u ON p.author_id = u.id
       LEFT JOIN post_photos pp ON p.id = pp.post_id
+      LEFT JOIN post_rated_items pri ON p.id = pri.post_id
       LEFT JOIN (
         SELECT post_id, COUNT(*) as like_count
         FROM likes
@@ -221,7 +257,7 @@ router.post("/", async (req, res) => {
             res.status(404).json({ error: "User not found" });
             return;
         }
-        const { caption, rating, menu_items, dining_hall_name, meal_type, photos, } = req.body;
+        const { caption, rating, menu_items, dining_hall_name, meal_type, photos, rated_items, } = req.body;
         // Validation
         if (rating !== undefined && rating !== null) {
             if (typeof rating !== "number") {
@@ -335,6 +371,15 @@ router.post("/", async (req, res) => {
                     photo.dish_name || null,
                 ]);
                 photoRecords.push(photoResult.rows[0]);
+            }
+        }
+        // Insert rated items if provided
+        if (rated_items && rated_items.length > 0) {
+            for (let i = 0; i < rated_items.length; i++) {
+                const item = rated_items[i];
+                const roundedItemRating = Math.round(item.rating * 10) / 10;
+                await client.query(`INSERT INTO post_rated_items (post_id, menu_item_name, rating, display_order)
+           VALUES ($1, $2, $3, $4)`, [post.id, item.menu_item_name.trim(), roundedItemRating, i]);
             }
         }
         // Commit transaction

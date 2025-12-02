@@ -456,6 +456,10 @@ const transformPost = (backendPost: BackendPost): Post => {
     notes: backendPost.caption || "",
     menuItems: backendPost.menu_items || [],
     rating: backendPost.rating || 5.0,
+    ratedItems: backendPost.rated_items?.map(item => ({
+      menuItemName: item.menu_item_name,
+      rating: item.rating
+    })),
     likeCount: Number(backendPost.like_count) || 0,
     commentCount: Number(backendPost.comment_count) || 0,
     isLiked: backendPost.is_liked || false,
@@ -569,6 +573,14 @@ export const createPost = async (postData: PostData): Promise<Post> => {
           ? postData.photos.map((storageKey, index) => ({
               storage_key: storageKey,
               display_order: index,
+            }))
+          : null,
+      // Include rated items if provided
+      rated_items:
+        postData.ratedItems && postData.ratedItems.length > 0
+          ? postData.ratedItems.map((item) => ({
+              menu_item_name: item.menuItemName,
+              rating: Math.max(1.0, Math.min(10.0, Number(item.rating.toFixed(1)))),
             }))
           : null,
     };

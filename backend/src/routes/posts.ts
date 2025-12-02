@@ -32,12 +32,24 @@ router.get("/", async (req: Request, res: Response): Promise<void> => {
           ) FILTER (WHERE pp.id IS NOT NULL), 
           '[]'::json
         ) as photos,
+        COALESCE(
+          JSON_AGG(
+            DISTINCT JSON_BUILD_OBJECT(
+              'id', pri.id,
+              'menu_item_name', pri.menu_item_name,
+              'rating', CAST(pri.rating AS FLOAT),
+              'display_order', pri.display_order
+            ) ORDER BY pri.display_order
+          ) FILTER (WHERE pri.id IS NOT NULL),
+          '[]'::json
+        ) as rated_items,
         COALESCE(l.like_count, 0) as like_count,
         COALESCE(c.comment_count, 0) as comment_count,
         CASE WHEN ul.user_id IS NOT NULL THEN true ELSE false END as is_liked
       FROM posts p
       JOIN users u ON p.author_id = u.id
       LEFT JOIN post_photos pp ON p.id = pp.post_id
+      LEFT JOIN post_rated_items pri ON p.id = pri.post_id
       LEFT JOIN (
         SELECT post_id, COUNT(*) as like_count
         FROM likes
@@ -79,7 +91,7 @@ router.get("/me", async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const query = `
+      const query = `
       SELECT 
         p.id,
         p.author_id,
@@ -103,12 +115,24 @@ router.get("/me", async (req: Request, res: Response): Promise<void> => {
           ) FILTER (WHERE pp.id IS NOT NULL),
           '[]'::json
         ) as photos,
+        COALESCE(
+          JSON_AGG(
+            DISTINCT JSON_BUILD_OBJECT(
+              'id', pri.id,
+              'menu_item_name', pri.menu_item_name,
+              'rating', CAST(pri.rating AS FLOAT),
+              'display_order', pri.display_order
+            ) ORDER BY pri.display_order
+          ) FILTER (WHERE pri.id IS NOT NULL),
+          '[]'::json
+        ) as rated_items,
         COALESCE(l.like_count, 0) as like_count,
         COALESCE(c.comment_count, 0) as comment_count,
         CASE WHEN ul.user_id IS NOT NULL THEN true ELSE false END as is_liked
       FROM posts p
       JOIN users u ON p.author_id = u.id
       LEFT JOIN post_photos pp ON p.id = pp.post_id
+      LEFT JOIN post_rated_items pri ON p.id = pri.post_id
       LEFT JOIN (
         SELECT post_id, COUNT(*) as like_count
         FROM likes
@@ -123,9 +147,7 @@ router.get("/me", async (req: Request, res: Response): Promise<void> => {
       WHERE p.author_id = $1
       GROUP BY p.id, p.author_id, p.caption, p.rating, p.menu_items, p.dining_hall_name, p.meal_type, p.created_at, u.username, u.email, l.like_count, c.comment_count, ul.user_id
       ORDER BY p.created_at DESC
-    `;
-
-    const result = await pool.query(query, [userId]);
+    `;    const result = await pool.query(query, [userId]);
     // Parse rating from string to number if present
     const rows = result.rows.map((row: any) => ({
       ...row,
@@ -177,12 +199,24 @@ router.get(
           ) FILTER (WHERE pp.id IS NOT NULL), 
           '[]'::json
         ) as photos,
+        COALESCE(
+          JSON_AGG(
+            DISTINCT JSON_BUILD_OBJECT(
+              'id', pri.id,
+              'menu_item_name', pri.menu_item_name,
+              'rating', CAST(pri.rating AS FLOAT),
+              'display_order', pri.display_order
+            ) ORDER BY pri.display_order
+          ) FILTER (WHERE pri.id IS NOT NULL),
+          '[]'::json
+        ) as rated_items,
         COALESCE(l.like_count, 0) as like_count,
         COALESCE(c.comment_count, 0) as comment_count,
         CASE WHEN ul.user_id IS NOT NULL THEN true ELSE false END as is_liked
       FROM posts p
       JOIN users u ON p.author_id = u.id
       LEFT JOIN post_photos pp ON p.id = pp.post_id
+      LEFT JOIN post_rated_items pri ON p.id = pri.post_id
       LEFT JOIN (
         SELECT post_id, COUNT(*) as like_count
         FROM likes
@@ -245,6 +279,7 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
       dining_hall_name,
       meal_type,
       photos,
+      rated_items,
     }: CreatePostRequest = req.body;
 
     // Validation
@@ -386,6 +421,20 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
           ]
         );
         photoRecords.push(photoResult.rows[0]);
+      }
+    }
+
+    // Insert rated items if provided
+    if (rated_items && rated_items.length > 0) {
+      for (let i = 0; i < rated_items.length; i++) {
+        const item = rated_items[i];
+        const roundedItemRating = Math.round(item.rating * 10) / 10;
+        
+        await client.query(
+          `INSERT INTO post_rated_items (post_id, menu_item_name, rating, display_order)
+           VALUES ($1, $2, $3, $4)`,
+          [post.id, item.menu_item_name.trim(), roundedItemRating, i]
+        );
       }
     }
 

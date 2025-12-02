@@ -57,6 +57,12 @@ export interface BackendPost {
     display_order: number;
     dish_name?: string;
   }[];
+  rated_items?: {
+    id: string | number;
+    menu_item_name: string;
+    rating: number;
+    display_order: number;
+  }[];
 }
 
 // Frontend display format for posts
@@ -73,6 +79,7 @@ export interface Post {
   notes: string;
   menuItems: string[];
   rating: number;
+  ratedItems?: RatedItem[]; // Individual ratings for multiple items
   likeCount: number;
   commentCount: number;
   isLiked: boolean;
@@ -85,6 +92,11 @@ export interface Comment {
   created_at: string;
 }
 
+export interface RatedItem {
+  menuItemName: string;
+  rating: number;
+}
+
 export interface PostData {
   restaurantId: string;
   restaurantName: string;
@@ -92,6 +104,7 @@ export interface PostData {
   mealType: string;
   menuItems: string[];
   rating: number;
+  ratedItems?: RatedItem[]; // Optional: Multiple items with individual ratings
   companions: string[];
   notes: string;
   photos: string[];

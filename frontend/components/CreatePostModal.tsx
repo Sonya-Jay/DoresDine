@@ -4,6 +4,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -66,6 +67,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
   }, [visible, initialDiningHall, initialMealType]);
 
   const handleClose = () => {
+  const handleClose = () => {
     // Reset all form fields when closing
     setSelectedDiningHall(null);
     setSelectedMealType(null);
@@ -76,13 +78,13 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
     setPhotos([]);
     onClose();
   };
-
   const handleSubmit = () => {
     if (!selectedDiningHall) {
       // Could add validation alert here
       return;
     }
 
+    const postData: PostData = {
     const postData: PostData = {
       restaurantId: selectedDiningHall.id.toString(),
       restaurantName: selectedDiningHall.name,
@@ -94,7 +96,6 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
       notes,
       photos,
     };
-
     onSubmit(postData);
     handleClose();
   };
@@ -156,6 +157,28 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
 
             {/* Rating Slider */}
             <RatingSlider value={rating} onValueChange={setRating} />
+
+            {/* Rate Another Item Button */}
+            <TouchableOpacity
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                paddingVertical: 14,
+                paddingHorizontal: 16,
+                borderRadius: 10,
+                borderWidth: 2,
+                borderColor: "#D4A574",
+                backgroundColor: "#FFFBF5",
+                marginBottom: 20,
+              }}
+              onPress={() => alert('Rate another item clicked! Feature coming soon.')}
+            >
+              <Icon name="plus" size={20} color="#D4A574" />
+              <Text style={{ marginLeft: 8, fontSize: 14, fontWeight: "600", color: "#D4A574" }}>
+                Rate another item
+              </Text>
+            </TouchableOpacity>
 
             {/* Companion Selector */}
             <CompanionSelector

@@ -666,6 +666,27 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#fff",
   },
+  ratedItemRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+    paddingRight: 8,
+  },
+  itemRatingBadge: {
+    borderRadius: 12,
+    borderWidth: 2,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    minWidth: 45,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  itemRatingText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#000",
+  },
 });
 
 export default styles;

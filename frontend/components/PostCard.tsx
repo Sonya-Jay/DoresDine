@@ -168,32 +168,60 @@ const PostCard: React.FC<PostCardProps> = ({
               </View>
             </TouchableOpacity>
           ))
-        ) : post.menuItems.length > 0 ? (
+        ) : post.menuItems.length > 0 || (post.ratedItems && post.ratedItems.length > 0) ? (
           <View style={styles.menuItemsContainer}>
             <Text style={styles.menuItemsHeader}>What was eaten:</Text>
-            {post.menuItems.map((item, idx) => (
-              <View key={idx} style={styles.menuItemWrapper}>
-                <Text style={styles.menuItemText}>• {item}</Text>
-              </View>
-            ))}
-            {/* Show rating for the overall meal when no photos */}
-            <View style={styles.mealRatingWrapper}>
-              <View
-                style={[
-                  styles.mealRating,
-                  {
-                    borderColor:
-                      post.rating >= 7
-                        ? "#4CAF50"
-                        : post.rating >= 5
-                        ? "#FFA726"
-                        : "#f44336",
-                  },
-                ]}
-              >
-                <Text style={styles.ratingText}>{post.rating}</Text>
-              </View>
-            </View>
+            
+            {/* Display rated items with individual ratings */}
+            {post.ratedItems && post.ratedItems.length > 0 ? (
+              post.ratedItems.map((item, idx) => (
+                <View key={idx} style={styles.ratedItemRow}>
+                  <Text style={styles.menuItemText}>• {item.menuItemName}</Text>
+                  <View
+                    style={[
+                      styles.itemRatingBadge,
+                      {
+                        borderColor:
+                          item.rating >= 7
+                            ? "#4CAF50"
+                            : item.rating >= 5
+                            ? "#FFA726"
+                            : "#f44336",
+                      },
+                    ]}
+                  >
+                    <Text style={styles.itemRatingText}>{item.rating}</Text>
+                  </View>
+                </View>
+              ))
+            ) : (
+              /* Fallback to menu items list */
+              <>
+                {post.menuItems.map((item, idx) => (
+                  <View key={idx} style={styles.menuItemWrapper}>
+                    <Text style={styles.menuItemText}>• {item}</Text>
+                  </View>
+                ))}
+                {/* Show rating for the overall meal when no photos */}
+                <View style={styles.mealRatingWrapper}>
+                  <View
+                    style={[
+                      styles.mealRating,
+                      {
+                        borderColor:
+                          post.rating >= 7
+                            ? "#4CAF50"
+                            : post.rating >= 5
+                            ? "#FFA726"
+                            : "#f44336",
+                      },
+                    ]}
+                  >
+                    <Text style={styles.ratingText}>{post.rating}</Text>
+                  </View>
+                </View>
+              </>
+            )}
           </View>
         ) : null}
       </View>

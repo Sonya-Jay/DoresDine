@@ -43,6 +43,15 @@ export interface PostPhoto {
   created_at: Date;
 }
 
+export interface PostRatedItem {
+  id: string;
+  post_id: string;
+  menu_item_name: string;
+  rating: number;
+  display_order: number;
+  created_at: Date;
+}
+
 export interface PostWithPhotos extends Post {
   photos: PostPhoto[];
 }
@@ -57,6 +66,10 @@ export interface CreatePostRequest {
     storage_key: string;
     display_order: number;
     dish_name?: string;
+  }>;
+  rated_items?: Array<{
+    menu_item_name: string;
+    rating: number;
   }>;
 }
 
