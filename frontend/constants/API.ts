@@ -8,12 +8,15 @@ const LOCAL_BACKEND = "http://localhost:3000";
 const AWS_BACKEND = "http://Doresdine-backend-env.eba-j9uthrv7.us-east-2.elasticbeanstalk.com";
 
 // Determine which backend to use
-// In development, always use localhost. In production builds, use AWS.
-// You can override with EXPO_PUBLIC_API_URL environment variable
+// - If EXPO_PUBLIC_API_URL is set, use that (highest priority)
+// - If running on web in dev mode, use localhost
+// - Otherwise, use AWS backend (works for physical devices and production)
 export const API_URL = 
   typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_API_URL 
     ? process.env.EXPO_PUBLIC_API_URL 
-    : (typeof __DEV__ !== 'undefined' && __DEV__) ? LOCAL_BACKEND : AWS_BACKEND;
+    : (typeof __DEV__ !== 'undefined' && __DEV__ && typeof window !== 'undefined') 
+      ? LOCAL_BACKEND  // Web browser in dev mode
+      : AWS_BACKEND;   // Physical device or production
 
 // Log which backend is being used (for debugging)
 if (typeof __DEV__ !== 'undefined' && __DEV__) {
