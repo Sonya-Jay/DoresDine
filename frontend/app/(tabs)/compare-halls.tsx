@@ -1,7 +1,8 @@
 import BottomNav from "@/components/BottomNav";
 import Header from "@/components/Header";
-import { fetchDiningHalls, fetchMenuItems } from "@/services/api";
-import { DiningHall, MenuItem } from "@/types";
+import { fetchDiningHalls } from "@/services/api";
+import { API_URL, API_ENDPOINTS } from "@/constants/API";
+import { DiningHall, MenuItem, DayMenu } from "@/types";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -17,6 +18,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/Feather";
 
 type MealType = "breakfast" | "lunch" | "dinner";
+
+interface MenuScheduleResponse {
+  hall: string;
+  schedule: DayMenu[];
+}
 
 export default function CompareHallsScreen() {
   const insets = useSafeAreaInsets();
@@ -60,13 +66,60 @@ export default function CompareHallsScreen() {
     try {
       setLoadingMenus(true);
       
-      // Format date as YYYY-MM-DD
-      const dateStr = selectedDate.toISOString().split('T')[0];
-      
-      // Fetch menu items for both halls
+      // Fetch menu schedules for both halls
+      const [schedule1Response, schedule2Response] = await Promise.all([
+        fetch(`${API_URL}${API_ENDPOINTS.MENU_SCHEDULE(selectedHall1.id)}`),
+        fetch(`${API_URL}${API_ENDPOINTS.MENU_SCHEDULE(selectedHall2.id)}`),
+      ]);
+
+      if (!schedule1Response.ok || !schedule2Response.ok) {
+        throw new Error("Failed to fetch menu schedules");
+      }
+
+      const schedule1Data: MenuScheduleResponse = await schedule1Response.json();
+      const schedule2Data: MenuScheduleResponse = await schedule2Response.json();
+
+      // Format the selected date to match the backend format
+      const selectedDateStr = selectedDate.toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        month: 'long', 
+        day: 'numeric', 
+        year: 'numeric' 
+      });
+
+      // Find the menu for the selected date
+      const dayMenu1 = schedule1Data.schedule.find(day => day.date === selectedDateStr);
+      const dayMenu2 = schedule2Data.schedule.find(day => day.date === selectedDateStr);
+
+      // Find the meal period that matches the selected meal type
+      const getMealItems = async (dayMenu: DayMenu | undefined, hall: DiningHall): Promise<MenuItem[]> => {
+        if (!dayMenu || !dayMenu.meals) return [];
+        
+        const mealPeriod = dayMenu.meals.find(meal => 
+          meal.name.toLowerCase().includes(selectedMealType.toLowerCase())
+        );
+        
+        if (!mealPeriod) return [];
+
+        // Fetch the actual menu items for this meal
+        try {
+          const response = await fetch(
+            `${API_URL}${API_ENDPOINTS.MENU_ITEMS(mealPeriod.id, hall.cbordUnitId)}`
+          );
+          
+          if (!response.ok) return [];
+          
+          const items = await response.json();
+          return items;
+        } catch (err) {
+          console.error("Error fetching menu items:", err);
+          return [];
+        }
+      };
+
       const [items1, items2] = await Promise.all([
-        fetchMenuItems(selectedHall1.id, selectedMealType, dateStr),
-        fetchMenuItems(selectedHall2.id, selectedMealType, dateStr),
+        getMealItems(dayMenu1, selectedHall1),
+        getMealItems(dayMenu2, selectedHall2),
       ]);
 
       setHall1Items(items1);
