@@ -3,9 +3,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const cors_1 = __importDefault(require("cors"));
 require("dotenv/config");
 const express_1 = __importDefault(require("express"));
-const cors_1 = __importDefault(require("cors"));
 const db_1 = __importDefault(require("./db"));
 const auth_1 = require("./middleware/auth");
 const auth_2 = __importDefault(require("./routes/auth"));
@@ -57,7 +57,7 @@ app.use((req, res, next) => {
         return next();
     }
     // Apply JSON parsing with increased limit for other routes
-    express_1.default.json({ limit: '20mb' })(req, res, next);
+    express_1.default.json({ limit: '50mb' })(req, res, next);
 });
 // Attach user from Authorization Bearer token (optional)
 app.use(auth_1.attachUserFromToken);

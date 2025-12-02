@@ -416,7 +416,7 @@ const transformPost = (backendPost: BackendPost): Post => {
 
   // Build images array from photos
   // Filter out any photos with empty storage_key and ensure we have valid URLs
-  // Also filter out HEIC files as React Native Image doesn't support them
+      // Accept all image types
 
   // Deduplicate photos by storage_key to avoid showing duplicates
   const seenStorageKeys = new Set<string>();
@@ -433,15 +433,10 @@ const transformPost = (backendPost: BackendPost): Post => {
   });
 
   const images = uniquePhotos
-    .filter((photo) => {
-      // Filter out HEIC files - React Native Image doesn't support them
-      const extension = photo.storage_key.toLowerCase().split(".").pop();
-      if (extension === "heic" || extension === "heif") {
-        console.warn("Skipping HEIC file (not supported):", photo.storage_key);
-        return false;
-      }
-      return true;
-    })
+        .filter((photo) => {
+          // Accept all image types
+          return true;
+        })
     .map((photo) => {
       const photoUrl = getPhotoUrl(photo.storage_key);
       
@@ -844,14 +839,26 @@ export const uploadPhoto = async (
   fileName: string = "photo.jpg"
 ): Promise<string> => {
   try {
-    // Determine file type from URI or filename
+    // Determine file type from URI or filename - support all image types
     const fileExtension = fileName.split(".").pop()?.toLowerCase() || "jpg";
-    const mimeType =
-      fileExtension === "png"
-        ? "image/png"
-        : fileExtension === "gif"
-        ? "image/gif"
-        : "image/jpeg";
+    
+    // Map common image extensions to MIME types
+    const mimeTypeMap: { [key: string]: string } = {
+      jpg: "image/jpeg",
+      jpeg: "image/jpeg",
+      png: "image/png",
+      gif: "image/gif",
+      webp: "image/webp",
+      bmp: "image/bmp",
+      heic: "image/heic",
+      heif: "image/heif",
+      svg: "image/svg+xml",
+      ico: "image/x-icon",
+      tiff: "image/tiff",
+      tif: "image/tiff",
+    };
+    
+    const mimeType = mimeTypeMap[fileExtension] || "image/jpeg"; // Default to JPEG if unknown
 
     // Create FormData - React Native format
     const formData = new FormData();

@@ -3,11 +3,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const client_s3_1 = require("@aws-sdk/client-s3");
 const express_1 = require("express");
+const fs_1 = __importDefault(require("fs"));
 const multer_1 = __importDefault(require("multer"));
 const path_1 = __importDefault(require("path"));
-const fs_1 = __importDefault(require("fs"));
-const client_s3_1 = require("@aws-sdk/client-s3");
 const router = (0, express_1.Router)();
 // Initialize S3 client if credentials are provided
 const s3Client = process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
@@ -39,11 +39,11 @@ else {
 }
 // Configure multer for memory storage (we'll upload to S3 or local disk)
 const storage = multer_1.default.memoryStorage();
-// Configure multer with file size limits (20MB max)
+// Configure multer with file size limits (50MB max)
 const upload = (0, multer_1.default)({
     storage,
     limits: {
-        fileSize: 20 * 1024 * 1024, // 20MB in bytes
+        fileSize: 50 * 1024 * 1024, // 50MB in bytes
     },
 });
 // POST /upload/photo - upload a single photo
@@ -70,11 +70,24 @@ router.post("/photo", async (req, res) => {
                 const unique = Date.now() + "-" + Math.round(Math.random() * 1e9);
                 const fileExtension = path_1.default.extname(file.originalname || ".jpg");
                 const s3Key = `uploads/${unique}${fileExtension}`;
-                // Determine content type
+                // Determine content type - support all image types
+                const mimeTypeMap = {
+                    ".jpg": "image/jpeg",
+                    ".jpeg": "image/jpeg",
+                    ".png": "image/png",
+                    ".gif": "image/gif",
+                    ".webp": "image/webp",
+                    ".bmp": "image/bmp",
+                    ".heic": "image/heic",
+                    ".heif": "image/heif",
+                    ".svg": "image/svg+xml",
+                    ".ico": "image/x-icon",
+                    ".tiff": "image/tiff",
+                    ".tif": "image/tiff",
+                };
                 const contentType = file.mimetype ||
-                    (fileExtension === ".jpg" || fileExtension === ".jpeg" ? "image/jpeg" :
-                        fileExtension === ".png" ? "image/png" :
-                            fileExtension === ".gif" ? "image/gif" : "application/octet-stream");
+                    mimeTypeMap[fileExtension.toLowerCase()] ||
+                    "application/octet-stream";
                 // Upload to S3
                 // Note: ACL "public-read" is deprecated and may not work if bucket has ACLs disabled
                 // Instead, configure bucket policy to allow public reads

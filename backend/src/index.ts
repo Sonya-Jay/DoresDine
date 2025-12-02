@@ -1,6 +1,6 @@
+import cors from "cors";
 import "dotenv/config";
 import express from "express";
-import cors from "cors";
 import pool from "./db";
 import { attachUserFromToken } from "./middleware/auth";
 import authRouter from "./routes/auth";
@@ -59,7 +59,7 @@ app.use((req, res, next) => {
     return next();
   }
   // Apply JSON parsing with increased limit for other routes
-  express.json({ limit: '20mb' })(req, res, next);
+  express.json({ limit: '50mb' })(req, res, next);
 });
 
 // Attach user from Authorization Bearer token (optional)

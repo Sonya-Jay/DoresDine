@@ -1,8 +1,8 @@
-import { Router, Request, Response } from "express";
+import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { Request, Response, Router } from "express";
+import fs from "fs";
 import multer from "multer";
 import path from "path";
-import fs from "fs";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 
 const router = Router();
 
@@ -39,11 +39,11 @@ if (!s3Client || !S3_BUCKET) {
 // Configure multer for memory storage (we'll upload to S3 or local disk)
 const storage = multer.memoryStorage();
 
-// Configure multer with file size limits (20MB max)
+// Configure multer with file size limits (50MB max)
 const upload = multer({ 
   storage,
   limits: {
-    fileSize: 20 * 1024 * 1024, // 20MB in bytes
+    fileSize: 50 * 1024 * 1024, // 50MB in bytes
   },
 });
 
@@ -74,11 +74,25 @@ router.post("/photo", async (req: Request, res: Response) => {
         const fileExtension = path.extname(file.originalname || ".jpg");
         const s3Key = `uploads/${unique}${fileExtension}`;
         
-        // Determine content type
+        // Determine content type - support all image types
+        const mimeTypeMap: { [key: string]: string } = {
+          ".jpg": "image/jpeg",
+          ".jpeg": "image/jpeg",
+          ".png": "image/png",
+          ".gif": "image/gif",
+          ".webp": "image/webp",
+          ".bmp": "image/bmp",
+          ".heic": "image/heic",
+          ".heif": "image/heif",
+          ".svg": "image/svg+xml",
+          ".ico": "image/x-icon",
+          ".tiff": "image/tiff",
+          ".tif": "image/tiff",
+        };
+        
         const contentType = file.mimetype || 
-          (fileExtension === ".jpg" || fileExtension === ".jpeg" ? "image/jpeg" :
-           fileExtension === ".png" ? "image/png" :
-           fileExtension === ".gif" ? "image/gif" : "application/octet-stream");
+          mimeTypeMap[fileExtension.toLowerCase()] || 
+          "application/octet-stream";
 
         // Upload to S3
         // Note: ACL "public-read" is deprecated and may not work if bucket has ACLs disabled

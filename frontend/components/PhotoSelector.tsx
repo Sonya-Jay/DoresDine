@@ -1,9 +1,9 @@
-import * as ImagePicker from "expo-image-picker";
+import { uploadPhoto } from "@/services/api";
 import * as ImageManipulator from "expo-image-manipulator";
+import * as ImagePicker from "expo-image-picker";
 import React from "react";
 import { Alert, StyleSheet, Text, TouchableOpacity } from "react-native";
 import Icon from "react-native-vector-icons/Feather";
-import { uploadPhoto } from "@/services/api";
 
 interface PhotoSelectorProps {
   photos: string[];
@@ -39,28 +39,14 @@ const PhotoSelector: React.FC<PhotoSelectorProps> = ({
     if (result.canceled) return;
 
     if (result.assets && result.assets.length > 0) {
-      // Filter out HEIC/HEIF files - React Native Image doesn't support them
+      // Accept all image types
       const validAssets = result.assets.filter((asset) => {
         if (!asset.uri) return false;
-        const fileName = asset.fileName || asset.uri;
-        const extension = fileName.toLowerCase().split('.').pop();
-        if (extension === 'heic' || extension === 'heif') {
-          return false;
-        }
         return true;
       });
 
-      // Check if any HEIC files were filtered out
-      const heicCount = result.assets.length - validAssets.length;
-      if (heicCount > 0) {
-        Alert.alert(
-          "HEIC files not supported",
-          `${heicCount} HEIC file${heicCount > 1 ? 's were' : ' was'} removed. Please select JPEG or PNG images instead.`
-        );
-      }
-
       if (validAssets.length === 0) {
-        Alert.alert("No valid images", "Please select JPEG or PNG images (HEIC files are not supported)");
+        Alert.alert("No valid images", "Please select valid images");
         return;
       }
 
@@ -71,30 +57,42 @@ const PhotoSelector: React.FC<PhotoSelectorProps> = ({
         if (!asset.uri) return null;
 
         try {
-          // Compress and resize image before uploading
+          // Get original file extension to preserve format
+          const originalFileName = asset.fileName || asset.uri;
+          const fileExtension = originalFileName.toLowerCase().split('.').pop() || 'jpg';
+          
+          // Determine format based on original file
+          let saveFormat = ImageManipulator.SaveFormat.JPEG;
+          if (fileExtension === 'png') {
+            saveFormat = ImageManipulator.SaveFormat.PNG;
+          }
+          
+          // Compress and resize image before uploading (preserves original format)
           const manipulatedImage = await ImageManipulator.manipulateAsync(
             asset.uri,
             [
               { resize: { width: 1920 } }, // Resize to max 1920px width (maintains aspect ratio)
             ],
             {
-              compress: 0.7, // Compress to 70% quality (reduces file size significantly)
-              format: ImageManipulator.SaveFormat.JPEG, // Use JPEG for better compression
+              compress: 0.6, // Compress to 60% quality (reduces file size more aggressively)
+              format: saveFormat, // Preserve original format (JPEG or PNG)
             }
           );
 
-          console.log("Image compressed:", {
+          console.log("Image processed:", {
             original: asset.uri,
-            compressed: manipulatedImage.uri,
+            processed: manipulatedImage.uri,
             width: manipulatedImage.width,
             height: manipulatedImage.height,
+            format: saveFormat,
           });
 
-          // Upload the compressed photo to backend
-          // Always use .jpg extension since we convert everything to JPEG
+          // Upload the processed photo to backend
+          // Use the correct extension based on the processed format (not original)
+          const processedExtension = saveFormat === ImageManipulator.SaveFormat.PNG ? 'png' : 'jpg';
           const fileName = asset.fileName 
-            ? asset.fileName.replace(/\.(heic|heif|png|gif)$/i, '.jpg')
-            : `photo_${Date.now()}.jpg`;
+            ? asset.fileName.replace(/\.(heic|heif|jpg|jpeg|png|gif|webp|bmp)$/i, `.${processedExtension}`)
+            : `photo_${Date.now()}.${processedExtension}`;
           
           const storageKey = await uploadPhoto(
             manipulatedImage.uri,
