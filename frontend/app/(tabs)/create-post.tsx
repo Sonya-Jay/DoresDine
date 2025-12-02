@@ -1,6 +1,6 @@
 import { useRouter, useLocalSearchParams } from "expo-router";
 import React, { useState, useEffect } from "react";
-import { View, Alert, ScrollView, Text, TouchableOpacity, StyleSheet, TextInput, Platform } from "react-native";
+import { View, Alert, ScrollView, Text, TouchableOpacity, StyleSheet, TextInput, Platform, Modal } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Icon from "react-native-vector-icons/Feather";
@@ -215,20 +215,52 @@ export default function CreatePostScreen() {
         </View>
 
         {/* Date Picker */}
-        {showDatePicker && (
+        {showDatePicker && Platform.OS === 'android' && (
           <DateTimePicker
             value={selectedDate}
             mode="date"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            display="default"
             onChange={(event, date) => {
-              setShowDatePicker(Platform.OS === 'ios');
-              if (date) {
+              setShowDatePicker(false);
+              if (date && event.type !== 'dismissed') {
                 setSelectedDate(date);
               }
             }}
             maximumDate={new Date()}
           />
         )}
+
+        {/* iOS Date Picker Modal */}
+        <Modal
+          visible={showDatePicker && Platform.OS === 'ios'}
+          transparent={true}
+          animationType="slide"
+        >
+          <View style={styles.datePickerModal}>
+            <View style={styles.datePickerContainer}>
+              <View style={styles.datePickerHeader}>
+                <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                  <Text style={styles.datePickerCancel}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                  <Text style={styles.datePickerDone}>Done</Text>
+                </TouchableOpacity>
+              </View>
+              <DateTimePicker
+                value={selectedDate}
+                mode="date"
+                display="spinner"
+                onChange={(event, date) => {
+                  if (date) {
+                    setSelectedDate(date);
+                  }
+                }}
+                maximumDate={new Date()}
+                textColor="#000"
+              />
+            </View>
+          </View>
+        </Modal>
 
         {/* Rated Dishes Section */}
         <View style={styles.section}>
@@ -404,7 +436,7 @@ const styles = StyleSheet.create({
   },
   dateText: {
     fontSize: 14,
-    color: "#666\",
+    color: "#666",
     marginBottom: 16,
   },
   dateSelector: {
@@ -538,5 +570,33 @@ const styles = StyleSheet.create({
     color: "#666",
     marginBottom: 8,
   },
+  datePickerModal: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  datePickerContainer: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 34,
+  },
+  datePickerHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e0e0e0",
+  },
+  datePickerCancel: {
+    fontSize: 17,
+    color: "#007AFF",
+  },
+  datePickerDone: {
+    fontSize: 17,
+    fontWeight: "600",
+    color: "#007AFF",
+  },
 });
-
