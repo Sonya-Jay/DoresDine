@@ -1,10 +1,10 @@
 import BottomNav from "@/components/BottomNav";
 import FilterModal, { FilterOptions } from "@/components/FilterModal";
 import Header from "@/components/Header";
-import { fetchMenuItems } from "@/services/api";
+import { fetchMenuItems, searchDishes, SearchDish } from "@/services/api";
 import { MenuItem } from "@/types";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -12,6 +12,8 @@ import {
   Text,
   TouchableOpacity,
   View,
+  ScrollView,
+  LayoutChangeEvent,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/Feather";
@@ -37,6 +39,10 @@ export default function MenuItemsScreen() {
     allergens: [],
     mealTypes: [],
   });
+  const [searchResults, setSearchResults] = useState<SearchDish[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [headerHeight, setHeaderHeight] = useState(180);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Parse filter params
   const filterAllergens = params.filterAllergens
@@ -146,15 +152,52 @@ export default function MenuItemsScreen() {
     setActiveFilters(filters);
   };
 
-  // Calculate header height: safe area + headerTop (40) + margins (12) + searchBar (24+12) + filter (16+3) + paddingBottom (12)
-  const headerHeight =
-    Math.max(insets.top, 15) + 40 + 12 + 24 + 12 + 16 + 3 + 12; // ~134px + safe area
+  // Search dishes when searchText changes
+  useEffect(() => {
+    // Clear previous timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    // If search text is empty, clear results
+    if (searchText.trim().length < 1) {
+      setSearchResults([]);
+      return;
+    }
+
+    // Debounce search by 300ms
+    searchTimeoutRef.current = setTimeout(async () => {
+      try {
+        setSearchLoading(true);
+        const results = await searchDishes(searchText.trim());
+        setSearchResults(results);
+      } catch (err: any) {
+        console.error("Error searching dishes:", err);
+        setSearchResults([]);
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 300);
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchText]);
+
+  const handleHeaderLayout = (event: LayoutChangeEvent) => {
+    const { height } = event.nativeEvent.layout;
+    setHeaderHeight(height);
+  };
+
   const bottomNavHeight = 60 + Math.max(insets.bottom, 8);
 
   return (
     <View style={{ flex: 1, backgroundColor: "#fff" }}>
       {/* Fixed Header */}
       <View
+        onLayout={handleHeaderLayout}
         style={{
           position: "absolute",
           top: 0,
@@ -174,21 +217,72 @@ export default function MenuItemsScreen() {
           setSearchText={setSearchText}
           onFilterPress={() => setFilterModalVisible(true)}
           activeFilterCount={activeFilterCount}
+          searchPlaceholder="Search foods"
+          disableSearchModal={true}
         />
       </View>
+
+      {/* Search Results Dropdown */}
+      {searchText.trim().length >= 1 && (
+        <View style={[styles.searchDropdown, { top: headerHeight }]}>
+          {searchLoading ? (
+            <View style={styles.searchDropdownLoading}>
+              <ActivityIndicator size="small" color="#D4A574" />
+              <Text style={styles.searchDropdownLoadingText}>Searching...</Text>
+            </View>
+          ) : searchResults.length > 0 ? (
+            <ScrollView 
+              style={styles.searchDropdownScroll}
+              keyboardShouldPersistTaps="handled"
+            >
+              {searchResults.map((dish, index) => (
+                <TouchableOpacity
+                  key={`${dish.name}-${index}`}
+                  style={styles.searchResultItem}
+                  onPress={() => {
+                    // Filter items to show only this dish
+                    setSearchText("");
+                    setSearchResults([]);
+                    // The filteredItems will automatically filter by the dish name
+                    setSearchText(dish.name);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.searchResultIcon}>
+                    <Icon name="coffee" size={20} color="#fff" />
+                  </View>
+                  <View style={styles.searchResultInfo}>
+                    <Text style={styles.searchResultName}>{dish.name}</Text>
+                    {dish.frequency && (
+                      <Text style={styles.searchResultSubtitle}>
+                        {dish.frequency} {dish.frequency === 1 ? 'post' : 'posts'}
+                      </Text>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          ) : (
+            <View style={styles.searchDropdownEmpty}>
+              <Text style={styles.searchDropdownEmptyText}>No dishes found</Text>
+            </View>
+          )}
+        </View>
+      )}
 
       {/* Scrollable Content */}
       <FlatList
         contentContainerStyle={{
-          paddingTop: headerHeight + 80, // Header + back button section
+          paddingTop: headerHeight + 20,
           paddingBottom: bottomNavHeight,
           paddingHorizontal: 20,
         }}
         ListHeaderComponent={
           <View style={styles.header}>
             <TouchableOpacity
-              onPress={() => router.back()}
+              onPress={() => router.push("/(tabs)/menus")}
               style={styles.backButton}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
               <Icon name="arrow-left" size={24} color="#000" />
             </TouchableOpacity>
@@ -287,14 +381,16 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 20,
     paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
+    marginBottom: 8,
   },
   backButton: {
     marginRight: 12,
-    padding: 4,
+    padding: 8,
+    minWidth: 40,
+    minHeight: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerText: {
     flex: 1,
@@ -314,6 +410,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
+    width: '100%',
   },
   itemName: {
     fontSize: 18,
@@ -368,5 +465,71 @@ const styles = StyleSheet.create({
     padding: 20,
     textAlign: "center",
     color: "#999",
+  },
+  searchDropdown: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    maxHeight: 400,
+    zIndex: 9,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  searchDropdownScroll: {
+    maxHeight: 400,
+  },
+  searchResultItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f5f5f5',
+  },
+  searchResultIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    backgroundColor: '#D4A574',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  searchResultInfo: {
+    flex: 1,
+  },
+  searchResultName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#000',
+    marginBottom: 2,
+  },
+  searchResultSubtitle: {
+    fontSize: 14,
+    color: '#666',
+  },
+  searchDropdownLoading: {
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchDropdownLoadingText: {
+    marginTop: 8,
+    fontSize: 14,
+    color: '#666',
+  },
+  searchDropdownEmpty: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  searchDropdownEmptyText: {
+    fontSize: 14,
+    color: '#999',
   },
 });

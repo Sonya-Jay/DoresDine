@@ -55,8 +55,8 @@ router.get(
     try {
       const query = ((req.query.q as string) || "").trim().toLowerCase();
 
-      if (!query || query.length < 2) {
-        res.status(400).json({ error: "Query must be at least 2 characters" });
+      if (!query || query.length < 1) {
+        res.status(400).json({ error: "Query must be at least 1 character" });
         return;
       }
 
@@ -74,8 +74,8 @@ router.get("/dishes", async (req: Request, res: Response): Promise<void> => {
   try {
     const query = ((req.query.q as string) || "").trim().toLowerCase();
 
-    if (!query || query.length < 2) {
-      res.status(400).json({ error: "Query must be at least 2 characters" });
+    if (!query || query.length < 1) {
+      res.status(400).json({ error: "Query must be at least 1 character" });
       return;
     }
 

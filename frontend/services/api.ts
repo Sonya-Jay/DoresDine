@@ -885,7 +885,7 @@ export const searchDiningHalls = async (
   query: string
 ): Promise<SearchDiningHall[]> => {
   try {
-    if (!query || query.trim().length < 2) {
+    if (!query || query.trim().length < 1) {
       return [];
     }
 
@@ -897,11 +897,18 @@ export const searchDiningHalls = async (
     );
 
     if (!response.ok) {
-      throw new Error(`Failed to search dining halls: ${response.statusText}`);
+      let errorMessage = `Failed to search dining halls: ${response.statusText}`;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorMessage;
+      } catch (e) {
+        // Couldn't parse error response
+      }
+      throw new Error(errorMessage);
     }
 
     const data = await response.json();
-    return data.diningHalls;
+    return data.diningHalls || [];
   } catch (error) {
     console.error("Error searching dining halls:", error);
     throw error;
@@ -911,7 +918,7 @@ export const searchDiningHalls = async (
 // Search dishes
 export const searchDishes = async (query: string): Promise<SearchDish[]> => {
   try {
-    if (!query || query.trim().length < 2) {
+    if (!query || query.trim().length < 1) {
       return [];
     }
 
@@ -923,11 +930,18 @@ export const searchDishes = async (query: string): Promise<SearchDish[]> => {
     );
 
     if (!response.ok) {
-      throw new Error(`Failed to search dishes: ${response.statusText}`);
+      let errorMessage = `Failed to search dishes: ${response.statusText}`;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorMessage;
+      } catch (e) {
+        // Couldn't parse error response
+      }
+      throw new Error(errorMessage);
     }
 
     const data = await response.json();
-    return data.dishes;
+    return data.dishes || [];
   } catch (error) {
     console.error("Error searching dishes:", error);
     throw error;

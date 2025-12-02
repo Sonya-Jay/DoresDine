@@ -50,8 +50,8 @@ router.get("/users", async (req, res) => {
 router.get("/dining-halls", async (req, res) => {
     try {
         const query = (req.query.q || "").trim().toLowerCase();
-        if (!query || query.length < 2) {
-            res.status(400).json({ error: "Query must be at least 2 characters" });
+        if (!query || query.length < 1) {
+            res.status(400).json({ error: "Query must be at least 1 character" });
             return;
         }
         const diningHalls = await searchDiningHalls(query);
@@ -66,8 +66,8 @@ router.get("/dining-halls", async (req, res) => {
 router.get("/dishes", async (req, res) => {
     try {
         const query = (req.query.q || "").trim().toLowerCase();
-        if (!query || query.length < 2) {
-            res.status(400).json({ error: "Query must be at least 2 characters" });
+        if (!query || query.length < 1) {
+            res.status(400).json({ error: "Query must be at least 1 character" });
             return;
         }
         // Search through posts for menu items
