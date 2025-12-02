@@ -35,6 +35,7 @@ const Header: React.FC<HeaderProps> = ({
   hideSearch,
   searchPlaceholder,
   disableSearchModal,
+  dishSearchMode = false,
 }) => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -130,7 +131,6 @@ const Header: React.FC<HeaderProps> = ({
                 onPress={() => {
                   setSearchText("");
                   setSearchModalVisible(false);
-                  setDishSearchVisible(false);
                 }}
               >
                 <Icon name="x" size={20} color="#999" />
