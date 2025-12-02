@@ -1,6 +1,7 @@
 import { Request, Response, Router } from "express";
 import pool from "../db";
 import cbordService from "../services/cbordService";
+import { DINING_HALLS } from "../services/cbordService";
 
 const router = Router();
 
@@ -100,6 +101,27 @@ router.get(
     } catch (error) {
       console.error("Error fetching trending dishes:", error);
       res.status(500).json({ error: "Failed to fetch trending dishes" });
+    }
+  }
+);
+
+// GET /search/dish-availability - Find which dining halls serve a dish
+router.get(
+  "/dish-availability",
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const query = ((req.query.q as string) || "").trim().toLowerCase();
+
+      if (!query || query.length < 1) {
+        res.status(400).json({ error: "Query must be at least 1 character" });
+        return;
+      }
+
+      const availability = await searchDishAvailability(query);
+      res.json(availability);
+    } catch (error) {
+      console.error("Error searching dish availability:", error);
+      res.status(500).json({ error: "Failed to search dish availability" });
     }
   }
 );
@@ -230,6 +252,113 @@ async function getTrendingDishes(limit: number): Promise<any[]> {
   } catch (error) {
     console.error("Error in getTrendingDishes:", error);
     return [];
+  }
+}
+
+async function searchDishAvailability(query: string): Promise<{
+  dish: string;
+  today: Array<{ hallId: number; hallName: string; mealPeriod?: string }>;
+  later: Array<{ hallId: number; hallName: string; date?: string; mealPeriod?: string }>;
+}> {
+  const today: Array<{ hallId: number; hallName: string; mealPeriod?: string }> = [];
+  const later: Array<{ hallId: number; hallName: string; date?: string; mealPeriod?: string }> = [];
+  
+  const todayDate = new Date();
+  const todayDateStr = todayDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+  
+  try {
+    // Search all dining halls in parallel (but limit concurrency to avoid overwhelming the API)
+    const searchPromises = DINING_HALLS.map(async (hall) => {
+      try {
+        // Get menu schedule for this hall
+        const schedule = await cbordService.getMenuSchedule(hall.cbordUnitId);
+        
+        // Check today's menu
+        const todayMenu = schedule.find(day => {
+          const dayDate = new Date(day.date);
+          const dayDateStr = dayDate.toISOString().split('T')[0];
+          return dayDateStr === todayDateStr;
+        });
+        
+        if (todayMenu) {
+          // Check each meal period for today
+          for (const period of todayMenu.meals || []) {
+            if (period.id) {
+              try {
+                const items = await cbordService.getMenuItems(period.id, hall.cbordUnitId);
+                const found = items.some(item => 
+                  item.name.toLowerCase().includes(query)
+                );
+                
+                if (found) {
+                  today.push({
+                    hallId: hall.id,
+                    hallName: hall.name,
+                    mealPeriod: period.name,
+                  });
+                  return; // Found in today, don't check later
+                }
+              } catch (err) {
+                // Skip if we can't fetch items for this meal
+                console.log(`Could not fetch items for hall ${hall.id}, meal ${period.id}`);
+              }
+            }
+          }
+        }
+        
+        // If not found today, check future days
+        for (const day of schedule) {
+          const dayDate = new Date(day.date);
+          const dayDateStr = dayDate.toISOString().split('T')[0];
+          
+          // Skip today (already checked) and past dates
+          if (dayDateStr <= todayDateStr) continue;
+          
+          // Check each meal period
+          for (const period of day.meals || []) {
+            if (period.id) {
+              try {
+                const items = await cbordService.getMenuItems(period.id, hall.cbordUnitId);
+                const found = items.some(item => 
+                  item.name.toLowerCase().includes(query)
+                );
+                
+                if (found) {
+                  later.push({
+                    hallId: hall.id,
+                    hallName: hall.name,
+                    date: day.date,
+                    mealPeriod: period.name,
+                  });
+                  return; // Found in this day, move to next hall
+                }
+              } catch (err) {
+                // Skip if we can't fetch items
+              }
+            }
+          }
+        }
+      } catch (err) {
+        // Skip halls that fail
+        console.log(`Error checking hall ${hall.name}:`, err);
+      }
+    });
+    
+    // Wait for all searches to complete (with timeout)
+    await Promise.allSettled(searchPromises);
+    
+    return {
+      dish: query,
+      today,
+      later,
+    };
+  } catch (error) {
+    console.error("Error in searchDishAvailability:", error);
+    return {
+      dish: query,
+      today: [],
+      later: [],
+    };
   }
 }
 

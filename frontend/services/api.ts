@@ -973,3 +973,44 @@ export const getTrendingDishes = async (
     throw error;
   }
 };
+
+// Search dish availability across dining halls
+export interface DishAvailability {
+  dish: string;
+  today: Array<{ hallId: number; hallName: string; mealPeriod?: string }>;
+  later: Array<{ hallId: number; hallName: string; date?: string; mealPeriod?: string }>;
+}
+
+export const searchDishAvailability = async (
+  query: string
+): Promise<DishAvailability> => {
+  try {
+    if (!query || query.trim().length < 1) {
+      return { dish: query, today: [], later: [] };
+    }
+
+    const response = await fetch(
+      `${API_URL}/search/dish-availability?q=${encodeURIComponent(query.trim())}`,
+      {
+        headers: getHeaders(false),
+      }
+    );
+
+    if (!response.ok) {
+      let errorMessage = `Failed to search dish availability: ${response.statusText}`;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorMessage;
+      } catch (e) {
+        // Couldn't parse error response
+      }
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error searching dish availability:", error);
+    throw error;
+  }
+};

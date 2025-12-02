@@ -22,6 +22,7 @@ interface HeaderProps {
   hideSearch?: boolean;
   searchPlaceholder?: string;
   disableSearchModal?: boolean;
+  dishSearchMode?: boolean; // New prop for dish search mode
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -66,6 +67,7 @@ const Header: React.FC<HeaderProps> = ({
 
   const handleSearchChange = (text: string) => {
     setSearchText(text);
+    // Regular search modal (dish search is now on separate page)
     if (!disableSearchModal && text.trim().length >= 2) {
       setSearchModalVisible(true);
     } else {
@@ -86,8 +88,12 @@ const Header: React.FC<HeaderProps> = ({
             <TouchableOpacity>
               <Icon name="bell" size={24} color="#000" />
             </TouchableOpacity>
-            <TouchableOpacity style={{ marginLeft: 20 }}>
-              <Icon name="menu" size={24} color="#000" />
+            <TouchableOpacity
+              style={{ marginLeft: 20 }}
+              onPress={() => router.push("/(tabs)/search")}
+              accessibilityLabel="Search for Dishes"
+            >
+              <Icon name="search" size={24} color="#000" />
             </TouchableOpacity>
             <TouchableOpacity
               style={{ marginLeft: 20 }}
@@ -108,8 +114,11 @@ const Header: React.FC<HeaderProps> = ({
 
         {!hideSearch && (
           <View style={styles.searchBar}>
+            {dishSearchMode && (
+              <Icon name="search" size={20} color="#999" style={{ marginRight: 8 }} />
+            )}
             <TextInput
-              placeholder={searchPlaceholder || "Search a menu, member, etc."}
+              placeholder={dishSearchMode ? "Search for a dish..." : (searchPlaceholder || "Search a menu, member, etc.")}
               value={searchText}
               onChangeText={handleSearchChange}
               style={styles.searchInput}
@@ -121,6 +130,7 @@ const Header: React.FC<HeaderProps> = ({
                 onPress={() => {
                   setSearchText("");
                   setSearchModalVisible(false);
+                  setDishSearchVisible(false);
                 }}
               >
                 <Icon name="x" size={20} color="#999" />

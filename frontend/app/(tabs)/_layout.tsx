@@ -65,6 +65,13 @@ export default function TabLayout() {
           headerShown: false,
         }}
       />
+      <Tabs.Screen
+        name="dish-results"
+        options={{
+          title: 'Dish Results',
+          headerShown: false,
+        }}
+      />
     </Tabs>
   );
 }
