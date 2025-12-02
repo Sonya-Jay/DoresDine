@@ -253,7 +253,10 @@ const PostCard: React.FC<PostCardProps> = ({
             <TouchableOpacity onPress={handleUsernamePress} activeOpacity={0.7}>
               <Text style={styles.username}>{post.username}</Text>
             </TouchableOpacity>
-            <Text style={styles.rankedText}> ranked </Text>
+          </View>
+          
+          <View style={styles.userHeader}>
+            <Text style={styles.rankedText}>ranked </Text>
             <TouchableOpacity onPress={handleDiningHallPress} activeOpacity={0.7}>
               <Text style={styles.restaurant}>{post.dininghall}</Text>
             </TouchableOpacity>
