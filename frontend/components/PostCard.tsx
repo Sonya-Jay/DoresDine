@@ -267,10 +267,6 @@ const PostCard: React.FC<PostCardProps> = ({
               <Icon name="calendar" size={11} color="#666" />
               <Text style={styles.metadataText}> {post.date}</Text>
             </View>
-            <View style={styles.metadataRow}>
-              <Icon name="x" size={11} color="#666" />
-              <Text style={styles.metadataText}> {post.visits} Visits</Text>
-            </View>
           </View>
         </View>
       </View>
