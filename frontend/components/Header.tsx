@@ -97,18 +97,7 @@ const Header: React.FC<HeaderProps> = ({
             </Text>
           </TouchableOpacity>
           <View style={styles.headerIcons}>
-            <TouchableOpacity>
-              <Icon name="bell" size={24} color="#000" />
-            </TouchableOpacity>
             <TouchableOpacity
-              style={{ marginLeft: 20 }}
-              onPress={() => router.push("/(tabs)/search")}
-              accessibilityLabel="Search for Dishes"
-            >
-              <Icon name="search" size={24} color="#000" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={{ marginLeft: 20 }}
               onPress={handleSettingsPress}
               accessibilityLabel="Profile Settings"
             >

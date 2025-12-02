@@ -429,9 +429,6 @@ const PostCard: React.FC<PostCardProps> = ({
           >
             <Icon name="message-square" size={24} color="#000" />
           </TouchableOpacity>
-          <TouchableOpacity style={{ marginLeft: 20 }}>
-            <Icon name="send" size={24} color="#000" />
-          </TouchableOpacity>
         </View>
         <View style={styles.actionsRight}>
           {!isOwnPost && (
