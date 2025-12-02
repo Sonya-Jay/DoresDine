@@ -67,7 +67,6 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
   }, [visible, initialDiningHall, initialMealType]);
 
   const handleClose = () => {
-  const handleClose = () => {
     // Reset all form fields when closing
     setSelectedDiningHall(null);
     setSelectedMealType(null);
@@ -78,13 +77,13 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
     setPhotos([]);
     onClose();
   };
+
   const handleSubmit = () => {
     if (!selectedDiningHall) {
       // Could add validation alert here
       return;
     }
 
-    const postData: PostData = {
     const postData: PostData = {
       restaurantId: selectedDiningHall.id.toString(),
       restaurantName: selectedDiningHall.name,
@@ -96,8 +95,18 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
       notes,
       photos,
     };
+    
+    // Reset all form fields after submitting
+    setSelectedDiningHall(null);
+    setSelectedMealType(null);
+    setRating(5.0);
+    setMenuItems([]);
+    setCompanions([]);
+    setNotes("");
+    setPhotos([]);
+    
     onSubmit(postData);
-    handleClose();
+    onClose();
   };
 
   return (
