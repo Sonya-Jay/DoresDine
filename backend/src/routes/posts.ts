@@ -345,6 +345,7 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
       menu_items,
       dining_hall_name,
       meal_type,
+      created_at,
       photos,
       rated_items,
     }: CreatePostRequest = req.body;
@@ -464,8 +465,8 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
         : null;
 
     const postResult = await client.query<Post>(
-      `INSERT INTO posts (author_id, caption, rating, menu_items, dining_hall_name, meal_type)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO posts (author_id, caption, rating, menu_items, dining_hall_name, meal_type, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
       [
         userId,
@@ -474,6 +475,7 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
         menu_items || null,
         dining_hall_name || null,
         meal_type || null,
+        created_at || new Date().toISOString(),
       ]
     );
 

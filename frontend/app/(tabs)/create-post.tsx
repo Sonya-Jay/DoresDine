@@ -110,11 +110,12 @@ export default function CreatePostScreen() {
     const postData: PostData = {
       restaurantId: selectedDiningHall.id.toString(),
       restaurantName: selectedDiningHall.name,
-      date: selectedDate.toISOString().split("T")[0],
+      date: selectedDate.toISOString(),
       mealType: selectedMealType || "Lunch",
       menuItems: ratedItems.map(item => item.menuItemName), // Keep for backward compatibility
       rating: overallRating ? Math.round(overallRating * 10) / 10 : undefined, // Overall rating as average
       ratedItems: ratedItems.length > 0 ? ratedItems : undefined,
+      companions: [], // No companion selection in this version
       notes,
       photos: photosWithDishNames.map(p => p.storage_key), // Keep for backward compatibility
       photosWithDishNames: photosWithDishNames.length > 0 ? photosWithDishNames : undefined,

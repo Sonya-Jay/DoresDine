@@ -62,6 +62,7 @@ export interface CreatePostRequest {
   menu_items?: string[];
   dining_hall_name?: string;
   meal_type?: string;
+  created_at?: string; // ISO date string for custom post date
   photos?: Array<{
     storage_key: string;
     display_order: number;

@@ -624,6 +624,7 @@ export const createPost = async (postData: PostData): Promise<Post> => {
       menu_items: postData.menuItems.length > 0 ? postData.menuItems : null,
       dining_hall_name: postData.restaurantName || null,
       meal_type: postData.mealType || null,
+      created_at: postData.date || new Date().toISOString(), // Send the selected date
       // Send photos with dish_name if provided, otherwise use simple photos array
       photos:
         postData.photosWithDishNames && postData.photosWithDishNames.length > 0
